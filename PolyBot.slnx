@@ -1,0 +1,19 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/samples/">
+    <Project Path="samples/EchoBot/EchoBot.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/PolyBot.InternalsGenerators/PolyBot.InternalsGenerators.csproj" />
+    <Project Path="src/PolyBot.SourceGenerators/PolyBot.SourceGenerators.csproj" />
+    <Project Path="src/PolyBot/PolyBot.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PolyBot.Tests.Fixtures/PolyBot.Tests.Fixtures.csproj" />
+    <Project Path="tests/PolyBot.Tests/PolyBot.Tests.csproj" />
+  </Folder>
+</Solution>

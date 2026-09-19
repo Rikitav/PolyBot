@@ -1,0 +1,1969 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PolyBot</name>
+    </assembly>
+    <members>
+        <member name="T:PolyBot.Attributes.ArgAttribute">
+            <summary>
+            Binds a handler parameter of a <c>[Command]</c>-restricted handler to one whitespace-separated
+            argument token from the message text, instead of resolving it from the DI container.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ArgAttribute.#ctor">
+            <summary>
+            Initializes a new instance without an explicit name; the parameter name is used.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ArgAttribute.#ctor(System.String)">
+            <param name="name">The argument name, used in parse error messages; <c>null</c> infers the parameter name.</param>
+        </member>
+        <member name="P:PolyBot.Attributes.ArgAttribute.Name">
+            <summary>
+            The argument name, used in parse error messages. Inferred from the parameter name when unset.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ArgAttribute.IsOptional">
+            <summary>
+            When <c>true</c>, a missing token yields the default value of the argument type instead of a parse error. Defaults to <c>false</c>.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CallbackButtonAttribute">
+            <summary>
+            Declares a button of a generated inline keyboard; the source generator emits the
+            implementation. Each attribute list forms one keyboard row.
+            </summary>
+            <remarks>
+            <see cref="P:PolyBot.Attributes.CallbackButtonAttribute.CallbackData"/> may contain <c>{parameter}</c> placeholders referencing the declaring
+            method's parameters; partial properties have no parameters, so placeholders only work on
+            methods. Unknown placeholders are reported as <c>CUR017</c>.
+            </remarks>
+        </member>
+        <member name="M:PolyBot.Attributes.CallbackButtonAttribute.#ctor(System.String,System.String)">
+            <summary>
+            Creates the attribute with a button label and callback data.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackButtonAttribute.Text">
+            <summary>
+            The button label.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackButtonAttribute.CallbackData">
+            <summary>
+            The callback data, optionally with <c>{parameter}</c> placeholders.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CommandAttribute">
+            <summary>
+            Restricts a message handler to one or more bot commands (e.g. <c>/start</c>).
+            Only meaningful on handlers whose update payload is a <see cref="T:Telegram.Bot.Types.Message"/>.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CommandAttribute.Aliases">
+            <summary>
+            Command names without the leading '/', matched case-insensitively.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CommandAttribute.NoArgs">
+            <summary>
+            When <c>true</c>, the argument parse throws a
+            <see cref="T:PolyBot.Commands.CommandArgsParseException"/> if the message carries any tokens after
+            the command; extra tokens are ignored by default.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CommandAttribute.Prefix">
+            <summary>
+            The command prefix, controlling the matching mode. <c>'/'</c> (the default) matches
+            <c>BotCommand</c> message entities (optionally with an <c>@botsuffix</c> verified
+            against <see cref="P:PolyBot.PolyBotOptions.BotUsername"/>). <c>' '</c> or <c>'\0'</c> matches
+            <see cref="P:Telegram.Bot.Types.Message.Text"/> via
+            <see cref="M:System.String.StartsWith(System.String,System.StringComparison)"/> (ordinal-ignore-case); any
+            other character requires that character at the start of the text followed by the alias.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CommandAttribute.Description">
+            <summary>
+            The BotFather menu description used by the generated <see cref="T:PolyBot.BotFather.IBotFatherSync"/>;
+            missing values produce a compile-time warning (unless <see cref="P:PolyBot.Attributes.CommandAttribute.IsHidden"/> is set)
+            and values longer than 256 characters are a compile-time error.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CommandAttribute.LanguageCode">
+            <summary>
+            BotFather localization code (e.g. <c>"en"</c>, <c>"ru"</c>) the command is
+            registered under; <c>null</c> (the default) registers it for all languages.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CommandAttribute.Scope">
+            <summary>
+            The BotFather audience for the command.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CommandAttribute.IsHidden">
+            <summary>
+            When <c>true</c>, the command is matched for routing but excluded from BotFather
+            synchronization. Hidden commands skip the missing-description warning.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CommandScope">
+            <summary>
+            The BotFather audience a command is registered for, mapped to the corresponding
+            <c>Telegram.Bot.Types.BotCommandScopes.BotCommandScope</c> by the generated <c>PolyBotBotFatherSync</c>.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.CommandScope.Default">
+            <summary>
+            All chats (the default).
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.CommandScope.AllPrivateChats">
+            <summary>
+            All private chats.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.CommandScope.AllGroupChats">
+            <summary>
+            All group chats.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.CommandScope.AllChatAdministrators">
+            <summary>
+            All chats where the user is an administrator.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ExceptionHandlerAttribute">
+            <summary>
+            Marks the bot's single exception handler: the generated <c>PolyBot.BotRouter.HandleErrorAsync</c>
+            invokes it for every update-handling failure instead of swallowing it. Parameters resolve
+            like handler parameters — <see cref="T:System.Exception"/>, <see cref="T:Telegram.Bot.ITelegramBotClient"/>
+            and <see cref="T:System.Threading.CancellationToken"/> come from the error callback, anything else
+            from the DI container (keyed with <see cref="T:PolyBot.Attributes.KeyAttribute"/>) — but there is no current update in
+            the error path, so update-bound parameters are rejected at compile time. The method must return
+            <see cref="T:System.Threading.Tasks.Task"/> or <see cref="T:System.Threading.Tasks.ValueTask"/>.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.HandlerAttribute">
+            <summary>
+            Base class for update-type handler attributes (e.g. <c>MessageHandlerAttribute</c>).
+            Marks a method as a handler for a specific kind of update.
+            </summary>
+            <remarks>
+            Concrete, update-specific attributes are generated at compile time by the
+            PolyBot source generator into the <c>PolyBot.Attributes</c> namespace.
+            </remarks>
+        </member>
+        <member name="P:PolyBot.Attributes.HandlerAttribute.Priority">
+            <summary>
+            Routing priority; lower values run earlier. Defaults to <c>0</c>.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.KeyAttribute">
+            <summary>
+            Specifies the service key used when resolving a handler parameter from the DI container.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.KeyAttribute.#ctor(System.Object)">
+            <param name="serviceKey">The key used to resolve the keyed service.</param>
+        </member>
+        <member name="P:PolyBot.Attributes.KeyAttribute.ServiceKey">
+            <summary>
+            The key used to resolve the keyed service.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.NoStateAttribute`1">
+            <summary>
+            Restricts a handler to updates that have no stored <typeparamref name="TEnum"/> state
+            for <see cref="P:PolyBot.Attributes.NoStateAttribute`1.Key"/>; typically used for "entry" handlers that start a conversation flow.
+            </summary>
+            <remarks>
+            Attributes sharing the same <c>(TEnum, StateKey)</c> pair are OR-ed; attributes with
+            different pairs are AND-ed. An update whose key cannot be resolved does <em>not</em> match:
+            <c>NoState</c> means "the identity was resolved and has no state".
+            </remarks>
+            <typeparam name="TEnum">The enum type that declares the states.</typeparam>
+        </member>
+        <member name="M:PolyBot.Attributes.NoStateAttribute`1.#ctor(PolyBot.State.StateKey)">
+            <param name="key">Which identity of the update to key the state by.</param>
+        </member>
+        <member name="P:PolyBot.Attributes.NoStateAttribute`1.Key">
+            <summary>
+            Which identity of the update the state is keyed by.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ParseAttribute">
+            <summary>
+            Binds a <c>string</c> handler parameter of a <c>[Command]</c>-restricted handler to the
+            match of <see cref="P:PolyBot.Attributes.ParseAttribute.Pattern"/> against the text remaining after the positionally consumed
+            <c>[Arg]</c> tokens and any preceding tail consumers (<c>[Parse]</c>/<c>[Rest]</c> parameters).
+            </summary>
+            <remarks>
+            The pattern is scanned, not anchored: text before the match is skipped and claimed. With no
+            capturing groups the whole match is bound; with one or more, <c>Groups[1].Value</c> is bound.
+            No match throws a <see cref="T:PolyBot.Commands.CommandArgsParseException"/> from <see cref="M:PolyBot.Commands.CommandHelper.ParseArgs(System.String,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])"/>.
+            </remarks>
+        </member>
+        <member name="M:PolyBot.Attributes.ParseAttribute.#ctor(System.String)">
+            <param name="pattern">The regular expression scanned against the remaining text.</param>
+        </member>
+        <member name="P:PolyBot.Attributes.ParseAttribute.Pattern">
+            <summary>
+            The regular expression scanned (not anchored) against the remaining text.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.PatternAttribute">
+            <summary>
+            Declares a route template over <c>Telegram.Bot.Types.CallbackQuery.Data</c> for a
+            <c>[CallbackQueryHandler]</c> method. Segments are separated by <see cref="P:PolyBot.Attributes.PatternAttribute.Separator"/>
+            (default <c>':'</c>): a literal segment (<c>cart:checkout</c>) must match exactly, a
+            placeholder (<c>{id}</c>, optionally constrained — <c>{id:int}</c>) captures one segment
+            into the <c>[Arg]</c>-annotated parameter of the same name, and a trailing <c>{*name}</c>
+            wildcard captures the rest of the data into a <c>string</c> parameter. Data is at most
+            <see cref="F:PolyBot.Routing.CallbackPatternMatcher.MaxCallbackDataBytes"/> bytes, so templates whose literal
+            skeleton cannot fit are compile-time errors.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PatternAttribute.#ctor(System.String)">
+            <param name="template">The segment template, e.g. <c>"item:{id}:{action}"</c>.</param>
+        </member>
+        <member name="P:PolyBot.Attributes.PatternAttribute.Template">
+            <summary>
+            The route template.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.PatternAttribute.Separator">
+            <summary>
+            The segment separator. Defaults to <c>':'</c>.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.RestAttribute">
+            <summary>
+            Binds a <c>string</c> handler parameter of a <c>[Command]</c>-restricted handler to
+            everything that follows the positionally consumed argument tokens in the message text,
+            as a single trimmed string.
+            </summary>
+            <remarks>
+            At most one parameter per handler may carry <see cref="T:PolyBot.Attributes.RestAttribute"/>. The remainder is
+            never <c>null</c>, and because it absorbs all trailing text, a handler with a rest parameter
+            never reports "found unwanted arguments".
+            </remarks>
+        </member>
+        <member name="T:PolyBot.Attributes.StateAttribute`1">
+            <summary>
+            Restricts a handler to updates whose current <typeparamref name="TEnum"/> state (see
+            <see cref="T:PolyBot.State.IStateMachine"/>) equals <see cref="P:PolyBot.Attributes.StateAttribute`1.State"/> for <see cref="P:PolyBot.Attributes.StateAttribute`1.Key"/>.
+            </summary>
+            <remarks>
+            Attributes sharing the same <c>(TEnum, StateKey)</c> pair are OR-ed (any listed state
+            matches); attributes with different pairs are AND-ed. Handlers with neither
+            <see cref="T:PolyBot.Attributes.StateAttribute`1"/> nor <see cref="T:PolyBot.Attributes.NoStateAttribute`1"/> are fully
+            stateless and always execute when reached.
+            </remarks>
+            <typeparam name="TEnum">The enum type that declares the states.</typeparam>
+        </member>
+        <member name="M:PolyBot.Attributes.StateAttribute`1.#ctor(`0,PolyBot.State.StateKey)">
+            <param name="state">The state the handler matches.</param>
+            <param name="key">Which identity of the update to key the state by.</param>
+        </member>
+        <member name="P:PolyBot.Attributes.StateAttribute`1.State">
+            <summary>
+            The state the handler matches.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.StateAttribute`1.Key">
+            <summary>
+            Which identity of the update the state is keyed by.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ThrottleAction">
+            <summary>
+            What a throttled handler does when its sliding window is exhausted.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.ThrottleAction.Ignore">
+            <summary>
+            Halts the whole routing branch for this update (as if the handler returned <c>Result.StopRouting</c>).
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.ThrottleAction.Fallthrough">
+            <summary>
+            Skips this handler and continues evaluating the remaining candidate handlers.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ThrottledAttribute">
+            <summary>
+            Declarative sliding-window rate limiting on a handler. The generated router inlines the
+            guard as a single <c>ThrottleGate.TryEnter</c> call at the top of the handler's branch —
+            before state fetches, filter resolution or handler invocation. Gates are static per handler
+            and thread-safe across concurrent polling loops and parallel webhook requests.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ThrottledAttribute.Limit">
+            <summary>
+            Maximum number of requests permitted within the window.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ThrottledAttribute.PeriodMilliseconds">
+            <summary>
+            Duration window in milliseconds.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ThrottledAttribute.Scope">
+            <summary>
+            Scope/key level for rate-limiting bucket.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ThrottledAttribute.Action">
+            <summary>
+            Behavior when rate limit is exceeded.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ThrottleScope">
+            <summary>
+            The bucket a <see cref="T:PolyBot.Attributes.ThrottledAttribute"/> rate-limits by.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.ThrottleScope.User">
+            <summary>
+            Per user id (<c>from.id</c>); updates without a user share bucket 0.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.ThrottleScope.Chat">
+            <summary>
+            Per chat id; updates without a chat share bucket 0.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.ThrottleScope.UserInChat">
+            <summary>
+            Per user-in-chat pair.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Attributes.ThrottleScope.Global">
+            <summary>
+            A single bucket for the handler across all users and chats.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.UpdateHandlerDescriptorAttribute">
+            <summary>
+            Metadata stamped by the source generator onto each generated handler attribute, recording
+            which update type it handles and the corresponding property on <see cref="T:Telegram.Bot.Types.Update"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.UpdateHandlerDescriptorAttribute.#ctor(Telegram.Bot.Types.Enums.UpdateType,System.String)">
+            <param name="updateType">The update type handled.</param>
+            <param name="updatePropertyName">The name of the matching property on <c>Update</c>.</param>
+        </member>
+        <member name="P:PolyBot.Attributes.UpdateHandlerDescriptorAttribute.UpdateType">
+            <summary>
+            The update type handled by the attributed handler attribute.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.UpdateHandlerDescriptorAttribute.UpdatePropertyName">
+            <summary>
+            The name of the matching property on <see cref="T:Telegram.Bot.Types.Update"/>.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MessageHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.Message</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.InlineQueryHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.InlineQuery</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChosenInlineResultHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.ChosenInlineResult</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CallbackQueryHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.CallbackQuery</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.EditedMessageHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.EditedMessage</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChannelPostHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.ChannelPost</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.EditedChannelPostHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.EditedChannelPost</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ShippingQueryHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.ShippingQuery</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.PreCheckoutQueryHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.PreCheckoutQuery</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.PollHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.Poll</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.PollAnswerHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.PollAnswer</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MyChatMemberHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.MyChatMember</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChatMemberHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.ChatMember</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChatJoinRequestHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.ChatJoinRequest</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MessageReactionHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.MessageReaction</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MessageReactionCountHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.MessageReactionCount</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChatBoostHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.ChatBoost</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.RemovedChatBoostHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.RemovedChatBoost</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.BusinessConnectionHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.BusinessConnection</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.BusinessMessageHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.BusinessMessage</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.EditedBusinessMessageHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.EditedBusinessMessage</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.DeletedBusinessMessagesHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.DeletedBusinessMessages</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.PurchasedPaidMediaHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.PurchasedPaidMedia</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ManagedBotHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.ManagedBot</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.GuestMessageHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.GuestMessage</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.SubscriptionHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.Subscription</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.StoppedMessageGenerationHandlerAttribute">
+            <summary>Marks a handler for <c>UpdateType.StoppedMessageGeneration</c> updates.</summary>
+        </member>
+        <member name="T:PolyBot.Attributes.PolyBotAwaiterExtensions">
+            <summary>
+            One <c>WaitFor*</c> method per Telegram.Bot update type.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForMessageAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>Message</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForInlineQueryAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>InlineQuery</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForChosenInlineResultAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>ChosenInlineResult</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForCallbackQueryAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>CallbackQuery</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForEditedMessageAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>EditedMessage</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForChannelPostAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>ChannelPost</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForEditedChannelPostAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>EditedChannelPost</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForShippingQueryAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>ShippingQuery</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForPreCheckoutQueryAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>PreCheckoutQuery</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForPollAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>Poll</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForPollAnswerAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>PollAnswer</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForMyChatMemberAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>MyChatMember</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForChatMemberAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>ChatMember</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForChatJoinRequestAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>ChatJoinRequest</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForMessageReactionAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>MessageReaction</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForMessageReactionCountAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>MessageReactionCount</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForChatBoostAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>ChatBoost</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForRemovedChatBoostAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>RemovedChatBoost</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForBusinessConnectionAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>BusinessConnection</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForBusinessMessageAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>BusinessMessage</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForEditedBusinessMessageAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>EditedBusinessMessage</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForDeletedBusinessMessagesAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>DeletedBusinessMessages</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForPurchasedPaidMediaAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>PurchasedPaidMedia</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForManagedBotAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>ManagedBot</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForGuestMessageAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>GuestMessage</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForSubscriptionAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>Subscription</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForStoppedMessageGenerationAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts a conversational await for the update type <c>StoppedMessageGeneration</c>.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Awaits.AwaitIdentity">
+            <summary>
+            Numeric identity of a pending await: the (userId, chatId) pair it was registered for,
+            with 0 marking an id not part of the identity (Telegram ids are positive). Registration
+            keys lookups so no key strings are ever formatted.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Awaits.IUpdateAwaiter">
+            <summary>
+            Conversation-style inline awaiting over incoming updates: a handler builds an await via
+            <see cref="M:PolyBot.Awaits.IUpdateAwaiter.WaitForAsync``1(System.Nullable{System.TimeSpan})"/>, marks it up with <c>TextMatches</c>/<c>WithFilter</c>,
+            and awaits a terminal method; the generated router suspends the handler and resumes it
+            when a matching update arrives.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Awaits.IUpdateAwaiter.WaitForAsync``1(System.Nullable{System.TimeSpan})">
+            <summary>
+            Starts building a single-shot await for a <typeparamref name="TUpdate"/> payload.
+            </summary>
+            <typeparam name="TUpdate">The payload DTO to await (e.g. <see cref="T:Telegram.Bot.Types.Message"/>). Unknown payload types never match.</typeparam>
+            <param name="timeout">Optional timeout after which the terminal await completes with <c>null</c>.</param>
+        </member>
+        <member name="M:PolyBot.Awaits.IUpdateAwaiter.TryDeliverAsync(System.Nullable{System.Int64},System.Nullable{System.Int64},Telegram.Bot.Types.Update,System.Object,System.Type,System.String[],System.Type[],System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Router-facing delivery hook: called by the generated router after the branch's own
+            static conditions (payload, regexes, <c>Where</c> lambdas, filters) have passed. Does
+            no matching of its own — probes the numeric identity (most specific first) and, when
+            a pending await with a matching declarative signature exists, atomically removes it
+            and completes its task with <paramref name="payload"/>. Returns <c>true</c> when the
+            update was claimed; <c>false</c> lets it fall through to normal routing.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Awaits.UpdateAwaiter">
+            <summary>
+            Default <see cref="T:PolyBot.Awaits.IUpdateAwaiter"/>: pending awaits live in a
+            <see cref="T:System.Collections.Concurrent.ConcurrentDictionary`2"/> keyed by numeric
+            <see cref="T:PolyBot.Awaits.AwaitIdentity"/> pairs (no key strings formatted per update), bucketed by
+            declarative signature (payload type, <c>TextMatches</c> patterns, filter types, Where
+            flag). Delivery is single-winner via <c>Interlocked.Exchange</c> gating so a timeout
+            racing a delivery cannot double-complete. Registered as a singleton by <c>AddPolyBot</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiter.#ctor(PolyBot.State.IUpdateContextAccessor)">
+            <summary>
+            Creates the awaiter over the given update context accessor.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiter.WaitForAsync``1(System.Nullable{System.TimeSpan})">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiter.TryDeliverAsync(System.Nullable{System.Int64},System.Nullable{System.Int64},Telegram.Bot.Types.Update,System.Object,System.Type,System.String[],System.Type[],System.Boolean,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:PolyBot.Awaits.UpdateAwaiterBuilder`1">
+            <summary>
+            Immutable-fluent registration builder for a single-shot update await: mark it up with
+            <see cref="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.TextMatches(System.String)"/> and the <c>WithFilter</c> overloads, then complete the
+            registration with a terminal method (<see cref="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.ByUserId(System.Threading.CancellationToken)"/>, <see cref="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.ByChatId(System.Threading.CancellationToken)"/>,
+            <see cref="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.ByUserInChat(System.Threading.CancellationToken)"/>).
+            </summary>
+            <remarks>
+            The marker methods are consumed by the source generator, which emits their checks into
+            the router branch — the engine stores and checks nothing at delivery. <c>Where</c>
+            requires <c>static</c>, non-async, expression-bodied lambdas (else <c>CUR016</c>); a
+            filter passed as a variable is neither checked nor keyed.
+            </remarks>
+            <typeparam name="TUpdate">The awaited payload DTO.</typeparam>
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.TextMatches(System.String)">
+            <summary>
+            Generator marker: the generated router branch matches the pattern against the
+            payload's <see cref="P:Telegram.Bot.Types.Message.Text"/> (falling back to <see cref="P:Telegram.Bot.Types.Message.Caption"/>);
+            the pattern also becomes part of the registration key. Non-message payloads are a
+            generator error.
+            </summary>
+            <param name="pattern">The regular expression scanned against the text.</param>
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.Where(System.Func{`0,System.Boolean})">
+            <summary>
+            Generator marker: the lambda is re-emitted verbatim into the generated router branch
+            and invoked there. Only <c>static</c>, non-async, expression-bodied lambdas
+            referencing only the parameter are allowed (else <c>CUR016</c>).
+            </summary>
+            <param name="predicate">The payload predicate (marker only, never invoked at runtime).</param>
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.WithFilter(PolyBot.Routing.IUpdateFilter)">
+            <summary>
+            Generator marker: the filter's <see cref="M:PolyBot.Routing.IUpdateFilter.CanPass(Telegram.Bot.Types.Update)"/> is evaluated by
+            the generated router branch and its type becomes part of the registration key. A
+            filter passed as a variable is not statically analyzable — no check is emitted and
+            the type is not keyed.
+            </summary>
+            <param name="filter">The filter the update must pass (marker only).</param>
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.WithFilter``1">
+            <summary>
+            Generator marker: <typeparamref name="TFilter"/> is resolved from DI (with an
+            <c>ActivatorUtilities</c> fallback), its <see cref="M:PolyBot.Routing.IUpdateFilter.CanPass(Telegram.Bot.Types.Update)"/> is
+            evaluated by the generated router branch, and the type becomes part of the
+            registration key.
+            </summary>
+            <typeparam name="TFilter">The filter type to apply (marker only).</typeparam>
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.ByUserId(System.Threading.CancellationToken)">
+            <summary>
+            Registers the await keyed by the CURRENT update's user id; on timeout the task
+            completes with <c>null</c> and the registration is removed.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">
+            No current update, unresolvable user id, or an await with the same identity and
+            signature already pending — slot conflicts throw instead of silently replacing.
+            </exception>
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.ByChatId(System.Threading.CancellationToken)">
+            <summary>
+            Registers the await keyed by the CURRENT update's chat id. See <see cref="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.ByUserId(System.Threading.CancellationToken)"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.ByUserInChat(System.Threading.CancellationToken)">
+            <summary>
+            Registers the await keyed by the CURRENT update's combined user-in-chat identity. See <see cref="M:PolyBot.Awaits.UpdateAwaiterBuilder`1.ByUserId(System.Threading.CancellationToken)"/>.
+            </summary>
+        </member>
+        <member name="T:PolyBot.BotFather.IBotFatherSync">
+            <summary>
+            Pushes the commands discovered from <c>[Command]</c>-decorated handlers to BotFather via
+            <c>SetMyCommands</c>. Implemented by the generated <c>PolyBot.PolyBotBotFatherSync</c>;
+            register it with the generated <c>PolyBotExtensions.AddPolyBotBotFatherSync</c>.
+            </summary>
+        </member>
+        <member name="P:PolyBot.BotFather.IBotFatherSync.DiscoveredCommands">
+            <summary>
+            The discovered commands, in declaration order (hidden commands excluded).
+            </summary>
+        </member>
+        <member name="M:PolyBot.BotFather.IBotFatherSync.SyncCommandsAsync(System.Threading.CancellationToken)">
+            <summary>
+            Sends one <c>SetMyCommands</c> call per distinct (scope, language) group.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Commands.ArgSpec">
+            <summary>
+            Describes one command argument for <see cref="M:PolyBot.Commands.CommandHelper.ParseArgs(System.String,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])"/>: type, name,
+            and whether it may be omitted.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Commands.ArgSpec.#ctor(System.Type,System.String,System.Boolean)">
+            <summary>
+            Creates the argument specification.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Commands.ArgSpec.Type">
+            <summary>
+            The type the argument token is parsed into.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Commands.ArgSpec.Name">
+            <summary>
+            The argument name, used in parse error messages.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Commands.ArgSpec.IsOptional">
+            <summary>
+            When <c>true</c>, a missing token yields the default value of <see cref="P:PolyBot.Commands.ArgSpec.Type"/>
+            instead of a parse error.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Commands.CommandArgsParseException">
+            <summary>
+            Thrown by <see cref="M:PolyBot.Commands.CommandHelper.ParseArgs(System.String,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])"/> when the tokens following a command
+            cannot be bound to the handler's argument specifications.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Commands.CommandArgsParseException.#ctor(System.String)">
+            <summary>
+            Creates the exception with an error message.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Commands.CommandArgsParseException.#ctor(System.String,System.String,System.String)">
+            <summary>
+            Creates the exception with an error message.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Commands.CommandArgsParseException.#ctor(System.String,System.String,System.String,System.Exception)">
+            <summary>
+            Creates the exception with an error message and an underlying parse error.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Commands.CommandArgsParseException.ArgumentName">
+            <summary>
+            The argument that failed to bind, or <c>null</c> when the failure is not tied to
+            a single argument (e.g. unwanted arguments).
+            </summary>
+        </member>
+        <member name="P:PolyBot.Commands.CommandArgsParseException.CommandText">
+            <summary>
+            The full text of the message that carried the command.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Commands.CommandHelper">
+            <summary>
+            Helpers for parsing and matching bot commands in messages.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Commands.CommandHelper.TryGetCommandName(Telegram.Bot.Types.Message,System.String@)">
+            <summary>
+            Extracts the command name from a message if it starts with a bot command entity.
+            </summary>
+            <param name="message">The message to inspect.</param>
+            <param name="command">
+            When this method returns <c>true</c>, the command name without the leading '/'
+            and any <c>@botname</c> suffix.
+            </param>
+        </member>
+        <member name="M:PolyBot.Commands.CommandHelper.CommandEquals(System.String,System.String)">
+            <summary>
+            Compares a parsed command name against an alias, ignoring case.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Commands.CommandHelper.MatchCommand(Telegram.Bot.Types.Message,System.String,System.Char,System.String,System.Int32@)">
+            <summary>
+            Determines whether the message matches a command alias under the given prefix mode.
+            </summary>
+            <param name="message">The message to inspect.</param>
+            <param name="alias">The command alias without the prefix.</param>
+            <param name="prefix">
+            The matching mode: <c>'/'</c> matches <c>BotCommand</c> entities (with
+            <c>@botsuffix</c> verification against <paramref name="botUsername"/>),
+            <c>' '</c> or <c>'\0'</c> matches the text prefix ordinal-ignore-case, and any other
+            character requires that character at the start of the text followed by the alias.
+            </param>
+            <param name="botUsername">
+            The bot username used to verify <c>@botsuffix</c> entity text; when <c>null</c> or
+            empty, suffixes cannot be verified and every suffix is accepted.
+            </param>
+            <param name="argsStartIndex">
+            When this method returns <c>true</c>, the index in <see cref="P:Telegram.Bot.Types.Message.Text"/> where
+            the command arguments begin (the end of the command entity or alias).
+            </param>
+        </member>
+        <member name="M:PolyBot.Commands.CommandHelper.ParseArgs(System.String,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])">
+            <summary>
+            Parses the whitespace-separated tokens that follow a command into values for the
+            given argument specifications.
+            </summary>
+            <param name="text">The full message text.</param>
+            <param name="argsStartIndex">The index in <paramref name="text"/> where the arguments begin.</param>
+            <param name="specs">The argument specifications, one per declared handler argument.</param>
+            <param name="noArgs">
+            When <c>true</c>, any token after the command throws a
+            <see cref="T:PolyBot.Commands.CommandArgsParseException"/>; ignored when <paramref name="tailPatterns"/>
+            is non-empty, because the tail consumers absorb all trailing text.
+            </param>
+            <param name="tailPatterns">
+            One entry per tail consumer, in handler-parameter declaration order: the regex
+            pattern of a <c>[Parse]</c> parameter, or <c>null</c> for a <c>[Rest]</c> parameter.
+            Each <c>[Parse]</c> consumer scans the tail region for its pattern (advancing past
+            the match), each <c>[Rest]</c> consumer claims everything that is left.
+            </param>
+            <returns>
+            One entry per specification, followed by one entry per tail consumer; missing
+            optional arguments yield the default value of their type.
+            </returns>
+            <exception cref="T:PolyBot.Commands.CommandArgsParseException">
+            Thrown when <paramref name="noArgs"/> is <c>true</c> and tokens are present, when a
+            required argument is missing, when a token cannot be parsed into its type, or when
+            a <c>[Parse]</c> pattern does not match the remaining text.
+            </exception>
+        </member>
+        <member name="T:PolyBot.Keyboards.InlineKeyboardBuilder">
+            <summary>
+            Fluent builder for <see cref="T:Telegram.Bot.Types.ReplyMarkups.InlineKeyboardMarkup"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.WithCallbackButton(System.String,System.String)">
+            <summary>
+            Appends a callback button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.Build">
+            <summary>
+            Builds the markup placing every button on its own row.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.Adjust(System.Int32[])">
+            <summary>
+            Builds the markup chunking the flat button list into rows of the given sizes,
+            repeating the last size for the remaining buttons.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Keyboards.ReplyKeyboardBuilder">
+            <summary>
+            Fluent builder for <see cref="T:Telegram.Bot.Types.ReplyMarkups.ReplyKeyboardMarkup"/>. Built markups set
+            <see cref="P:Telegram.Bot.Types.ReplyMarkups.ReplyKeyboardMarkup.ResizeKeyboard"/> so the client sizes the keyboard to its buttons.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.WithButton(System.String)">
+            <summary>
+            Appends a button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.Build">
+            <summary>
+            Builds the markup placing every button on its own row.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.Adjust(System.Int32[])">
+            <summary>
+            Builds the markup chunking the flat button list into rows of the given sizes,
+            repeating the last size for the remaining buttons.
+            </summary>
+        </member>
+        <member name="T:PolyBot.PolyBotClient">
+            <summary>
+            Unified runtime runner binding the service collection, configuration and the Telegram
+            bot client to the generated routing pipeline. Two modes: <see cref="M:PolyBot.PolyBotClient.RunPollingAsync(System.Threading.CancellationToken)"/>
+            (long polling) and <see cref="M:PolyBot.PolyBotClient.RunTest(System.Threading.CancellationToken)"/> (token-free in-memory test harness).
+            </summary>
+        </member>
+        <member name="M:PolyBot.PolyBotClient.#ctor(PolyBot.PolyBotOptions)">
+            <summary>
+            Creates the runner with optional direct options (taking precedence over configuration).
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotClient.Services">
+            <summary>
+            The service collection the consumer registers the generated router and services into.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotClient.Configuration">
+            <summary>
+            The application configuration (an empty <see cref="T:Microsoft.Extensions.Configuration.ConfigurationManager"/> by default);
+            options are read from the <c>"PolyBot"</c> section by fixed names.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotClient.BotClient">
+            <summary>
+            The built bot client. Only available after <see cref="M:PolyBot.PolyBotClient.RunPollingAsync(System.Threading.CancellationToken)"/> or
+            <see cref="M:PolyBot.PolyBotClient.RunTest(System.Threading.CancellationToken)"/> started; throws <see cref="T:System.InvalidOperationException"/> before that.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PolyBotClient.RunPollingAsync(System.Threading.CancellationToken)">
+            <summary>
+            Starts the long-polling loop against the Telegram Bot API.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PolyBotClient.RunTest(System.Threading.CancellationToken)">
+            <summary>
+            Builds the provider and initializes the test harness, returning the update mocker.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PolyBotClient.DisposeAsync">
+            <inheritdoc />
+        </member>
+        <member name="T:PolyBot.PolyBotOptions">
+            <summary>
+            The single configuration entry point for a PolyBot bot. Populated from the
+            <c>"PolyBot"</c> configuration section (see <see cref="P:PolyBot.PolyBotClient.Configuration"/>)
+            and overridable per-value via the <see cref="M:PolyBot.PolyBotClient.#ctor(PolyBot.PolyBotOptions)"/> constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.BotUsername">
+            <summary>The bot's username, used for <c>@botsuffix</c> command verification.
+            Back-filled from <c>GetMe</c> by <see cref="M:PolyBot.PolyBotClient.RunPollingAsync(System.Threading.CancellationToken)"/> when polling starts.</summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.BotToken">
+            <summary>
+            The bot token. Required for <see cref="M:PolyBot.PolyBotClient.RunPollingAsync(System.Threading.CancellationToken)"/>; not required in test mode.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.BaseUrl">
+            <summary>
+            Optional custom Bot API base URL (local Bot API server).
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.UseTestEnvironment">
+            <summary>
+            Use the Bot API test environment.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.PollingLimit">
+            <summary>
+            Maximum number of updates per <c>GetUpdates</c> batch (Telegram allows 1-100).
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.PollingOffset">
+            <summary>
+            Initial update offset; leave unset to consume pending updates.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.AllowedUpdates">
+            <summary>
+            Update types to receive; <c>null</c> (the default) receives all.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.DropPendingUpdates">
+            <summary>
+            Drop pending updates when polling starts or the webhook is set.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.WebhookUrl">
+            <summary>
+            The full HTTPS URL Telegram sends updates to (the address mapped with <c>MapPolyBotWebhook</c>).
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.WebhookSecretToken">
+            <summary>
+            Secret token verified from the <c>X-Telegram-Bot-Api-Secret-Token</c> header.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.WebhookMaxConnections">
+            <summary>
+            Maximum simultaneous HTTPS connections to the webhook, 1-100. Defaults to 40.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyBotOptions.DeleteWebhookOnStop">
+            <summary>
+            When <c>true</c> (the default), <c>DeleteWebhook</c> is called on graceful shutdown.
+            </summary>
+        </member>
+        <member name="T:PolyBot.PolyBotServiceCollectionExtensions">
+            <summary>
+            Dependency injection extensions for PolyBot.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PolyBotServiceCollectionExtensions.AddPolyBotDefaults(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            Adds the PolyBot core services with try-add semantics — register your own
+            implementations <em>before</em> calling this to override them.
+            </summary>
+            <remarks>
+            <see cref="T:PolyBot.PolyBotOptions"/> is registered by <see cref="T:PolyBot.PolyBotClient"/> (or falls back
+            to a default in the webhook integration); preset your own instance when running behind a webhook.
+            </remarks>
+        </member>
+        <member name="T:PolyBot.PolyTests">
+            <summary>
+            In-memory <see cref="T:Telegram.Bot.ITelegramBotClient"/> test double: inject updates with
+            <see cref="M:PolyBot.PolyTests.EnqueueUpdate(Telegram.Bot.Types.Update)"/>, assert outgoing requests via <see cref="P:PolyBot.PolyTests.SentRequests"/>.
+            Only <c>GetMe</c>, <c>GetUpdates</c>, <c>SetWebhook</c>, <c>DeleteWebhook</c>,
+            <c>SetMyCommands</c>, <c>SendMessage</c> and <c>AnswerCallbackQuery</c> are answered;
+            anything else throws <see cref="T:System.NotSupportedException"/>.
+            </summary>
+            <remarks>Fully offline: no network, no token. Not thread-safe beyond what the framework needs.</remarks>
+        </member>
+        <member name="P:PolyBot.PolyTests.BotUser">
+            <summary>
+            The user returned by <c>GetMe</c>.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyTests.SentRequests">
+            <summary>
+            Every request the framework sent, in order.
+            </summary>
+        </member>
+        <member name="P:PolyBot.PolyTests.BotId">
+            <inheritdoc />
+        </member>
+        <member name="P:PolyBot.PolyTests.LocalBotServer">
+            <inheritdoc />
+        </member>
+        <member name="P:PolyBot.PolyTests.Timeout">
+            <inheritdoc />
+        </member>
+        <member name="P:PolyBot.PolyTests.ExceptionsParser">
+            <inheritdoc />
+        </member>
+        <member name="E:PolyBot.PolyTests.OnMakingApiRequest">
+            <inheritdoc />
+        </member>
+        <member name="E:PolyBot.PolyTests.OnApiResponseReceived">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.PolyTests.EnqueueUpdate(Telegram.Bot.Types.Update)">
+            <summary>
+            Queues an update for the next <c>GetUpdates</c> poll.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PolyTests.EnqueueUpdates(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.Update})">
+            <summary>
+            Queues several updates at once, in order.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PolyTests.SendRequest``1(Telegram.Bot.Requests.Abstractions.IRequest{``0},System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.PolyTests.TestApi(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.PolyTests.DownloadFile(System.String,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.PolyTests.DownloadFile(Telegram.Bot.Types.TGFile,System.IO.Stream,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:PolyBot.Routing.CallbackPatternMatcher">
+            <summary>
+            Zero-allocation segment matcher for <c>CallbackQuery.Data</c> route templates. The
+            generated router calls <see cref="M:PolyBot.Routing.CallbackPatternMatcher.Match(System.String,System.Char,System.Int32,PolyBot.Routing.CallbackSegments@)"/> once per pattern-guarded handler and then
+            tests segments by index; segment bounds are resolved by scanning, so no offset arrays
+            are allocated per update.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Routing.CallbackPatternMatcher.MaxCallbackDataBytes">
+            <summary>
+            Telegram's <c>callback_data</c> byte limit.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.CallbackPatternMatcher.Match(System.String,System.Char,System.Int32,PolyBot.Routing.CallbackSegments@)">
+            <summary>
+            Splits <paramref name="data"/> into segments and succeeds when at least
+            <paramref name="minSegments"/> are present; fails past what a 64-byte payload can contain.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Routing.CallbackSegments">
+            <summary>
+            Segment view over callback data produced by <see cref="M:PolyBot.Routing.CallbackPatternMatcher.Match(System.String,System.Char,System.Int32,PolyBot.Routing.CallbackSegments@)"/>;
+            segment bounds are resolved by scanning on each access.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Routing.CallbackSegments.Count">
+            <summary>
+            The number of segments (always at least 1 for non-empty data).
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.CallbackSegments.EqualsOrdinal(System.Int32,System.String)">
+            <summary>
+            Ordinal comparison of the segment at <paramref name="index"/> against a literal.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.CallbackSegments.Substring(System.Int32)">
+            <summary>
+            Extracts the segment at <paramref name="index"/> (allocates the substring).
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.CallbackSegments.JoinRest(System.Int32)">
+            <summary>
+            Extracts everything from the segment at <paramref name="startIndex"/> to the end,
+            separators included — the value of a trailing <c>{*name}</c> wildcard.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Routing.IUpdateFilter">
+            <summary>
+            A synchronous gate over an incoming update, evaluated by the generated router when a
+            handler carries filter attributes. The source generator discovers concrete
+            implementations and emits a matching <c>XxxFilterAttribute</c>; the router resolves
+            filters from the service collection, falling back to <c>ActivatorUtilities</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.IUpdateFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Evaluates the update; returning <c>false</c> skips the handler.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Routing.Result">
+            <summary>
+            Outcome of a handler invocation: determines whether routing continues to the next
+            handler for the same update or stops.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Routing.Result.Continue">
+            <summary>
+            Routing continues to the next handler.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Routing.Result.StopRouting">
+            <summary>
+            Routing stops; no further handlers run.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.Result.Handled">
+            <summary>
+            Alias of <see cref="F:PolyBot.Routing.Result.StopRouting"/>: the current handler fully handled the update.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Routing.Result.ContinueRouting">
+            <summary>
+            Gets whether routing should continue after this handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.Result.Equals(PolyBot.Routing.Result)">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.Routing.Result.Equals(System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.Routing.Result.GetHashCode">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.Routing.Result.op_Equality(PolyBot.Routing.Result,PolyBot.Routing.Result)">
+            <summary>
+            Compares two <see cref="T:PolyBot.Routing.Result"/> values for equality.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.Result.op_Inequality(PolyBot.Routing.Result,PolyBot.Routing.Result)">
+            <summary>
+            Compares two <see cref="T:PolyBot.Routing.Result"/> values for inequality.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Routing.ThrottleGate">
+            <summary>
+            Thread-safe sliding-window rate limiter used by the generated <c>[Throttled]</c> guards;
+            buckets are keyed by the scope identity (user/chat pair, or bucket 0 for
+            <see cref="F:PolyBot.Attributes.ThrottleScope.Global"/>). Buckets are never evicted — long-running bots with
+            many distinct users should prefer a scope with fewer keys or a custom limiter.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.ThrottleGate.#ctor(System.Int32,System.Int32)">
+            <summary>
+            Creates a gate allowing <paramref name="limit"/> entries per <paramref name="periodMilliseconds"/> window.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.ThrottleGate.TryEnter(System.Int64)">
+            <summary>
+            Single-key entry (<see cref="F:PolyBot.Attributes.ThrottleScope.User"/>, <see cref="F:PolyBot.Attributes.ThrottleScope.Chat"/> or <see cref="F:PolyBot.Attributes.ThrottleScope.Global"/> with key 0).
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.ThrottleGate.TryEnter(System.Int64,System.Int64)">
+            <summary>
+            Two-key entry (<see cref="F:PolyBot.Attributes.ThrottleScope.UserInChat"/>); also backs the single-key overload.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Routing.UpdateExtensions">
+            <summary>
+            Convenience probes over <see cref="T:Telegram.Bot.Types.Update"/>'s many optional payloads; the payload
+            properties are probed in a fixed order, so an update carrying several payloads
+            resolves deterministically (first match wins).
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.UpdateExtensions.GetUserId(Telegram.Bot.Types.Update)">
+            <summary>
+            Gets the id of the first user found in the update's payloads; <c>null</c> when none carries one.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.UpdateExtensions.GetChatId(Telegram.Bot.Types.Update)">
+            <summary>
+            Gets the id of the first chat found in the update's payloads; <c>null</c> when none carries one.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.UpdateExtensions.GetSender(Telegram.Bot.Types.Update)">
+            <summary>
+            Gets the first <see cref="T:Telegram.Bot.Types.User"/> found in the update's payloads.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.UpdateExtensions.GetChat(Telegram.Bot.Types.Update)">
+            <summary>
+            Gets the first <see cref="T:Telegram.Bot.Types.Chat"/> found in the update's payloads.
+            <see cref="P:Telegram.Bot.Types.Update.BusinessConnection"/> exposes only its <c>UserChatId</c>, so it
+            contributes to <see cref="M:PolyBot.Routing.UpdateExtensions.GetChatId(Telegram.Bot.Types.Update)"/> but not to this method.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.UpdateExtensions.GetMessage(Telegram.Bot.Types.Update)">
+            <summary>
+            Gets the message payload: message, edited message, channel post, or edited channel post (first match wins).
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.UpdateExtensions.GetText(Telegram.Bot.Types.Update)">
+            <summary>
+            Gets the message text, falling back to its caption — media captions are typed
+            into like message text.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Routing.WorkflowSupport">
+            <summary>
+            Helpers for conversational handlers suspended by <see cref="T:PolyBot.Awaits.IUpdateAwaiter"/>. Called
+            by the generated router only.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Routing.WorkflowSupport.ObserveFireAndForget(System.Threading.Tasks.Task{PolyBot.Routing.Result})">
+            <summary>
+            Observes a suspended conversational workflow so an unhandled exception in it does
+            not terminate the process via an unobserved task exception; its <see cref="T:PolyBot.Routing.Result"/>
+            does not affect routing.
+            </summary>
+        </member>
+        <member name="T:PolyBot.State.IStateMachine">
+            <summary>
+            Typed facade over <see cref="T:PolyBot.State.IStateStorage"/> scoped to the update currently being
+            routed; keys are resolved from the current update via <see cref="T:PolyBot.State.StateKeyResolver"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.IStateMachine.GetAsync``1(PolyBot.State.StateKey,System.Threading.CancellationToken)">
+            <summary>
+            Gets the current state for the resolved key, or <c>null</c> when there is no
+            current update, the key is unresolvable for it, or no state is stored.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.IStateMachine.SetAsync``1(``0,PolyBot.State.StateKey,System.Threading.CancellationToken)">
+            <summary>
+            Stores <paramref name="state"/> for the resolved key.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">
+            No current update or unresolvable key: silent state loss is worse than a visible
+            failure, so this throws instead of dropping the write.
+            </exception>
+        </member>
+        <member name="M:PolyBot.State.IStateMachine.ResetAsync``1(PolyBot.State.StateKey,System.Threading.CancellationToken)">
+            <summary>
+            Removes the stored state for the resolved key, if any.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">
+            No current update or unresolvable key: silent state loss is worse than a visible
+            failure, so this throws instead of dropping the reset.
+            </exception>
+        </member>
+        <member name="T:PolyBot.State.IStateStorage">
+            <summary>
+            Persistent storage for finite-state-machine states. Callers pass raw identity keys;
+            implementations namespace them internally so states of different enum types never
+            collide for the same raw key.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.IStateStorage.GetStateAsync``1(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Gets the state stored for <paramref name="key"/>, or <c>null</c> when none (or an expired one) is stored.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.IStateStorage.SetStateAsync``1(System.String,``0,System.Threading.CancellationToken)">
+            <summary>
+            Stores <paramref name="state"/> for <paramref name="key"/>, replacing any previously stored state.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.IStateStorage.ClearStateAsync``1(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Removes the state stored for <paramref name="key"/>, if any.
+            </summary>
+        </member>
+        <member name="T:PolyBot.State.IUpdateContextAccessor">
+            <summary>
+            Holds the <see cref="P:PolyBot.State.IUpdateContextAccessor.Update"/> currently being routed. Implemented with
+            <see cref="T:System.Threading.AsyncLocal`1"/> so the value flows through async handler
+            invocations of one update without leaking into concurrently processed updates.
+            </summary>
+        </member>
+        <member name="P:PolyBot.State.IUpdateContextAccessor.Update">
+            <summary>
+            The update currently being routed, or <c>null</c> outside of routing.
+            </summary>
+        </member>
+        <member name="T:PolyBot.State.MemoryStateStorage">
+            <summary>
+            In-memory <see cref="T:PolyBot.State.IStateStorage"/> keyed by (enum type, raw key) pairs so different
+            enums never collide; expired entries are removed on read, which then returns <c>null</c>.
+            </summary>
+            <remarks>
+            Process-local — meant for development and single-instance bots; register a custom
+            <see cref="T:PolyBot.State.IStateStorage"/> before <c>AddPolyBot</c> to override it.
+            </remarks>
+        </member>
+        <member name="M:PolyBot.State.MemoryStateStorage.#ctor(System.Nullable{System.TimeSpan})">
+            <param name="defaultExpiration">
+            Optional lifetime counted from the moment a state is written; <c>null</c> (default)
+            stores without expiration.
+            </param>
+        </member>
+        <member name="M:PolyBot.State.MemoryStateStorage.GetStateAsync``1(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.State.MemoryStateStorage.SetStateAsync``1(System.String,``0,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.State.MemoryStateStorage.ClearStateAsync``1(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:PolyBot.State.StateKey">
+            <summary>
+            Determines which identity of the current <see cref="T:Telegram.Bot.Types.Update"/> a
+            state key is resolved from (see <see cref="T:PolyBot.State.StateKeyResolver"/>).
+            </summary>
+        </member>
+        <member name="F:PolyBot.State.StateKey.UserId">
+            <summary>
+            The sending user's id; usable for most update types.
+            </summary>
+        </member>
+        <member name="F:PolyBot.State.StateKey.ChatId">
+            <summary>
+            The chat's id; usable for message-, callback- and chat-related update types.
+            </summary>
+        </member>
+        <member name="F:PolyBot.State.StateKey.UserInChat">
+            <summary>
+            Combined <c>"{chatId}_{userId}"</c> key;
+            requires both ids to be present.
+            </summary>
+        </member>
+        <member name="T:PolyBot.State.StateKeyResolver">
+            <summary>
+            Resolves state storage keys from the update being routed, delegating to the probe
+            chains in <see cref="T:PolyBot.Routing.UpdateExtensions"/>. Ids are formatted invariant-culture;
+            <see cref="F:PolyBot.State.StateKey.UserInChat"/> combines both ids and requires both to be present.
+            Updates with no resolvable identity (e.g. plain polls) resolve nothing.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.StateKeyResolver.TryResolveKey(Telegram.Bot.Types.Update,PolyBot.State.StateKey,System.String@)">
+            <summary>
+            Attempts to resolve a state key of type <paramref name="key"/> from
+            <paramref name="update"/>, returning <see cref="F:System.String.Empty"/> when nothing resolves.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.StateKeyResolver.TryResolveIds(Telegram.Bot.Types.Update,PolyBot.State.StateKey,System.Int64@,System.Int64@)">
+            <summary>
+            Resolves the raw ids behind a <see cref="T:PolyBot.State.StateKey"/> without formatting them — the
+            non-allocating counterpart of <see cref="M:PolyBot.State.StateKeyResolver.TryResolveKey(Telegram.Bot.Types.Update,PolyBot.State.StateKey,System.String@)"/>. A missing id is returned
+            as <c>0</c> (Telegram ids are positive, so 0 means "not part of the identity").
+            </summary>
+        </member>
+        <member name="T:PolyBot.State.StateMachine">
+            <summary>
+            Default <see cref="T:PolyBot.State.IStateMachine"/>: composes keys via <see cref="T:PolyBot.State.StateKeyResolver"/>
+            from the update held by an <see cref="T:PolyBot.State.IUpdateContextAccessor"/> and delegates storage to
+            an <see cref="T:PolyBot.State.IStateStorage"/>. Resolved key strings are cached per current update.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.StateMachine.#ctor(PolyBot.State.IStateStorage,PolyBot.State.IUpdateContextAccessor)">
+            <summary>
+            Creates the state machine over the given storage and accessor.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.StateMachine.GetAsync``1(PolyBot.State.StateKey,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.State.StateMachine.SetAsync``1(``0,PolyBot.State.StateKey,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:PolyBot.State.StateMachine.ResetAsync``1(PolyBot.State.StateKey,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:PolyBot.State.StateMachineExtensions">
+            <summary>
+            Convenience transitions over the ordered values of a state enum:
+            <see cref="M:PolyBot.State.StateMachineExtensions.AdvanceAsync``1(PolyBot.State.IStateMachine,PolyBot.State.StateKey,System.Threading.CancellationToken)"/> walks forward, <see cref="M:PolyBot.State.StateMachineExtensions.RollbackAsync``1(PolyBot.State.IStateMachine,PolyBot.State.StateKey,System.Threading.CancellationToken)"/> walks back.
+            </summary>
+        </member>
+        <member name="M:PolyBot.State.StateMachineExtensions.AdvanceAsync``1(PolyBot.State.IStateMachine,PolyBot.State.StateKey,System.Threading.CancellationToken)">
+            <summary>
+            Moves one step forward in the enum's declaration order: no state → first value →
+            next value; past the last value the stored key is cleared. Returns the resulting state.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">
+            No current update or unresolvable key (only when a write is required; reading a
+            missing state never throws).
+            </exception>
+        </member>
+        <member name="M:PolyBot.State.StateMachineExtensions.RollbackAsync``1(PolyBot.State.IStateMachine,PolyBot.State.StateKey,System.Threading.CancellationToken)">
+            <summary>
+            Moves one step back in the enum's declaration order: any value → previous value;
+            from the first value (or from no state — a no-op) the stored key is cleared.
+            Returns the resulting state.
+            </summary>
+            <exception cref="T:System.InvalidOperationException">
+            No current update or unresolvable key (only when a write is required; reading a
+            missing state never throws).
+            </exception>
+        </member>
+        <member name="T:PolyBot.State.UpdateContextAccessor">
+            <summary>
+            Default <see cref="T:PolyBot.State.IUpdateContextAccessor"/>: an <see cref="T:System.Threading.AsyncLocal`1"/>
+            slot assigned by the generated router before routing and cleared in a <c>finally</c> afterwards.
+            </summary>
+        </member>
+        <member name="P:PolyBot.State.UpdateContextAccessor.Update">
+            <inheritdoc />
+        </member>
+        <member name="T:PolyBot.UpdateMocker">
+            <summary>
+            Test-harness controller returned by <see cref="M:PolyBot.PolyBotClient.RunTest(System.Threading.CancellationToken)"/>: pushes synthetic
+            updates straight into the generated router — no Telegram polling. <see cref="P:PolyBot.UpdateMocker.BotClient"/>
+            exposes <c>SentRequests</c> for outgoing-request assertions.
+            </summary>
+        </member>
+        <member name="P:PolyBot.UpdateMocker.Services">
+            <summary>
+            The built service provider of the test host.
+            </summary>
+        </member>
+        <member name="P:PolyBot.UpdateMocker.BotClient">
+            <summary>
+            The in-memory bot client serving this harness.
+            </summary>
+        </member>
+        <member name="M:PolyBot.UpdateMocker.Update(Telegram.Bot.Types.Update,System.Threading.CancellationToken)">
+            <summary>
+            Pushes an arbitrary update into the router, assigning an id when unset.
+            </summary>
+        </member>
+        <member name="M:PolyBot.UpdateMocker.Message(System.String,System.Int64,System.Int64,System.Threading.CancellationToken)">
+            <summary>
+            Pushes a plain text message.
+            </summary>
+        </member>
+        <member name="M:PolyBot.UpdateMocker.Command(System.String,System.Int64,System.Int64,System.Threading.CancellationToken)">
+            <summary>
+            Pushes a bot-command message (leading '/' optional; the entity is created automatically).
+            </summary>
+        </member>
+        <member name="M:PolyBot.UpdateMocker.Callback(System.String,System.Int64,System.Threading.CancellationToken)">
+            <summary>
+            Pushes a callback query with the given data.
+            </summary>
+        </member>
+        <member name="M:PolyBot.UpdateMocker.InlineQuery(System.String,System.Int64,System.Threading.CancellationToken)">
+            <summary>
+            Pushes an inline query.
+            </summary>
+        </member>
+        <member name="T:PolyBot.MessageFilter">
+            <summary>
+            Base filter for updates carrying a <c>Message</c> payload. Covers update type(s): Message, EditedMessage, ChannelPost, EditedChannelPost, BusinessMessage, EditedBusinessMessage, GuestMessage.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MessageFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>Message</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MessageFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>Message</c> payload, probing in Update property order: Message, EditedMessage, ChannelPost, EditedChannelPost, BusinessMessage, EditedBusinessMessage, GuestMessage.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MessageFilter.CanPass(Telegram.Bot.Types.Message)">
+            <summary>
+            Tests the extracted <c>Message</c> payload. Covers update type(s): Message, EditedMessage, ChannelPost, EditedChannelPost, BusinessMessage, EditedBusinessMessage, GuestMessage.
+            </summary>
+        </member>
+        <member name="T:PolyBot.EditedMessageFilter">
+            <summary>
+            Narrows <c>MessageFilter</c> to <c>UpdateType.EditedMessage</c> updates only (extraction: <c>update.EditedMessage</c>).
+            </summary>
+        </member>
+        <member name="M:PolyBot.EditedMessageFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Narrows extraction to <c>update.EditedMessage</c> only.
+            </summary>
+        </member>
+        <member name="T:PolyBot.ChannelPostFilter">
+            <summary>
+            Narrows <c>MessageFilter</c> to <c>UpdateType.ChannelPost</c> updates only (extraction: <c>update.ChannelPost</c>).
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChannelPostFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Narrows extraction to <c>update.ChannelPost</c> only.
+            </summary>
+        </member>
+        <member name="T:PolyBot.EditedChannelPostFilter">
+            <summary>
+            Narrows <c>MessageFilter</c> to <c>UpdateType.EditedChannelPost</c> updates only (extraction: <c>update.EditedChannelPost</c>).
+            </summary>
+        </member>
+        <member name="M:PolyBot.EditedChannelPostFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Narrows extraction to <c>update.EditedChannelPost</c> only.
+            </summary>
+        </member>
+        <member name="T:PolyBot.BusinessMessageFilter">
+            <summary>
+            Narrows <c>MessageFilter</c> to <c>UpdateType.BusinessMessage</c> updates only (extraction: <c>update.BusinessMessage</c>).
+            </summary>
+        </member>
+        <member name="M:PolyBot.BusinessMessageFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Narrows extraction to <c>update.BusinessMessage</c> only.
+            </summary>
+        </member>
+        <member name="T:PolyBot.EditedBusinessMessageFilter">
+            <summary>
+            Narrows <c>MessageFilter</c> to <c>UpdateType.EditedBusinessMessage</c> updates only (extraction: <c>update.EditedBusinessMessage</c>).
+            </summary>
+        </member>
+        <member name="M:PolyBot.EditedBusinessMessageFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Narrows extraction to <c>update.EditedBusinessMessage</c> only.
+            </summary>
+        </member>
+        <member name="T:PolyBot.GuestMessageFilter">
+            <summary>
+            Narrows <c>MessageFilter</c> to <c>UpdateType.GuestMessage</c> updates only (extraction: <c>update.GuestMessage</c>).
+            </summary>
+        </member>
+        <member name="M:PolyBot.GuestMessageFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Narrows extraction to <c>update.GuestMessage</c> only.
+            </summary>
+        </member>
+        <member name="T:PolyBot.InlineQueryFilter">
+            <summary>
+            Base filter for updates carrying a <c>InlineQuery</c> payload. Covers update type(s): InlineQuery.
+            </summary>
+        </member>
+        <member name="M:PolyBot.InlineQueryFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>InlineQuery</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.InlineQueryFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>InlineQuery</c> payload, probing in Update property order: InlineQuery.
+            </summary>
+        </member>
+        <member name="M:PolyBot.InlineQueryFilter.CanPass(Telegram.Bot.Types.InlineQuery)">
+            <summary>
+            Tests the extracted <c>InlineQuery</c> payload. Covers update type(s): InlineQuery.
+            </summary>
+        </member>
+        <member name="T:PolyBot.ChosenInlineResultFilter">
+            <summary>
+            Base filter for updates carrying a <c>ChosenInlineResult</c> payload. Covers update type(s): ChosenInlineResult.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChosenInlineResultFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>ChosenInlineResult</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChosenInlineResultFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>ChosenInlineResult</c> payload, probing in Update property order: ChosenInlineResult.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChosenInlineResultFilter.CanPass(Telegram.Bot.Types.ChosenInlineResult)">
+            <summary>
+            Tests the extracted <c>ChosenInlineResult</c> payload. Covers update type(s): ChosenInlineResult.
+            </summary>
+        </member>
+        <member name="T:PolyBot.CallbackQueryFilter">
+            <summary>
+            Base filter for updates carrying a <c>CallbackQuery</c> payload. Covers update type(s): CallbackQuery.
+            </summary>
+        </member>
+        <member name="M:PolyBot.CallbackQueryFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>CallbackQuery</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.CallbackQueryFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>CallbackQuery</c> payload, probing in Update property order: CallbackQuery.
+            </summary>
+        </member>
+        <member name="M:PolyBot.CallbackQueryFilter.CanPass(Telegram.Bot.Types.CallbackQuery)">
+            <summary>
+            Tests the extracted <c>CallbackQuery</c> payload. Covers update type(s): CallbackQuery.
+            </summary>
+        </member>
+        <member name="T:PolyBot.ShippingQueryFilter">
+            <summary>
+            Base filter for updates carrying a <c>ShippingQuery</c> payload. Covers update type(s): ShippingQuery.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ShippingQueryFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>ShippingQuery</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ShippingQueryFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>ShippingQuery</c> payload, probing in Update property order: ShippingQuery.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ShippingQueryFilter.CanPass(Telegram.Bot.Types.Payments.ShippingQuery)">
+            <summary>
+            Tests the extracted <c>ShippingQuery</c> payload. Covers update type(s): ShippingQuery.
+            </summary>
+        </member>
+        <member name="T:PolyBot.PreCheckoutQueryFilter">
+            <summary>
+            Base filter for updates carrying a <c>PreCheckoutQuery</c> payload. Covers update type(s): PreCheckoutQuery.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PreCheckoutQueryFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>PreCheckoutQuery</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PreCheckoutQueryFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>PreCheckoutQuery</c> payload, probing in Update property order: PreCheckoutQuery.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PreCheckoutQueryFilter.CanPass(Telegram.Bot.Types.Payments.PreCheckoutQuery)">
+            <summary>
+            Tests the extracted <c>PreCheckoutQuery</c> payload. Covers update type(s): PreCheckoutQuery.
+            </summary>
+        </member>
+        <member name="T:PolyBot.PollFilter">
+            <summary>
+            Base filter for updates carrying a <c>Poll</c> payload. Covers update type(s): Poll.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PollFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>Poll</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PollFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>Poll</c> payload, probing in Update property order: Poll.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PollFilter.CanPass(Telegram.Bot.Types.Poll)">
+            <summary>
+            Tests the extracted <c>Poll</c> payload. Covers update type(s): Poll.
+            </summary>
+        </member>
+        <member name="T:PolyBot.PollAnswerFilter">
+            <summary>
+            Base filter for updates carrying a <c>PollAnswer</c> payload. Covers update type(s): PollAnswer.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PollAnswerFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>PollAnswer</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PollAnswerFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>PollAnswer</c> payload, probing in Update property order: PollAnswer.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PollAnswerFilter.CanPass(Telegram.Bot.Types.PollAnswer)">
+            <summary>
+            Tests the extracted <c>PollAnswer</c> payload. Covers update type(s): PollAnswer.
+            </summary>
+        </member>
+        <member name="T:PolyBot.MyChatMemberFilter">
+            <summary>
+            Base filter for updates carrying a <c>ChatMemberUpdated</c> payload. Covers update type(s): MyChatMember, ChatMember.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MyChatMemberFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>ChatMemberUpdated</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MyChatMemberFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>ChatMemberUpdated</c> payload, probing in Update property order: MyChatMember, ChatMember.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MyChatMemberFilter.CanPass(Telegram.Bot.Types.ChatMemberUpdated)">
+            <summary>
+            Tests the extracted <c>ChatMemberUpdated</c> payload. Covers update type(s): MyChatMember, ChatMember.
+            </summary>
+        </member>
+        <member name="T:PolyBot.ChatMemberFilter">
+            <summary>
+            Narrows <c>MyChatMemberFilter</c> to <c>UpdateType.ChatMember</c> updates only (extraction: <c>update.ChatMember</c>).
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChatMemberFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Narrows extraction to <c>update.ChatMember</c> only.
+            </summary>
+        </member>
+        <member name="T:PolyBot.ChatJoinRequestFilter">
+            <summary>
+            Base filter for updates carrying a <c>ChatJoinRequest</c> payload. Covers update type(s): ChatJoinRequest.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChatJoinRequestFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>ChatJoinRequest</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChatJoinRequestFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>ChatJoinRequest</c> payload, probing in Update property order: ChatJoinRequest.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChatJoinRequestFilter.CanPass(Telegram.Bot.Types.ChatJoinRequest)">
+            <summary>
+            Tests the extracted <c>ChatJoinRequest</c> payload. Covers update type(s): ChatJoinRequest.
+            </summary>
+        </member>
+        <member name="T:PolyBot.MessageReactionFilter">
+            <summary>
+            Base filter for updates carrying a <c>MessageReactionUpdated</c> payload. Covers update type(s): MessageReaction.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MessageReactionFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>MessageReactionUpdated</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MessageReactionFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>MessageReactionUpdated</c> payload, probing in Update property order: MessageReaction.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MessageReactionFilter.CanPass(Telegram.Bot.Types.MessageReactionUpdated)">
+            <summary>
+            Tests the extracted <c>MessageReactionUpdated</c> payload. Covers update type(s): MessageReaction.
+            </summary>
+        </member>
+        <member name="T:PolyBot.MessageReactionCountFilter">
+            <summary>
+            Base filter for updates carrying a <c>MessageReactionCountUpdated</c> payload. Covers update type(s): MessageReactionCount.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MessageReactionCountFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>MessageReactionCountUpdated</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MessageReactionCountFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>MessageReactionCountUpdated</c> payload, probing in Update property order: MessageReactionCount.
+            </summary>
+        </member>
+        <member name="M:PolyBot.MessageReactionCountFilter.CanPass(Telegram.Bot.Types.MessageReactionCountUpdated)">
+            <summary>
+            Tests the extracted <c>MessageReactionCountUpdated</c> payload. Covers update type(s): MessageReactionCount.
+            </summary>
+        </member>
+        <member name="T:PolyBot.ChatBoostFilter">
+            <summary>
+            Base filter for updates carrying a <c>ChatBoostUpdated</c> payload. Covers update type(s): ChatBoost.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChatBoostFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>ChatBoostUpdated</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChatBoostFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>ChatBoostUpdated</c> payload, probing in Update property order: ChatBoost.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ChatBoostFilter.CanPass(Telegram.Bot.Types.ChatBoostUpdated)">
+            <summary>
+            Tests the extracted <c>ChatBoostUpdated</c> payload. Covers update type(s): ChatBoost.
+            </summary>
+        </member>
+        <member name="T:PolyBot.RemovedChatBoostFilter">
+            <summary>
+            Base filter for updates carrying a <c>ChatBoostRemoved</c> payload. Covers update type(s): RemovedChatBoost.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RemovedChatBoostFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>ChatBoostRemoved</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RemovedChatBoostFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>ChatBoostRemoved</c> payload, probing in Update property order: RemovedChatBoost.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RemovedChatBoostFilter.CanPass(Telegram.Bot.Types.ChatBoostRemoved)">
+            <summary>
+            Tests the extracted <c>ChatBoostRemoved</c> payload. Covers update type(s): RemovedChatBoost.
+            </summary>
+        </member>
+        <member name="T:PolyBot.BusinessConnectionFilter">
+            <summary>
+            Base filter for updates carrying a <c>BusinessConnection</c> payload. Covers update type(s): BusinessConnection.
+            </summary>
+        </member>
+        <member name="M:PolyBot.BusinessConnectionFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>BusinessConnection</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.BusinessConnectionFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>BusinessConnection</c> payload, probing in Update property order: BusinessConnection.
+            </summary>
+        </member>
+        <member name="M:PolyBot.BusinessConnectionFilter.CanPass(Telegram.Bot.Types.BusinessConnection)">
+            <summary>
+            Tests the extracted <c>BusinessConnection</c> payload. Covers update type(s): BusinessConnection.
+            </summary>
+        </member>
+        <member name="T:PolyBot.DeletedBusinessMessagesFilter">
+            <summary>
+            Base filter for updates carrying a <c>BusinessMessagesDeleted</c> payload. Covers update type(s): DeletedBusinessMessages.
+            </summary>
+        </member>
+        <member name="M:PolyBot.DeletedBusinessMessagesFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>BusinessMessagesDeleted</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.DeletedBusinessMessagesFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>BusinessMessagesDeleted</c> payload, probing in Update property order: DeletedBusinessMessages.
+            </summary>
+        </member>
+        <member name="M:PolyBot.DeletedBusinessMessagesFilter.CanPass(Telegram.Bot.Types.BusinessMessagesDeleted)">
+            <summary>
+            Tests the extracted <c>BusinessMessagesDeleted</c> payload. Covers update type(s): DeletedBusinessMessages.
+            </summary>
+        </member>
+        <member name="T:PolyBot.PurchasedPaidMediaFilter">
+            <summary>
+            Base filter for updates carrying a <c>PaidMediaPurchased</c> payload. Covers update type(s): PurchasedPaidMedia.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PurchasedPaidMediaFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>PaidMediaPurchased</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PurchasedPaidMediaFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>PaidMediaPurchased</c> payload, probing in Update property order: PurchasedPaidMedia.
+            </summary>
+        </member>
+        <member name="M:PolyBot.PurchasedPaidMediaFilter.CanPass(Telegram.Bot.Types.Payments.PaidMediaPurchased)">
+            <summary>
+            Tests the extracted <c>PaidMediaPurchased</c> payload. Covers update type(s): PurchasedPaidMedia.
+            </summary>
+        </member>
+        <member name="T:PolyBot.ManagedBotFilter">
+            <summary>
+            Base filter for updates carrying a <c>ManagedBotUpdated</c> payload. Covers update type(s): ManagedBot.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ManagedBotFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>ManagedBotUpdated</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ManagedBotFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>ManagedBotUpdated</c> payload, probing in Update property order: ManagedBot.
+            </summary>
+        </member>
+        <member name="M:PolyBot.ManagedBotFilter.CanPass(Telegram.Bot.Types.ManagedBotUpdated)">
+            <summary>
+            Tests the extracted <c>ManagedBotUpdated</c> payload. Covers update type(s): ManagedBot.
+            </summary>
+        </member>
+        <member name="T:PolyBot.SubscriptionFilter">
+            <summary>
+            Base filter for updates carrying a <c>BotSubscriptionUpdated</c> payload. Covers update type(s): Subscription.
+            </summary>
+        </member>
+        <member name="M:PolyBot.SubscriptionFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>BotSubscriptionUpdated</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.SubscriptionFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>BotSubscriptionUpdated</c> payload, probing in Update property order: Subscription.
+            </summary>
+        </member>
+        <member name="M:PolyBot.SubscriptionFilter.CanPass(Telegram.Bot.Types.BotSubscriptionUpdated)">
+            <summary>
+            Tests the extracted <c>BotSubscriptionUpdated</c> payload. Covers update type(s): Subscription.
+            </summary>
+        </member>
+        <member name="T:PolyBot.StoppedMessageGenerationFilter">
+            <summary>
+            Base filter for updates carrying a <c>MessageGenerationStopped</c> payload. Covers update type(s): StoppedMessageGeneration.
+            </summary>
+        </member>
+        <member name="M:PolyBot.StoppedMessageGenerationFilter.CanPass(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the update's <c>MessageGenerationStopped</c> payload (first match wins) and tests it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.StoppedMessageGenerationFilter.Extract(Telegram.Bot.Types.Update)">
+            <summary>
+            Extracts the first <c>MessageGenerationStopped</c> payload, probing in Update property order: StoppedMessageGeneration.
+            </summary>
+        </member>
+        <member name="M:PolyBot.StoppedMessageGenerationFilter.CanPass(Telegram.Bot.Types.MessageGenerationStopped)">
+            <summary>
+            Tests the extracted <c>MessageGenerationStopped</c> payload. Covers update type(s): StoppedMessageGeneration.
+            </summary>
+        </member>
+        <member name="T:Microsoft.CodeAnalysis.EmbeddedAttribute">
+            <summary>
+            A special attribute recognized by Roslyn, that marks a type as "embedded", meaning it won't ever be visible from other assemblies.
+            </summary>
+        </member>
+    </members>
+</doc>
