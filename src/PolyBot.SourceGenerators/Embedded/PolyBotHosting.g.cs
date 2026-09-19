@@ -23,17 +23,15 @@ public sealed class PolyBotPollingHostedService : global::Microsoft.Extensions.H
         _receiverOptions = receiverOptions ?? new global::Telegram.Bot.Polling.ReceiverOptions();
     }
 
-    public global::System.Threading.Tasks.Task StartAsync(global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task StartAsync(global::System.Threading.CancellationToken cancellationToken)
     {
-        _pollingTask = global::System.Threading.Tasks.Task.Run(PollAsync, global::System.Threading.CancellationToken.None);
-
         global::Telegram.Bot.Types.User me = await global::Telegram.Bot.TelegramBotClientExtensions.GetMe(_botClient!, cancellationToken).ConfigureAwait(false);
         if (!string.IsNullOrEmpty(me.Username))
         {
             _options.BotUsername = me.Username;
         }
 
-        return global::System.Threading.Tasks.Task.CompletedTask;
+        _pollingTask = global::System.Threading.Tasks.Task.Run(PollAsync, global::System.Threading.CancellationToken.None);
     }
 
     public async global::System.Threading.Tasks.Task StopAsync(global::System.Threading.CancellationToken cancellationToken)
@@ -71,7 +69,7 @@ public static class PolyBotHostingExtensions
         }
 
         global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton(services, receiverOptions);
-        global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::Microsoft.Extensions.Hosting.IHostedService>(services, static (global::System.IServiceProvider sp) => new global::PolyBot.PolyBotPollingHostedService(global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.ITelegramBotClient>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.Polling.IUpdateHandler>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::Telegram.Bot.Polling.ReceiverOptions>(sp)));
+        global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::Microsoft.Extensions.Hosting.IHostedService>(services, static (global::System.IServiceProvider sp) => new global::PolyBot.PolyBotPollingHostedService(global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.ITelegramBotClient>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::PolyBot.PolyBotOptions>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.Polling.IUpdateHandler>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::Telegram.Bot.Polling.ReceiverOptions>(sp)));
         return services;
     }
 }

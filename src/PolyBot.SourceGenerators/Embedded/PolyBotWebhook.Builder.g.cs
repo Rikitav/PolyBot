@@ -25,13 +25,13 @@ public sealed class PolyBotWebhookHostedService : global::Microsoft.Extensions.H
             throw new global::System.InvalidOperationException("PolyBotOptions.WebhookUrl must be set to an absolute HTTPS URL to receive webhook updates.");
         }
 
-        await global::Telegram.Bot.TelegramBotClientExtensions.SetWebhook(_botClient, _options.WebhookUrl, null, null, _options.WebhookMaxConnections, _options.AllowedUpdates, _options.DropPendingUpdates, _options.WebhookSecretToken, cancellationToken).ConfigureAwait(false);
-
         global::Telegram.Bot.Types.User me = await global::Telegram.Bot.TelegramBotClientExtensions.GetMe(_botClient!, cancellationToken).ConfigureAwait(false);
         if (!string.IsNullOrEmpty(me.Username))
         {
             _options.BotUsername = me.Username;
         }
+
+        await global::Telegram.Bot.TelegramBotClientExtensions.SetWebhook(_botClient, _options.WebhookUrl, null, null, _options.WebhookMaxConnections, _options.AllowedUpdates, _options.DropPendingUpdates, _options.WebhookSecretToken, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task StopAsync(global::System.Threading.CancellationToken cancellationToken)
