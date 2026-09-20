@@ -128,6 +128,7 @@ public sealed class UpdateAwaiterBuilder<TUpdate>
         TaskCompletionSource<object?> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         UpdateAwaiter.PendingAwait pending = new UpdateAwaiter.PendingAwait(
             typeof(TUpdate), _patterns.ToArray(), _filterTypes.ToArray(), _hasWhere, tcs, new CancellationTokenSource());
+
         _engine.RegisterAwait(identity, _timeout, pending);
         if (!ct.CanBeCanceled)
         {
