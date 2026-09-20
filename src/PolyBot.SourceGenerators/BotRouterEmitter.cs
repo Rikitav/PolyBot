@@ -893,7 +893,7 @@ internal static class BotRouterEmitter
             else if (handler.NoArgs)
             {
                 statements.Add(SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(
-                    $"global::PolyBot.Commands.CommandHelper.ParseArgs({payloadVar}.Text!, {cmdLenVar}, global::System.Array.Empty<global::PolyBot.Commands.ArgSpec>(), true, global::System.Array.Empty<string?>())")));
+                    $"global::PolyBot.Commands.CommandHelper.ParseArgs({payloadVar}, {cmdLenVar}, global::System.Array.Empty<global::PolyBot.Commands.ArgSpec>(), true, global::System.Array.Empty<string?>())")));
             }
 
             return statements;
@@ -937,7 +937,7 @@ internal static class BotRouterEmitter
             expression: SyntaxFactory.ParseExpression("global::PolyBot.Commands.CommandHelper.ParseArgs"),
             argumentList: SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(new[]
             {
-                SyntaxFactory.Argument(SyntaxFactory.ParseExpression($"{payloadVar}.Text!")),
+                SyntaxFactory.Argument(SyntaxFactory.ParseExpression(payloadVar)),
                 SyntaxFactory.Argument(SyntaxFactory.IdentifierName(cmdLenVar)),
                 SyntaxFactory.Argument(specsArray),
                 SyntaxFactory.Argument(BoolLiteral(handler.NoArgs)),
@@ -994,6 +994,7 @@ internal static class BotRouterEmitter
             return new List<StatementSyntax>
             {
                 SyntaxFactory.ExpressionStatement(SyntaxFactory.AwaitExpression(invocation)),
+                SyntaxFactory.ReturnStatement(),
             };
         }
 
@@ -1030,6 +1031,7 @@ internal static class BotRouterEmitter
                     condition: SyntaxFactory.ParseExpression($"!{taskVar}.IsCompleted"),
                     statement: SyntaxFactory.Block(SyntaxFactory.ReturnStatement())),
                 SyntaxFactory.ExpressionStatement(SyntaxFactory.AwaitExpression(SyntaxFactory.ParseExpression(taskVar))),
+                SyntaxFactory.ReturnStatement(),
             };
         }
 

@@ -111,8 +111,8 @@ public static class CommandHelper
     /// Parses the whitespace-separated tokens that follow a command into values for the
     /// given argument specifications.
     /// </summary>
-    /// <param name="text">The full message text.</param>
-    /// <param name="argsStartIndex">The index in <paramref name="text"/> where the arguments begin.</param>
+    /// <param name="message">The original message that carried the command.</param>
+    /// <param name="argsStartIndex">The index in <see cref="Message.Text"/> where the arguments begin.</param>
     /// <param name="specs">The argument specifications, one per declared handler argument.</param>
     /// <param name="noArgs">
     /// When <c>true</c>, any token after the command throws a
@@ -134,13 +134,14 @@ public static class CommandHelper
     /// required argument is missing, when a token cannot be parsed into its type, or when
     /// a <c>[Parse]</c> pattern does not match the remaining text.
     /// </exception>
-    public static object?[] ParseArgs(string text, int argsStartIndex, ArgSpec[] specs, bool noArgs, string?[] tailPatterns)
+    public static object?[] ParseArgs(Message message, int argsStartIndex, ArgSpec[] specs, bool noArgs, string?[] tailPatterns)
     {
+        string text = message.Text ?? string.Empty;
         string argsText = text.Substring(argsStartIndex);
         string[] tokens = argsText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         if (noArgs && tailPatterns.Length == 0 && tokens.Length > 0)
         {
-            throw new CommandArgsParseException("found unwanted arguments", null, text);
+            throw new CommandArgsParseException("found unwanted arguments", null, message);
         }
 
         object?[] values = new object?[specs.Length + tailPatterns.Length];
@@ -151,14 +152,14 @@ public static class CommandHelper
             {
                 if (!spec.IsOptional)
                 {
-                    throw new CommandArgsParseException($"missing required argument '{spec.Name}'", spec.Name, text);
+                    throw new CommandArgsParseException($"missing required argument '{spec.Name}'", spec.Name, message);
                 }
 
                 values[i] = spec.Type.IsValueType ? Activator.CreateInstance(spec.Type) : null;
                 continue;
             }
 
-            values[i] = ParseToken(tokens[i], spec, text);
+            values[i] = ParseToken(tokens[i], spec, message);
         }
 
         if (tailPatterns.Length > 0)
@@ -180,7 +181,7 @@ public static class CommandHelper
                     throw new CommandArgsParseException(
                         $"rest \"{remaining}\" does not match pattern \"{pattern}\"",
                         null,
-                        text);
+                        message);
                 }
 
                 values[specs.Length + t] = match.Groups.Count > 1 ? match.Groups[1].Value : match.Value;
@@ -289,7 +290,7 @@ public static class CommandHelper
         return true;
     }
 
-    private static object ParseToken(string token, ArgSpec spec, string commandText)
+    private static object ParseToken(string token, ArgSpec spec, Message sourceMessage)
     {
         Type type = spec.Type;
         Type? underlyingType = Nullable.GetUnderlyingType(type);
@@ -310,7 +311,7 @@ public static class CommandHelper
                 return boolValue;
             }
 
-            throw CannotParse(token, spec, type, commandText);
+            throw CannotParse(token, spec, type, sourceMessage);
         }
 
         if (type.IsEnum)
@@ -328,7 +329,7 @@ public static class CommandHelper
                 return Enum.ToObject(type, numericEnumValue);
             }
 
-            throw CannotParse(token, spec, type, commandText);
+            throw CannotParse(token, spec, type, sourceMessage);
         }
 
         if (TryParseNumeric(token, type, out object? numericValue))
@@ -345,16 +346,16 @@ public static class CommandHelper
             }
             catch (Exception ex)
             {
-                throw new CommandArgsParseException(CannotParseMessage(token, spec, type), spec.Name, commandText, ex);
+                throw new CommandArgsParseException(CannotParseMessage(token, spec, type), spec.Name, sourceMessage, ex);
             }
         }
 
-        throw CannotParse(token, spec, type, commandText);
+        throw CannotParse(token, spec, type, sourceMessage);
     }
 
-    private static CommandArgsParseException CannotParse(string token, ArgSpec spec, Type type, string commandText)
+    private static CommandArgsParseException CannotParse(string token, ArgSpec spec, Type type, Message sourceMessage)
     {
-        return new CommandArgsParseException(CannotParseMessage(token, spec, type), spec.Name, commandText);
+        return new CommandArgsParseException(CannotParseMessage(token, spec, type), spec.Name, sourceMessage);
     }
 
     private static string CannotParseMessage(string token, ArgSpec spec, Type type)

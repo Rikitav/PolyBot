@@ -118,7 +118,7 @@ public sealed partial class TestHandlers
         return Result.StopRouting;
     }
 
-    [MessageHandler]
+    [MessageHandler(Priority = -2)]
     [Command(Aliases = ["start"], Description = "Запустить бота", LanguageCode = "ru")]
     public static async Task<Result> StartRuHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
     {
@@ -126,7 +126,7 @@ public sealed partial class TestHandlers
         return Result.Handled();
     }
 
-    [MessageHandler(Priority = 0)]
+    [MessageHandler(Priority = -100)]
     public static async Task<Result> EchoHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
     {
         await bot.SendMessage(msg.Chat.Id, $"echo:{msg.Text}", cancellationToken: ct);
@@ -314,7 +314,7 @@ public sealed partial class TestHandlers
         return Result.Handled();
     }
 
-    [MessageHandler(Priority = -3)]
+    [MessageHandler(Priority = -50)]
     [Command(Aliases = ["boom"], IsHidden = true)]
     public static Task<Result> BoomHandler(Message msg)
     {
@@ -329,7 +329,7 @@ public sealed partial class TestHandlers
         return Result.Handled();
     }
 
-    [CallbackQueryHandler]
+    [CallbackQueryHandler(Priority = -100)]
     public static async Task<Result> OnCallback(CallbackQuery query, ITelegramBotClient bot, CancellationToken ct)
     {
         await bot.AnswerCallbackQuery(query.Id, cancellationToken: ct);

@@ -1,3 +1,5 @@
+using Telegram.Bot.Types;
+
 namespace PolyBot.Commands;
 
 /// <summary>
@@ -16,23 +18,38 @@ public sealed class CommandArgsParseException : Exception
     }
 
     /// <summary>
-    /// Creates the exception with an error message.
+    /// Creates the exception with an error message and the original
+    /// <see cref="Telegram.Bot.Types.Message"/> DTO.
     /// </summary>
-    public CommandArgsParseException(string message, string? argumentName, string commandText)
+    public CommandArgsParseException(string message, Message sourceMessage)
         : base(message)
     {
-        ArgumentName = argumentName;
-        CommandText = commandText;
+        SourceMessage = sourceMessage;
+        CommandText = sourceMessage.Text ?? string.Empty;
     }
 
     /// <summary>
-    /// Creates the exception with an error message and an underlying parse error.
+    /// Creates the exception with an error message, argument name, and the original
+    /// <see cref="Telegram.Bot.Types.Message"/> DTO.
     /// </summary>
-    public CommandArgsParseException(string message, string? argumentName, string commandText, Exception? innerException)
+    public CommandArgsParseException(string message, string? argumentName, Message sourceMessage)
+        : base(message)
+    {
+        ArgumentName = argumentName;
+        SourceMessage = sourceMessage;
+        CommandText = sourceMessage.Text ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Creates the exception with an error message, argument name, the original
+    /// <see cref="Telegram.Bot.Types.Message"/> DTO, and an underlying parse error.
+    /// </summary>
+    public CommandArgsParseException(string message, string? argumentName, Message sourceMessage, Exception? innerException)
         : base(message, innerException)
     {
         ArgumentName = argumentName;
-        CommandText = commandText;
+        SourceMessage = sourceMessage;
+        CommandText = sourceMessage.Text ?? string.Empty;
     }
 
     /// <summary>
@@ -45,4 +62,9 @@ public sealed class CommandArgsParseException : Exception
     /// The full text of the message that carried the command.
     /// </summary>
     public string CommandText { get; }
+
+    /// <summary>
+    /// The original <see cref="Telegram.Bot.Types.Message"/> DTO that carried the command.
+    /// </summary>
+    public Message? SourceMessage { get; }
 }

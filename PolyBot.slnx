@@ -5,6 +5,8 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/samples/">
+    <Project Path="samples/CommandBot/CommandBot.csproj" />
+    <Project Path="samples/ConversationBot/ConversationBot.csproj" />
     <Project Path="samples/EchoBot/EchoBot.csproj" />
   </Folder>
   <Folder Name="/src/">

@@ -13,7 +13,7 @@ The PolyBot source generator reports diagnostics as standard Roslyn compiler mes
 <Accordion title="CUR001 — Unsupported handler signature (Warning)">
 **Trigger:** A method decorated with a `[XxxHandler]` attribute returns something other than `Task<Result>`, `ValueTask<Result>`, `Task`, or `ValueTask`.
 
-**Fix:** Change the return type to one of the four supported types. `Task`/`ValueTask` (non-generic) always continues routing; `Task<Result>`/`ValueTask<Result>` lets you control routing with `Result.StopRouting` / `Result.ContinueRouting`.
+**Fix:** Change the return type to one of the four supported types. `Task`/`ValueTask` (non-generic) stop routing after the handler completes; `Task<Result>`/`ValueTask<Result>` let you control routing with `Result.StopRouting` / `Result.ContinueRouting`.
 
 ```csharp
 // ❌ CUR001 — wrong return type

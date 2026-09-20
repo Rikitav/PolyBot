@@ -26,10 +26,10 @@ public static async Task<Result> EchoHandler(Message msg, ITelegramBotClient bot
 }
 ```
 
-Returning plain `Task` or `ValueTask` (without `Result`) always continues routing — the generator treats the absence of a result value as an implicit `Result.Continue`.
+Returning plain `Task` or `ValueTask` (without `Result`) stops routing after the handler completes — the generator treats the absence of a result value as an implicit `Result.StopRouting`.
 
 <Note>
-A handler whose return type does not match any of these four forms is skipped and reported as diagnostic **`CUR001`** (warning). Always use `Task<Result>`, `ValueTask<Result>`, `Task`, or `ValueTask`.
+A handler whose return type does not match any of these four forms is skipped and reported as diagnostic **`CUR001`** (warning). Always use `Task<Result>`, `ValueTask<Result>`, `Task`, or `ValueTask`. Plain `Task`/`ValueTask` stop routing; use `Task<Result>`/`ValueTask<Result>` with `Result.Continue` when you need fall-through behavior.
 </Note>
 
 ## The `HandlerAttribute` base class

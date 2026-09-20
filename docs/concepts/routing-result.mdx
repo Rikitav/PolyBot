@@ -77,20 +77,20 @@ public static async Task<Result> ButtonHandler(CallbackQuery query, ITelegramBot
 
 ## Returning `Task` / `ValueTask` without `Result`
 
-A handler that returns plain `Task` or `ValueTask` (no type parameter) implicitly continues routing. The router treats the absence of a result value as `Result.Continue`:
+A handler that returns plain `Task` or `ValueTask` (no type parameter) implicitly stops routing. The router treats the absence of a result value as `Result.StopRouting`:
 
 ```csharp
-// Continues routing automatically — no Result needed
+// Stops routing automatically — no Result needed
 [MessageHandler]
 public static async Task AuditHandler(Message msg, IAuditService audit)
 {
     await audit.RecordAsync(msg);
-    // Implicitly continues to the next handler
+    // Implicitly ends the routing chain
 }
 ```
 
 <Note>
-`Task`/`ValueTask` without `Result` is useful for side-effect handlers (auditing, metrics) that should never interrupt the main routing flow, regardless of future refactoring.
+`Task`/`ValueTask` without `Result` is useful for handlers that fully consume the update. If you need fall-through behavior, return `Task<Result>`/`ValueTask<Result>` and use `Result.Continue`.
 </Note>
 
 ## Multi-handler routing walkthrough

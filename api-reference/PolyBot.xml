@@ -200,7 +200,7 @@
             <remarks>
             The pattern is scanned, not anchored: text before the match is skipped and claimed. With no
             capturing groups the whole match is bound; with one or more, <c>Groups[1].Value</c> is bound.
-            No match throws a <see cref="T:PolyBot.Commands.CommandArgsParseException"/> from <see cref="M:PolyBot.Commands.CommandHelper.ParseArgs(System.String,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])"/>.
+            No match throws a <see cref="T:PolyBot.Commands.CommandArgsParseException"/> from <see cref="M:PolyBot.Commands.CommandHelper.ParseArgs(Telegram.Bot.Types.Message,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])"/>.
             </remarks>
         </member>
         <member name="M:PolyBot.Attributes.ParseAttribute.#ctor(System.String)">
@@ -726,7 +726,7 @@
         </member>
         <member name="T:PolyBot.Commands.ArgSpec">
             <summary>
-            Describes one command argument for <see cref="M:PolyBot.Commands.CommandHelper.ParseArgs(System.String,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])"/>: type, name,
+            Describes one command argument for <see cref="M:PolyBot.Commands.CommandHelper.ParseArgs(Telegram.Bot.Types.Message,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])"/>: type, name,
             and whether it may be omitted.
             </summary>
         </member>
@@ -753,7 +753,7 @@
         </member>
         <member name="T:PolyBot.Commands.CommandArgsParseException">
             <summary>
-            Thrown by <see cref="M:PolyBot.Commands.CommandHelper.ParseArgs(System.String,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])"/> when the tokens following a command
+            Thrown by <see cref="M:PolyBot.Commands.CommandHelper.ParseArgs(Telegram.Bot.Types.Message,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])"/> when the tokens following a command
             cannot be bound to the handler's argument specifications.
             </summary>
         </member>
@@ -762,14 +762,22 @@
             Creates the exception with an error message.
             </summary>
         </member>
-        <member name="M:PolyBot.Commands.CommandArgsParseException.#ctor(System.String,System.String,System.String)">
+        <member name="M:PolyBot.Commands.CommandArgsParseException.#ctor(System.String,Telegram.Bot.Types.Message)">
             <summary>
-            Creates the exception with an error message.
+            Creates the exception with an error message and the original
+            <see cref="T:Telegram.Bot.Types.Message"/> DTO.
             </summary>
         </member>
-        <member name="M:PolyBot.Commands.CommandArgsParseException.#ctor(System.String,System.String,System.String,System.Exception)">
+        <member name="M:PolyBot.Commands.CommandArgsParseException.#ctor(System.String,System.String,Telegram.Bot.Types.Message)">
             <summary>
-            Creates the exception with an error message and an underlying parse error.
+            Creates the exception with an error message, argument name, and the original
+            <see cref="T:Telegram.Bot.Types.Message"/> DTO.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Commands.CommandArgsParseException.#ctor(System.String,System.String,Telegram.Bot.Types.Message,System.Exception)">
+            <summary>
+            Creates the exception with an error message, argument name, the original
+            <see cref="T:Telegram.Bot.Types.Message"/> DTO, and an underlying parse error.
             </summary>
         </member>
         <member name="P:PolyBot.Commands.CommandArgsParseException.ArgumentName">
@@ -781,6 +789,11 @@
         <member name="P:PolyBot.Commands.CommandArgsParseException.CommandText">
             <summary>
             The full text of the message that carried the command.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Commands.CommandArgsParseException.SourceMessage">
+            <summary>
+            The original <see cref="T:Telegram.Bot.Types.Message"/> DTO that carried the command.
             </summary>
         </member>
         <member name="T:PolyBot.Commands.CommandHelper">
@@ -824,13 +837,13 @@
             the command arguments begin (the end of the command entity or alias).
             </param>
         </member>
-        <member name="M:PolyBot.Commands.CommandHelper.ParseArgs(System.String,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])">
+        <member name="M:PolyBot.Commands.CommandHelper.ParseArgs(Telegram.Bot.Types.Message,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])">
             <summary>
             Parses the whitespace-separated tokens that follow a command into values for the
             given argument specifications.
             </summary>
-            <param name="text">The full message text.</param>
-            <param name="argsStartIndex">The index in <paramref name="text"/> where the arguments begin.</param>
+            <param name="message">The original message that carried the command.</param>
+            <param name="argsStartIndex">The index in <see cref="P:Telegram.Bot.Types.Message.Text"/> where the arguments begin.</param>
             <param name="specs">The argument specifications, one per declared handler argument.</param>
             <param name="noArgs">
             When <c>true</c>, any token after the command throws a

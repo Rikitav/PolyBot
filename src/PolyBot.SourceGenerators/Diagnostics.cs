@@ -9,7 +9,7 @@ internal static class PolyBotDiagnostics
     public static readonly DiagnosticDescriptor UnsupportedHandlerSignature = new(
         id: "CUR001",
         title: "Unsupported handler signature",
-        messageFormat: "Handler '{0}' must return Task<PolyBot.Result> or ValueTask<PolyBot.Result> (plain Task/ValueTask is also accepted); the method was skipped",
+        messageFormat: "Handler '{0}' must return Task<PolyBot.Result>, ValueTask<PolyBot.Result>, Task, or ValueTask; the method was skipped",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);

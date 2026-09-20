@@ -40,7 +40,7 @@ public static class Program
                 "No bot token provided: pass it as the first argument or set the TELEGRAM_BOT_TOKEN environment variable.");
         }
 
-        PolyBotClient client = new PolyBotClient(new PolyBotOptions() { BotToken = token });
+        await using PolyBotClient client = new PolyBotClient(new PolyBotOptions() { BotToken = token });
         client.Services.AddPolyBotRouter();
 
         await client.RunPollingAsync();

@@ -2,29 +2,31 @@
 
 PolyBot is a generative, DI-friendly routing framework for [Telegram.Bot](https://github.com/TelegramBots/Telegram.Bot). Instead of hand-written `switch` statements over `Update.Type`, you write minimal-API-style handler methods decorated with attributes; a Roslyn source generator compiles them into a hard-coded, optimized `BotRouter` implementing `Telegram.Bot.Polling.IUpdateHandler`.
 
+---
+
+## Learn and Docs
+
+Learn Telegrator on [Official documentation site](https://poly-bot.mintlify.site).
+
+---
+
 ## Quick start
 
 ```csharp
 [MessageHandler, Command(Aliases = ["start"])]
-public static async ValueTask<Result> StartHandler(Message msg, CancellationToken ct)
+public static async ValueTask<Result> StartHandler(Message msg, ITelegramBotClient client, CancellationToken ct)
 {
+    client.SendMessage(msg.Chat, "Hello, " + msg.From!.UserName + "!", cancellationToken: ct);
     return Result.StopRouting;
 }
-```
 
-```csharp
-services.AddSingleton(new PolyBotOptions() { BotToken = botToken });
-services.AddPolyBotDefaults();
-services.AddPolyBotRouter();
+public static async void Main()
+{
+    await using PolyBotClient client = new PolyBotClient();
+    client.Services.AddPolyBotRouter();
+    await client.RunPollingAsync();
+}
 ```
-
-```csharp
-await using PolyBotClient client = new PolyBotClient();
-client.Services.AddPolyBotRouter();
-await client.RunPollingAsync();
-```
-
-`PolyBotClient` reads `PolyBotOptions` from the `"PolyBot"` configuration section, syncs BotFather commands, resolves `BotUsername` from `GetMe`, and polls until cancelled.
 
 ## Features
 
@@ -140,7 +142,3 @@ await mock.Callback("item:1:open");
 ```
 
 `PolyTests` is also available as an in-memory `ITelegramBotClient` for driving the host or polling service manually.
-
-## Learn more
-
-For parameter injection tables, filter authoring, BotFather sync rules, diagnostics reference, library-vs-executable generation behavior, and full feature internals, see [DETAILS.md](DETAILS.md).
