@@ -80,8 +80,8 @@ public sealed class HostingTests
         });
         await using ServiceProvider provider = services.BuildServiceProvider();
 
-        // Resolving the hosted service applies the options configure delegate (url + secret).
-        _ = provider.GetRequiredService<IHostedService>();
+        IHostedService hosted = provider.GetRequiredService<IHostedService>();
+        await hosted.StartAsync(CancellationToken.None);
 
         MethodInfo endpointMethod = typeof(PolyBotWebhookExtensions).GetMethod(
             "HandlePolyBotWebhookAsync",
@@ -101,13 +101,17 @@ public sealed class HostingTests
         DefaultHttpContext garbageBody = CreateWebhookContext(provider, "not json", secret: "s3cr3t");
         await ((Task)endpointMethod.Invoke(null, [garbageBody])!);
 
+        // Wait for the queued update to be processed by the background loop.
+        bool delivered = await TestHost.WaitForAsync(
+            () => client.SentRequests.OfType<SendMessageRequest>().Any(static r => r.Text == "echo:via webhook"));
+
+        await hosted.StopAsync(CancellationToken.None);
+
         Assert.AreEqual(400, missingSecret.Response.StatusCode);
         Assert.AreEqual(401, wrongSecret.Response.StatusCode);
         Assert.AreEqual(200, validRequest.Response.StatusCode);
         Assert.AreEqual(400, garbageBody.Response.StatusCode);
-        Assert.IsTrue(
-            client.SentRequests.OfType<SendMessageRequest>().Any(static r => r.Text == "echo:via webhook"),
-            "the deserialized update was handed to the router, which replied through the test client");
+        Assert.IsTrue(delivered, "the deserialized update was handed to the router, which replied through the test client");
     }
 
     [TestMethod]

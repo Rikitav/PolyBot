@@ -4,18 +4,35 @@
 namespace PolyBot;
 /// <summary>
 /// Sets the webhook on startup (when a <see cref="T:PolyBot.PolyBotOptions"/> is
-/// registered) and optionally deletes it on graceful shutdown.
+/// registered) and optionally deletes it on graceful shutdown. Also owns an internal
+/// bounded update queue: webhook requests enqueue the update and return 200 OK
+/// immediately; a background loop dequeues updates and routes them through the
+/// generated router.
 /// </summary>
 public sealed class PolyBotWebhookHostedService : global::Microsoft.Extensions.Hosting.IHostedService
 {
     private readonly global::Telegram.Bot.ITelegramBotClient _botClient;
     private readonly global::Telegram.Bot.Polling.IUpdateHandler _updateHandler;
     private readonly global::PolyBot.PolyBotOptions _options;
+    private readonly global::System.Threading.Channels.Channel<global::Telegram.Bot.Types.Update> _channel;
+    private readonly global::System.Threading.CancellationTokenSource _stoppingCts;
+    private global::System.Threading.Tasks.Task? _processor;
     public PolyBotWebhookHostedService(global::Telegram.Bot.ITelegramBotClient botClient, global::Telegram.Bot.Polling.IUpdateHandler updateHandler, global::PolyBot.PolyBotOptions options)
     {
         _botClient = botClient;
         _updateHandler = updateHandler;
         _options = options;
+        _channel = global::System.Threading.Channels.Channel.CreateUnbounded<global::Telegram.Bot.Types.Update>();
+        _stoppingCts = new global::System.Threading.CancellationTokenSource();
+    }
+
+    /// <summary>
+    /// Enqueues an update to be processed by the background router loop.
+    /// Callers should return 200 OK immediately after awaiting this method.
+    /// </summary>
+    public global::System.Threading.Tasks.ValueTask EnqueueAsync(global::Telegram.Bot.Types.Update update, global::System.Threading.CancellationToken cancellationToken = default)
+    {
+        return _channel.Writer.WriteAsync(update, cancellationToken);
     }
 
     public async global::System.Threading.Tasks.Task StartAsync(global::System.Threading.CancellationToken cancellationToken)
@@ -25,29 +42,68 @@ public sealed class PolyBotWebhookHostedService : global::Microsoft.Extensions.H
             throw new global::System.InvalidOperationException("PolyBotOptions.WebhookUrl must be set to an absolute HTTPS URL to receive webhook updates.");
         }
 
+        _processor = ProcessQueueAsync(_stoppingCts.Token);
+
+        global::Telegram.Bot.Types.User me = await global::Telegram.Bot.TelegramBotClientExtensions.GetMe(_botClient!, cancellationToken).ConfigureAwait(false);
+        if (!string.IsNullOrEmpty(me.Username))
+        {
+            _options.BotUsername = me.Username;
+        }
+
         await global::Telegram.Bot.TelegramBotClientExtensions.SetWebhook(_botClient, _options.WebhookUrl, null, null, _options.WebhookMaxConnections, _options.AllowedUpdates, _options.DropPendingUpdates, _options.WebhookSecretToken, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task StopAsync(global::System.Threading.CancellationToken cancellationToken)
     {
+        _channel.Writer.Complete();
+        _stoppingCts.Cancel();
+        if (_processor is not null)
+        {
+            try
+            {
+                await _processor.ConfigureAwait(false);
+            }
+            catch (global::System.OperationCanceledException)
+            {
+            }
+        }
+
+        _stoppingCts.Dispose();
+
         if (_options.DeleteWebhookOnStop)
         {
             await global::Telegram.Bot.TelegramBotClientExtensions.DeleteWebhook(_botClient, _options.DropPendingUpdates, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async global::System.Threading.Tasks.Task ProcessQueueAsync(global::System.Threading.CancellationToken cancellationToken)
+    {
+        await foreach (global::Telegram.Bot.Types.Update update in _channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+        {
+            try
+            {
+                await _updateHandler.HandleUpdateAsync(_botClient, update, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Swallow handler exceptions to keep the queue processor alive, mirroring
+                // the behavior of the polling loop.
+            }
         }
     }
 }
 
 /// <summary>
 /// DI registration and endpoint mapping for the ASP.NET Core webhook
-/// integration: secret-token verification, direct stream deserialization and
-/// hand-off to the generated router.
+/// integration: secret-token verification, direct stream deserialization,
+/// enqueue into the hosted-service queue, and immediate 200 OK response.
 /// </summary>
 public static class PolyBotWebhookExtensions
 {
     /// <summary>
     /// Registers the router and the configured <see cref="T:PolyBot.PolyBotOptions"/>;
     /// when hosting abstractions are referenced, a <c>PolyBotWebhookHostedService</c> that
-    /// sets the webhook on startup is registered too.
+    /// sets the webhook on startup and processes updates from an internal queue is registered too.
     /// </summary>
     public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddPolyBotWebhook(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services, global::System.Action<global::PolyBot.PolyBotOptions>? configure = null)
     {
@@ -57,7 +113,7 @@ public static class PolyBotWebhookExtensions
             global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton(services, new ConfigureHolder(configure));
         }
 
-        global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::Microsoft.Extensions.Hosting.IHostedService>(services, (global::System.IServiceProvider sp) =>
+        global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton(services, (global::System.IServiceProvider sp) =>
         {
             global::PolyBot.PolyBotOptions options = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::PolyBot.PolyBotOptions>(sp) ?? new global::PolyBot.PolyBotOptions();
             ConfigureHolder? holder = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<ConfigureHolder>(sp);
@@ -66,14 +122,22 @@ public static class PolyBotWebhookExtensions
                 holder.Configure(options);
             }
 
-            return new global::PolyBot.PolyBotWebhookHostedService(global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.ITelegramBotClient>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.Polling.IUpdateHandler>(sp), options);
+            return new global::PolyBot.PolyBotWebhookHostedService(
+                global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.ITelegramBotClient>(sp),
+                global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.Polling.IUpdateHandler>(sp),
+                options);
         });
+
+        global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::Microsoft.Extensions.Hosting.IHostedService>(services, static (global::System.IServiceProvider sp) =>
+            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::PolyBot.PolyBotWebhookHostedService>(sp));
+
         return services;
     }
 
     /// <summary>
     /// Maps a POST endpoint that verifies the secret token, deserializes the update
-    /// from the request body and feeds it into the generated router.
+    /// from the request body, enqueues it for background processing and returns 200 OK
+    /// before the handler runs.
     /// </summary>
     public static global::Microsoft.AspNetCore.Builder.IEndpointConventionBuilder MapPolyBotWebhook(this global::Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints, string pattern = "/bot")
     {
@@ -82,7 +146,8 @@ public static class PolyBotWebhookExtensions
 
     /// <summary>
     /// Request delegate: secret-token verification (missing header 400, wrong value
-    /// 401), direct body-stream deserialization, router hand-off, 200 OK.
+    /// 401), direct body-stream deserialization, enqueue into the hosted queue,
+    /// immediate 200 OK.
     /// </summary>
     private static async global::System.Threading.Tasks.Task HandlePolyBotWebhookAsync(global::Microsoft.AspNetCore.Http.HttpContext context)
     {
@@ -124,9 +189,8 @@ public static class PolyBotWebhookExtensions
             return;
         }
 
-        global::Telegram.Bot.Polling.IUpdateHandler handler = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.Polling.IUpdateHandler>(context.RequestServices);
-        global::Telegram.Bot.ITelegramBotClient botClient = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.ITelegramBotClient>(context.RequestServices);
-        await handler.HandleUpdateAsync(botClient, update, context.RequestAborted).ConfigureAwait(false);
+        global::PolyBot.PolyBotWebhookHostedService queue = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::PolyBot.PolyBotWebhookHostedService>(context.RequestServices);
+        await queue.EnqueueAsync(update, context.RequestAborted).ConfigureAwait(false);
         context.Response.StatusCode = 200;
     }
 
