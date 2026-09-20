@@ -1,0 +1,153 @@
+---
+title: "Routing Result: Controlling the PolyBot Handler Chain"
+sidebarTitle: "Routing Result"
+description: "Explore the Result struct that every PolyBot handler returns, and learn how ContinueRouting, StopRouting, and Handled() control multi-handler dispatch."
+---
+
+Every handler that returns `Task<Result>` or `ValueTask<Result>` tells the router what to do next. The `Result` struct in `PolyBot.Routing` is the single control point for the routing pipeline — a lightweight value type with no heap allocation and a simple boolean outcome.
+
+## The `Result` struct
+
+```csharp
+namespace PolyBot.Routing;
+
+public readonly struct Result : IEquatable<Result>
+{
+    /// <summary>Routing continues to the next handler.</summary>
+    public static readonly Result Continue = new(true);
+
+    /// <summary>Routing stops; no further handlers run.</summary>
+    public static readonly Result StopRouting = new(false);
+
+    /// <summary>Alias of StopRouting: the current handler fully handled the update.</summary>
+    public static Result Handled() => StopRouting;
+
+    /// <summary>Gets whether routing should continue after this handler.</summary>
+    public bool ContinueRouting { get; }
+}
+```
+
+There are three ways to express an outcome:
+
+| Member | `ContinueRouting` value | Effect |
+|---|---|---|
+| `Result.Continue` | `true` | Router moves to the next matching handler |
+| `Result.StopRouting` | `false` | Router stops; no further handlers run |
+| `Result.Handled()` | `false` | Identical to `StopRouting`; semantically "I handled it" |
+
+## `Result.Continue` — pass to the next handler
+
+Return `Result.Continue` when your handler does something useful but is happy to let a downstream handler also run (logging, analytics, partial preprocessing):
+
+```csharp
+[MessageHandler(Priority = 5)]
+public static async Task<Result> LoggingHandler(Message msg, ILogger<BotRouter> log)
+{
+    log.LogInformation("Incoming message from {User}: {Text}", msg.From?.Username, msg.Text);
+    return Result.Continue;   // let every other handler still run
+}
+```
+
+## `Result.StopRouting` — end the chain
+
+Return `Result.StopRouting` when no other handler should process this update:
+
+```csharp
+[MessageHandler(Priority = -1)]
+[Command(Aliases = ["start"], Description = "Start the bot")]
+public static async Task<Result> StartHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "Welcome!", cancellationToken: ct);
+    return Result.StopRouting;
+}
+```
+
+## `Result.Handled()` — expressive alias
+
+`Result.Handled()` is exactly equivalent to `Result.StopRouting`. Use it when you want to emphasise that the update was fully consumed rather than simply stopped:
+
+```csharp
+[CallbackQueryHandler]
+public static async Task<Result> ButtonHandler(CallbackQuery query, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.AnswerCallbackQuery(query.Id, cancellationToken: ct);
+    return Result.Handled();  // same as Result.StopRouting
+}
+```
+
+## Returning `Task` / `ValueTask` without `Result`
+
+A handler that returns plain `Task` or `ValueTask` (no type parameter) implicitly continues routing. The router treats the absence of a result value as `Result.Continue`:
+
+```csharp
+// Continues routing automatically — no Result needed
+[MessageHandler]
+public static async Task AuditHandler(Message msg, IAuditService audit)
+{
+    await audit.RecordAsync(msg);
+    // Implicitly continues to the next handler
+}
+```
+
+<Note>
+`Task`/`ValueTask` without `Result` is useful for side-effect handlers (auditing, metrics) that should never interrupt the main routing flow, regardless of future refactoring.
+</Note>
+
+## Multi-handler routing walkthrough
+
+Consider three handlers registered for `MessageHandler`, ordered by priority:
+
+```csharp
+// Priority 5 — runs first
+[MessageHandler(Priority = 5)]
+public static async Task<Result> AuditHandler(Message msg, IAuditService audit)
+{
+    await audit.RecordAsync(msg);
+    return Result.Continue;   // ← passes through to Handler B
+}
+
+// Priority 0 (default) — runs second
+[MessageHandler]
+public static async Task<Result> EchoHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"echo:{msg.Text}", cancellationToken: ct);
+    return Result.Continue;   // ← passes through to Handler C
+}
+
+// Priority -1 — runs last
+[MessageHandler(Priority = -1)]
+[Command(Aliases = ["start"], Description = "Start the bot")]
+public static async Task<Result> StartHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "Welcome!", cancellationToken: ct);
+    return Result.StopRouting; // ← chain ends here
+}
+```
+
+<Steps>
+  <Step title="Router receives a Message update">
+    The generated router enters the `Message` case of its dispatch `switch`.
+  </Step>
+  <Step title="Handler A runs (Priority 5)">
+    `AuditHandler` records the message and returns `Result.Continue`. The router moves on.
+  </Step>
+  <Step title="Handler B runs (Priority 0)">
+    `EchoHandler` sends the echoed message and returns `Result.Continue`. The router moves on.
+  </Step>
+  <Step title="Handler C runs (Priority -1)">
+    `StartHandler` checks whether this is a `/start` command. If the command guard passes, it replies and returns `Result.StopRouting`. The chain ends — no further `MessageHandler` methods run.
+  </Step>
+  <Step title="Guard fails — fall-through beyond Handler C">
+    If the `/start` command guard did not pass, the generator skips the handler body entirely. Because no handler returned `StopRouting`, routing simply ends naturally with no more handlers to try.
+  </Step>
+</Steps>
+
+## Equality and comparison
+
+`Result` implements `IEquatable<Result>` and provides `==` / `!=` operators, so you can compare results in tests or conditional logic:
+
+```csharp
+Result r = Result.Handled();
+bool stopped = r == Result.StopRouting; // true
+bool continues = r.ContinueRouting;     // false
+```

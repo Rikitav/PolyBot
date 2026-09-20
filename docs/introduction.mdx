@@ -1,0 +1,76 @@
+---
+title: "PolyBot: Roslyn-Powered Routing for Telegram.Bot"
+sidebarTitle: "Introduction"
+description: "Learn how PolyBot's source-generator approach turns attribute-decorated handler methods into a hard-coded, DI-friendly BotRouter at compile time."
+---
+
+PolyBot is a generative, DI-friendly routing framework built on top of [Telegram.Bot](https://github.com/TelegramBots/Telegram.Bot). Instead of maintaining hand-written `switch` statements over `Update.Type`, you write minimal-API-style handler methods decorated with attributes. A **Roslyn source generator** compiles those handlers into a hard-coded, fully-optimized `BotRouter` — an `IUpdateHandler` implementation — at build time. There is no runtime reflection, no middleware pipeline to configure, and no registration boilerplate to keep in sync with your handler list.
+
+## How it works
+
+Every handler method you annotate with an `[XxxHandler]` attribute from the `PolyBot.Attributes` namespace becomes a typed branch inside the generated `BotRouter`. The router is emitted into the `PolyBot` namespace as `BotRouter`, and a companion `PolyBotExtensions.AddPolyBotRouter()` extension method is generated so you can register the router in any `IServiceCollection` with one line.
+
+Because the router is **compiled output**, not reflection-based dispatch, the full routing graph is visible to the C# compiler. Diagnostics (prefixed `CUR0xx`) surface misconfigurations — wrong return types, duplicate exception handlers, unreachable state conditions — as build warnings and errors rather than runtime surprises.
+
+Parameter injection is resolved at code-generation time as well. The generator inspects each handler's parameter list and emits the exact resolution path — no `MethodInfo.Invoke`, no boxed argument arrays.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Attribute routing" icon="tag">
+    One attribute per `UpdateType` from the `PolyBot.Attributes` namespace: `[MessageHandler]`, `[CallbackQueryHandler]`, `[InlineQueryHandler]`, `[ChosenInlineResultHandler]`, `[ShippingQueryHandler]`, `[PreCheckoutQueryHandler]`, `[PollHandler]`, `[PollAnswerHandler]`, `[ExceptionHandler]`, and more. Return `Result.StopRouting` to end dispatch or `Result.ContinueRouting` to fall through to the next handler. Order handlers with `Priority` (higher value = runs earlier) or rely on source order.
+  </Card>
+  <Card title="Dependency injection" icon="plug">
+    Handler parameters are resolved automatically. `ITelegramBotClient`, `CancellationToken`, `Update`, and the extracted payload (`Message`, `CallbackQuery`, …) are injected from the update context; everything else comes from `IServiceProvider` — including keyed services via `[Key("x")]`.
+  </Card>
+  <Card title="Commands & BotFather sync" icon="terminal">
+    `[Command(Aliases = ["start"])]` matches messages whose first entity is the matching `/` command. Optional metadata (`Description`, `LanguageCode`, `Scope`) is read by the generated sync service and pushed to BotFather automatically before polling starts.
+  </Card>
+  <Card title="Update filters" icon="filter">
+    `[XxxFilter]` attributes gate handlers with custom `IUpdateFilter` implementations. Generated abstract bases like `MessageFilter` let filters work directly with the extracted payload DTO. All filters must pass (AND semantics, in attribute order) before the handler runs.
+  </Card>
+  <Card title="Finite state machines" icon="arrow-right-arrow-left">
+    Restrict handlers to specific per-user/per-chat states with `[State<TEnum>(TEnum.Value)]` or `[NoState<TEnum>]`. Inject `IStateMachine` to transition state; plug in a custom `IStateStorage` for multi-instance persistence.
+  </Card>
+  <Card title="Inline awaits" icon="clock">
+    Suspend a handler mid-conversation and resume when a later update arrives — without blocking the polling loop. Inject `IUpdateAwaiter` and call `await awaiter.WaitForMessageAsync().TextMatches(…).ByUserId(ct)`.
+  </Card>
+  <Card title="Callback-data patterns" icon="route">
+    Declare a route template on a callback handler with `[Pattern("item:{id}:{action}")]`. Segment values are extracted, type-checked, and injected into `[Arg]`-annotated parameters — no manual parsing.
+  </Card>
+  <Card title="Rate limiting" icon="gauge">
+    Add a sliding-window throttle to any handler with `[Throttled(Limit = 3, PeriodMilliseconds = 60_000, Scope = ThrottleScope.User)]`. Guards are inlined by the generator — non-matching updates never consume budget.
+  </Card>
+  <Card title="Keyboard builders" icon="keyboard">
+    Build inline and reply keyboards with the fluent `InlineKeyboardBuilder` / `ReplyKeyboardBuilder` APIs, or generate keyboards from `[CallbackButton]` attributes on a `partial` method returning `InlineKeyboardMarkup`.
+  </Card>
+  <Card title="Hosting & webhooks" icon="server">
+    The generator inspects your project references and emits integration only for what you actually use. Generic Host gets `AddPolyBotHostedPolling()`; ASP.NET Core gets `AddPolyBotWebhook()` and `app.MapPolyBotWebhook("/bot")`.
+  </Card>
+  <Card title="Test harness" icon="flask">
+    Run your router offline with `client.RunTest()`. `UpdateMocker` pushes synthetic messages, commands, and callbacks straight into the generated router with no network and no token required.
+  </Card>
+  <Card title="Exception handling" icon="triangle-exclamation">
+    Decorate one method with `[ExceptionHandler]` and the router calls it from `HandleErrorAsync`. Parameters resolve like normal handler parameters — DI services, `Exception`, and `HandleErrorSource` all inject naturally.
+  </Card>
+</CardGroup>
+
+## Where the generator runs
+
+`PolyBot.SourceGenerators` is **bundled as an analyzer** inside the `PolyBot` NuGet package — you install one package and the generator is automatically active. No separate package reference, no MSBuild targets to configure.
+
+The generator adapts its output to your project type:
+
+- **Runnable assembly** (`OutputType` = `Exe` or `WinExe`) — the full routing infrastructure is emitted: `BotRouter`, `AddPolyBotRouter()`, BotFather sync, hosted-polling integration, and webhook endpoint.
+- **Library project** — only filters, `With*` awaiter extensions, and generated keyboards are emitted, so filter libraries can be shared across PolyBot apps without type collisions.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Build and run an echo bot end-to-end in under five minutes.
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    NuGet setup, project requirements, and service-wiring reference.
+  </Card>
+</CardGroup>

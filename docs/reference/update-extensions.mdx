@@ -1,0 +1,171 @@
+---
+title: "UpdateExtensions: Telegram Update Payload Probe Methods"
+sidebarTitle: "Update Extensions"
+description: "Reference for UpdateExtensions — first-match probes that extract user ids, chat ids, senders, chats, messages, and text from any Telegram Update."
+---
+
+`PolyBot.Routing.UpdateExtensions` is a static class of extension methods on `Telegram.Bot.Types.Update`. A Telegram `Update` carries one of many optional payload properties (`Message`, `CallbackQuery`, `PollAnswer`, etc.), and different payload types nest their user and chat information in different places. These helpers walk a fixed probe order and return the first match found, so you never need to write property-chain `??` chains by hand.
+
+<Note>
+These are the exact same probe chains that `StateKeyResolver` uses internally to resolve FSM keys. The probe order is fixed and matches Telegram.Bot 22.10's `Update` property declaration order — first match wins.
+</Note>
+
+---
+
+## Methods
+
+### `GetUserId()`
+
+```csharp
+public static long? GetUserId(this Update update)
+```
+
+Returns the id of the first user found across all update payload types, or `null` when none is present.
+
+<ResponseField name="return" type="long?">
+  The user id, or `null`.
+</ResponseField>
+
+### `GetChatId()`
+
+```csharp
+public static long? GetChatId(this Update update)
+```
+
+Returns the id of the first chat found across all update payload types, or `null` when none is present.
+
+<Note>
+`BusinessConnection` exposes only `UserChatId` (a `long`), not a full `Chat` object. It contributes to `GetChatId()` but not to `GetChat()`.
+</Note>
+
+<ResponseField name="return" type="long?">
+  The chat id, or `null`.
+</ResponseField>
+
+### `GetSender()`
+
+```csharp
+public static User? GetSender(this Update update)
+```
+
+Returns the first `User` object found across all payload types, or `null`.
+
+<ResponseField name="return" type="User?">
+  The sender `User`, or `null`.
+</ResponseField>
+
+### `GetChat()`
+
+```csharp
+public static Chat? GetChat(this Update update)
+```
+
+Returns the first `Chat` object found across all payload types, or `null`. Unlike `GetChatId()`, this returns `null` for `BusinessConnection` updates because only a `UserChatId` long is available there.
+
+<ResponseField name="return" type="Chat?">
+  The `Chat`, or `null`.
+</ResponseField>
+
+### `GetMessage()`
+
+```csharp
+public static Message? GetMessage(this Update update)
+```
+
+Returns the first message-shaped payload in the update using a simple four-property chain:
+
+```text
+Message ?? EditedMessage ?? ChannelPost ?? EditedChannelPost
+```
+
+<ResponseField name="return" type="Message?">
+  The `Message`, or `null` when none of the four properties is set.
+</ResponseField>
+
+### `GetText()`
+
+```csharp
+public static string? GetText(this Update update)
+```
+
+Returns the text of the message returned by `GetMessage()`, falling back to its `Caption` (media captions are typed like message text in Telegram). Returns `null` when there is no message-shaped payload or neither `Text` nor `Caption` is set.
+
+```csharp
+// Equivalent to:
+// var msg = update.GetMessage();
+// return msg?.Text ?? msg?.Caption;
+```
+
+<ResponseField name="return" type="string?">
+  The message text or caption, or `null`.
+</ResponseField>
+
+---
+
+## Probe order
+
+The following table shows the full probe order for each method. Within each group, properties are checked top-to-bottom and the first non-null result is returned.
+
+### User id / Sender probe order
+
+| Priority | Payload | Access path |
+|---|---|---|
+| 1 | Message | `Message.From.Id` |
+| 2 | EditedMessage | `EditedMessage.From.Id` |
+| 3 | ChannelPost | `ChannelPost.From.Id` |
+| 4 | EditedChannelPost | `EditedChannelPost.From.Id` |
+| 5 | CallbackQuery | `CallbackQuery.From.Id` |
+| 6 | InlineQuery | `InlineQuery.From.Id` |
+| 7 | ChosenInlineResult | `ChosenInlineResult.From.Id` |
+| 8 | ShippingQuery | `ShippingQuery.From.Id` |
+| 9 | PreCheckoutQuery | `PreCheckoutQuery.From.Id` |
+| 10 | PollAnswer | `PollAnswer.User.Id` |
+| 11 | MyChatMember | `MyChatMember.From.Id` |
+| 12 | ChatMember | `ChatMember.From.Id` |
+| 13 | ChatJoinRequest | `ChatJoinRequest.From.Id` |
+| 14 | MessageReaction | `MessageReaction.User.Id` |
+| 15 | BusinessConnection | `BusinessConnection.User.Id` |
+
+### Chat id / Chat probe order
+
+| Priority | Payload | Access path (`GetChatId` / `GetChat`) |
+|---|---|---|
+| 1 | Message | `Message.Chat.Id` / `Message.Chat` |
+| 2 | EditedMessage | `EditedMessage.Chat.Id` / `EditedMessage.Chat` |
+| 3 | ChannelPost | `ChannelPost.Chat.Id` / `ChannelPost.Chat` |
+| 4 | EditedChannelPost | `EditedChannelPost.Chat.Id` / `EditedChannelPost.Chat` |
+| 5 | CallbackQuery | `CallbackQuery.Message.Chat.Id` / `CallbackQuery.Message.Chat` |
+| 6 | PollAnswer | `PollAnswer.VoterChat.Id` / `PollAnswer.VoterChat` |
+| 7 | MyChatMember | `MyChatMember.Chat.Id` / `MyChatMember.Chat` |
+| 8 | ChatMember | `ChatMember.Chat.Id` / `ChatMember.Chat` |
+| 9 | ChatJoinRequest | `ChatJoinRequest.Chat.Id` / `ChatJoinRequest.Chat` |
+| 10 | MessageReaction | `MessageReaction.Chat.Id` / `MessageReaction.Chat` |
+| 11 | ChatBoost | `ChatBoost.Chat.Id` / `ChatBoost.Chat` |
+| 12 | BusinessConnection | `BusinessConnection.UserChatId` / *(id only, no `Chat` object)* |
+
+---
+
+## Usage in handlers
+
+Because parameter injection resolves `ITelegramBotClient`, `CancellationToken`, `Update`, and the specific payload automatically, you will usually receive the typed payload directly. `UpdateExtensions` is most useful in:
+
+- **Filters** — where you receive the raw `Update` and need a cross-type probe:
+
+```csharp
+public sealed class RegisteredUserFilter : IUpdateFilter
+{
+    private readonly IUserRepository _users;
+
+    public RegisteredUserFilter(IUserRepository users) => _users = users;
+
+    public bool CanPass(Update update)
+    {
+        long? userId = update.GetUserId();
+        return userId.HasValue && _users.IsRegistered(userId.Value);
+    }
+}
+```
+
+- **Exception handlers** — there is no typed payload in the error path, but the `Update` is not available either (see `CUR032`). Use `GetUserId()`/`GetChatId()` on updates you access through other means.
+
+- **State key resolution** — `IStateMachine.SetAsync` calls `StateKeyResolver` which uses the same probe chains internally. Understanding the probe order tells you exactly which update types are keyed by `StateKey.UserId` vs. `StateKey.ChatId` vs. `StateKey.UserInChat`.

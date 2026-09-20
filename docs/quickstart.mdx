@@ -1,0 +1,210 @@
+---
+title: "PolyBot Quickstart: Build an Echo Bot in Minutes"
+sidebarTitle: "Quickstart"
+description: "Create a working Telegram echo bot with PolyBot — write handlers, register the generated router, and start long polling in a few steps."
+---
+
+This guide walks you through building a minimal echo bot from scratch. By the end you will have a working Telegram bot that greets users on `/start` and echoes every other message back. The complete source is based on the EchoBot sample shipped with PolyBot.
+
+<Note>
+  Before you start, make sure you have the `PolyBot` NuGet package installed and that your project's `OutputType` is `Exe`. See [Installation](/installation) for details.
+</Note>
+
+## Prerequisites
+
+- .NET 8 or later (the `PolyBot` package targets `netstandard2.0` and `net10.0`)
+- A Telegram bot token from [@BotFather](https://t.me/BotFather)
+
+## Full example
+
+The listing below is the complete EchoBot `Program.cs`. The sections that follow break it apart step by step.
+
+```csharp
+using Microsoft.Extensions.Configuration;
+using PolyBot;
+using PolyBot.Attributes;
+using PolyBot.Routing;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
+
+namespace EchoBot;
+
+public sealed partial class BotHandlers
+{
+    [CallbackButton("Help", "help"), CallbackButton("About", "about")]
+    private static partial InlineKeyboardMarkup StartKeyboard();
+
+    [MessageHandler(Priority = -1)]
+    [Command(Aliases = ["start"], Description = "Start the bot")]
+    public static async Task<Result> Start(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "Welcome! I echo everything you say.", replyMarkup: StartKeyboard(), cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    [MessageHandler(Priority = 0)]
+    public static async Task<Result> Echo(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, msg.Text ?? string.Empty, cancellationToken: ct);
+        return Result.Handled();
+    }
+}
+
+public static class Program
+{
+    public static async Task Main(string[] args)
+    {
+        string? token = args.Length > 0 ? args[0] : Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new InvalidOperationException(
+                "No bot token provided: pass it as the first argument or set the TELEGRAM_BOT_TOKEN environment variable.");
+        }
+
+        PolyBotClient client = new PolyBotClient(new PolyBotOptions() { BotToken = token });
+        client.Services.AddPolyBotRouter();
+
+        await client.RunPollingAsync();
+    }
+}
+```
+
+## Step-by-step walkthrough
+
+<Steps>
+
+  ### Read the bot token
+
+  The entry point reads the token from the first command-line argument, falling back to the `TELEGRAM_BOT_TOKEN` environment variable. Either way works for local development and CI alike.
+
+  ```csharp
+  string? token = args.Length > 0
+      ? args[0]
+      : Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
+
+  if (string.IsNullOrEmpty(token))
+  {
+      throw new InvalidOperationException(
+          "No bot token provided: pass it as the first argument " +
+          "or set the TELEGRAM_BOT_TOKEN environment variable.");
+  }
+  ```
+
+  <Tip>
+    You can also put the token in a JSON configuration file and load it via `client.Configuration.AddJsonFile("appsettings.json")`. `PolyBotClient` reads options from the `"PolyBot"` configuration section automatically — set `"PolyBot:BotToken"` in that file and skip passing the token in code.
+  </Tip>
+
+  ### Write your handlers
+
+  Handlers are static (or instance) methods returning `Task<Result>` or `ValueTask<Result>`, decorated with an `[XxxHandler]` attribute from `PolyBot.Attributes`. Group them in any class — the source generator scans your entire compilation.
+
+  ```csharp
+  public sealed partial class BotHandlers
+  {
+      [MessageHandler(Priority = -1)]
+      [Command(Aliases = ["start"], Description = "Start the bot")]
+      public static async Task<Result> Start(Message msg, ITelegramBotClient bot, CancellationToken ct)
+      {
+          await bot.SendMessage(msg.Chat.Id, "Welcome! I echo everything you say.", cancellationToken: ct);
+          return Result.Handled();
+      }
+
+      [MessageHandler(Priority = 0)]
+      public static async Task<Result> Echo(Message msg, ITelegramBotClient bot, CancellationToken ct)
+      {
+          await bot.SendMessage(msg.Chat.Id, msg.Text ?? string.Empty, cancellationToken: ct);
+          return Result.Handled();
+      }
+  }
+  ```
+
+  A few things to note:
+
+  - **`Priority`** controls dispatch order within an update type. **Higher values run first** (source order is used when `Priority` is omitted). `Echo` at `0` runs before `Start` at `-1`; `Start`'s `[Command]` filter then narrows it to `/start` messages only.
+  - **`[Command(Aliases = ["start"])]`** restricts `Start` to messages whose first entity is `/start`. `Echo` has no command restriction and catches all remaining messages.
+  - **Parameters** are injected automatically. `Message` comes from the current update; `ITelegramBotClient` and `CancellationToken` are standard DI/update-context injections.
+  - **`Result.Handled()`** is shorthand for `Result.StopRouting` — it stops dispatch after this handler runs. Use `Result.ContinueRouting` to pass the update on to the next handler.
+
+  ### Generate a keyboard (optional)
+
+  The `partial` class also declares a generated keyboard using `[CallbackButton]` attributes. The source generator emits the implementation of `StartKeyboard()`:
+
+  ```csharp
+  public sealed partial class BotHandlers
+  {
+      [CallbackButton("Help", "help"), CallbackButton("About", "about")]
+      private static partial InlineKeyboardMarkup StartKeyboard();
+  }
+  ```
+
+  Each attribute list forms one row; attributes within the list form the columns. The containing class must be `partial` for the generator to fill in the method body.
+
+  ### Create a `PolyBotClient` and register the router
+
+  `PolyBotClient` wires configuration, the `ITelegramBotClient`, and PolyBot's core services together. Pass a `PolyBotOptions` instance to supply the bot token directly:
+
+  ```csharp
+  PolyBotClient client = new PolyBotClient(new PolyBotOptions() { BotToken = token });
+  client.Services.AddPolyBotRouter();
+  ```
+
+  <Note>
+    `AddPolyBotRouter()` is **generated by the source generator** into the `PolyBot` namespace. It will not exist until after your first successful build. If your IDE shows a "method not found" error on a brand-new project, build once (`dotnet build`) and the error will disappear.
+  </Note>
+
+  `PolyBotClient` internally calls `services.AddPolyBotDefaults()` before building the provider, so you do not need to call it yourself when using `PolyBotClient`. When wiring into a plain `IServiceCollection` (e.g. Generic Host), call both:
+
+  ```csharp
+  services.AddSingleton(new PolyBotOptions() { BotToken = token });
+  services.AddPolyBotDefaults();
+  services.AddPolyBotRouter();
+  ```
+
+  ### Start polling
+
+  `RunPollingAsync` takes care of the entire startup sequence:
+
+  1. Builds the `IServiceProvider`.
+  2. Calls `SyncCommandsAsync` on the BotFather sync service (generated from your `[Command]` attributes with `Description`).
+  3. Calls `GetMe` to back-fill `PolyBotOptions.BotUsername` so `@botsuffix` command verification works.
+  4. Enters the long-polling loop and blocks until the `CancellationToken` is cancelled.
+
+  ```csharp
+  await client.RunPollingAsync();
+  ```
+
+  To shut the bot down cleanly, pass a `CancellationToken` linked to a `Ctrl+C` handler or a host lifetime:
+
+  ```csharp
+  using CancellationTokenSource cts = new CancellationTokenSource();
+  Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+  await client.RunPollingAsync(cts.Token);
+  ```
+
+</Steps>
+
+## Running the bot
+
+```bash
+# Pass the token as a command-line argument
+dotnet run -- YOUR_BOT_TOKEN
+
+# Or set the environment variable and run without arguments
+export TELEGRAM_BOT_TOKEN=YOUR_BOT_TOKEN
+dotnet run
+```
+
+Send `/start` to your bot in Telegram — it should reply with the welcome message. Any other text message will be echoed back.
+
+## What to explore next
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    NuGet setup, project requirements, `PolyBotOptions` reference, and service wiring details.
+  </Card>
+  <Card title="Introduction" icon="book" href="/introduction">
+    Full feature overview: FSM, filters, rate limiting, webhooks, and more.
+  </Card>
+</CardGroup>

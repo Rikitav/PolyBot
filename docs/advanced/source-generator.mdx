@@ -1,0 +1,188 @@
+---
+title: "PolyBot Roslyn Source Generator Internals and Design"
+sidebarTitle: "Source Generator"
+description: "Inside the PolyBot incremental source generator: discovery phases, emitter classes, generated files for executables vs libraries, and InternalsGenerators."
+---
+
+PolyBot's entire routing pipeline is produced at compile time by a Roslyn incremental source generator. There is no reflection, no runtime scanning, and no delegate lists — the output is a single `BotRouter` class whose `HandleUpdateAsync` method is a plain `switch` over `update.Type` with hard-coded, inlined handler calls. This page explains how the generator works from the inside.
+
+---
+
+## Entry point: `PolyBotGenerator`
+
+The generator class lives in `PolyBot.SourceGenerators` and is decorated with `[Generator]`:
+
+```csharp
+[Generator]
+public sealed class PolyBotGenerator : IIncrementalGenerator
+{
+    public void Initialize(IncrementalGeneratorInitializationContext context) { ... }
+}
+```
+
+It implements `IIncrementalGenerator` (Roslyn's incremental API), which means the generator registers value providers once and Roslyn only re-runs the expensive parts when relevant inputs change. The full pipeline runs once per compilation; individual pipeline stages are cached by Roslyn between edits.
+
+### Library vs executable detection
+
+The very first thing the generator does is determine whether the consuming project is a library or a runnable assembly:
+
+```csharp
+IncrementalValueProvider<bool> isLibraryProvider =
+    context.AnalyzerConfigOptionsProvider.Select(
+        static (options, _) =>
+            options.GlobalOptions.TryGetValue("build_property.OutputType", out string? outputType) &&
+            string.Equals(outputType, "Library", StringComparison.OrdinalIgnoreCase));
+```
+
+The `build_property.OutputType` MSBuild property is read from the analyzer config options. `"Library"` → library mode; anything else (`"Exe"`, `"WinExe"`, absent) → executable mode.
+
+This flag gates which emitters run: filter attributes, `With*` extensions, and keyboards always run; `BotRouter`, `PolyBotExtensions`, BotFather sync, and hosting integrations only run for executables.
+
+---
+
+## Discovery phases
+
+### `FilterDiscovery`
+
+Scans the **compilation's own assembly** (not referenced assemblies) for concrete, non-generic classes that implement `IUpdateFilter`. It walks namespaces recursively and builds a list of `FilterClassModel` records containing:
+
+- `TypeFqn` — fully qualified type name for use in emitted code
+- `ShortName` — the class name without any namespace prefix, used to derive the `[XxxFilter]` attribute name
+- `DtoBaseName` — the name of the generated abstract DTO base the filter subclasses (e.g. `MessageFilter`), or `null` for raw `IUpdateFilter` implementations
+
+Generic filter classes produce `CUR012` (warning) and are skipped. The filter list is shared across all subsequent phases so cross-phase consistency is guaranteed within a single compilation.
+
+Referenced assemblies are **not scanned up front**. Instead, when a handler attribute or `With*` extension in a referenced library is encountered during handler discovery, `FindFilterInAssembly` walks the referenced assembly's namespace tree on demand to find the concrete filter type paired with the wrapper.
+
+### `HandlerDiscovery`
+
+Runs as a syntax-first incremental pipeline: the predicate selects any method with at least one attribute list, and the transform step performs the full semantic analysis per method. For each candidate method it:
+
+1. **Locates the handler attribute** — looks for an attribute that inherits `HandlerAttribute` (or, for error-type symbols on the first pass, matches the stem against `UpdateType` enum member names).
+2. **Resolves the update type** — reads `UpdateHandlerDescriptorAttribute` on the handler attribute class first; falls back to the naming convention (`MessageHandlerAttribute` → `UpdateType.Message`).
+3. **Classifies the return type** — `Task<Result>`, `ValueTask<Result>` → `HandlerReturnKind.Result`; `Task`/`ValueTask` → `HandlerReturnKind.Plain`; anything else → `CUR001`.
+4. **Processes `[Command]` and BotFather metadata** — reads `Aliases`, `Prefix`, `Description`, `Scope`, `LanguageCode`, `IsHidden`. Validates alias format (`CUR020`), checks description length (`CUR022`).
+5. **Processes `[Arg]`, `[Rest]`, `[Parse]`** — validates types and ordering, builds `ArgModel` and `TailConsumerModel` lists.
+6. **Resolves filter attributes** — matches attribute names against the `FilterClassModel` list (own-assembly filters) or walks referenced assemblies on demand (library filters).
+7. **Processes `[State<TEnum>]` / `[NoState<TEnum>]`** — folds same-pair conditions into OR groups; AND-links distinct pairs; reports `CUR011` on mutual exclusion.
+8. **Classifies handler parameters** — `ITelegramBotClient`, `CancellationToken`, `Update`, payload, `[Arg]`/`[Rest]`/`[Parse]`, `IStateMachine`, `IStateStorage`, `IUpdateAwaiter`, `[Key]` keyed services, or plain DI service.
+9. **Extracts await sites** — walks `AwaitExpression` nodes inside the method body, follows `WaitFor*Async` call chains, and records the DTO type, `TextMatches` patterns, `WithFilter<T>` types, `Where` lambdas, and terminal key mode (`ByUserId`, `ByChatId`, `ByUserInChat`). Reports `CUR013`–`CUR016` as appropriate.
+10. **Processes `[Pattern]`** — parses the template into `PatternSegmentModel` list, validates placeholder ↔ `[Arg]` bindings, checks 64-byte limit, resolves `TryParse` kind.
+11. **Processes `[Throttled]`** — reads `Limit`, `PeriodMilliseconds`, `Scope`, `Action`; reports `CUR035` on invalid values.
+
+### `KeyboardDiscovery`
+
+Selects methods and properties (C# 13) with at least one attribute list. For each candidate it looks for `[CallbackButton]` attributes, groups them by attribute list index (each list index becomes a keyboard row), and extracts `{parameter}` placeholder names from callback data strings.
+
+### `ExceptionHandlerDiscovery`
+
+Selects methods with attribute lists, looks for `[ExceptionHandler]`, validates return type (`CUR034`) and parameters (`CUR032`), and builds an `ExceptionHandlerModel`. Duplicate `[ExceptionHandler]` declarations are handled in the output phase (`CUR033`).
+
+---
+
+## Emitters
+
+After discovery, the collected models are passed to a set of emitters. Each emitter returns a `string?` — `null` means nothing to emit.
+
+### `BotRouterEmitter`
+
+Generates `PolyBot.BotRouter` (a `partial class`). The class implements `IUpdateHandler` and contains:
+
+- A `private readonly IServiceProvider _services` field
+- An optional `private readonly PolyBotOptions? __curatorOptions` field (when any handler uses `[Command]`)
+- Per-await-site static `string[]` and `Type[]` constant fields for the declarative signature arrays
+- Per-throttle-gate static `ThrottleGate` fields
+- A constructor taking `IServiceProvider`
+- `HandleUpdateAsync` — a `switch` on `update.Type`, one `case` per discovered update type (plus any update types referenced only via await sites), with inlined handler branches
+- `HandleErrorAsync` — calls the `[ExceptionHandler]` method (if any); otherwise returns `Task.CompletedTask`
+
+The `switch` sections are built in alphabetical order by update type member name for determinism. Within each case:
+
+1. Await-site branches come first (static pre-filter conditions → `TryDeliverAsync` → `return` if claimed)
+2. Handler branches follow in descending `Priority` order
+3. A `break` terminates the case
+
+### `FilterAttributesEmitter`
+
+Generates `PolyBotFilterAttributes.g.cs` with one attribute class per discovered filter, e.g.:
+
+```csharp
+// For NonEmptyTextFilter : MessageFilter
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+public sealed class NonEmptyTextFilterAttribute : Attribute { }
+```
+
+All generated filter attributes go into the `PolyBot.Attributes` namespace and use `AllowMultiple = true`.
+
+### `AwaiterExtensionsEmitter`
+
+Generates `PolyBotAwaiterExtensions.g.cs` (namespace `PolyBot.Attributes`) with one `With{FilterName}(this UpdateAwaiterBuilder<TDto>)` extension per discovered concrete filter. The `With*` method is typed to the filter's DTO base (`MessageFilter` → `UpdateAwaiterBuilder<Message>`) when possible, or generic (`UpdateAwaiterBuilder<TUpdate>`) otherwise.
+
+<Note>
+The `WaitFor{UpdateType}Async(this IUpdateAwaiter, TimeSpan?)` entry-point extensions are **not** emitted by `PolyBotGenerator`. They are emitted by the companion `PolyBot.InternalsGenerators` project directly into the `PolyBot` library assembly (also into namespace `PolyBot.Attributes`, class `PolyBotAwaiterExtensions`). Both generators emit into the same class name, which is a `partial` class split across two generated files.
+</Note>
+
+### `KeyboardMarkupEmitter`
+
+Generates `PolyBotKeyboards.g.cs` with the implementation of each `partial` method or property annotated with `[CallbackButton]`. Each attribute list maps to a `new InlineKeyboardButton[] { ... }` row; `{parameter}` placeholders in callback data are replaced with string interpolation.
+
+### `BotFatherSyncEmitter`
+
+Generates `PolyBotBotFatherSync.g.cs` containing the `PolyBotBotFatherSync : IBotFatherSync` class. It groups commands by `(Scope, LanguageCode)`, excludes hidden commands from `DiscoveredCommands`, and calls `SetMyCommands` once per group in `SyncCommandsAsync`.
+
+### `HostingEmitter`
+
+Generates conditional hosting integrations by inspecting referenced assemblies:
+
+- **`PolyBotHosting.g.cs`** — emitted when `Microsoft.Extensions.Hosting.Abstractions` is referenced. Contains `AddPolyBotHostedPolling(...)` extension and `PolyBotPollingHostedService : IHostedService`.
+- **`PolyBotWebhook.g.cs`** — emitted when any `Microsoft.AspNetCore.*` assembly is referenced. Contains `AddPolyBotWebhook()`, `MapPolyBotWebhook(string)`, and `PolyBotWebhookHostedService : IHostedService`.
+
+Neither is emitted for library projects regardless of referenced assemblies.
+
+### `PolyBotExtensionsEmitter`
+
+Generates `PolyBotExtensions.g.cs` containing the `AddPolyBotRouter()` extension method on `IServiceCollection`, which registers `BotRouter` as `IUpdateHandler` (singleton) and `PolyBotBotFatherSync` as `IBotFatherSync` (singleton).
+
+<Warning>
+Do **not** declare a type named `PolyBotExtensions` in the `PolyBot` namespace in your own code. The generator emits this class into the `PolyBot` namespace; a hand-written class with the same name causes a compile-time duplicate-type error.
+</Warning>
+
+---
+
+## What gets generated: summary
+
+| Generated file | Condition |
+|---|---|
+| `PolyBotFilterAttributes.g.cs` | Always (when any `IUpdateFilter` is found) |
+| `PolyBotAwaiterExtensions.g.cs` | Always (when any `IUpdateFilter` is found) |
+| `PolyBotKeyboards.g.cs` | When any `[CallbackButton]` member is found |
+| `BotRouter.g.cs` | Executable only, when handlers or an exception handler are found |
+| `PolyBotExtensions.g.cs` | Executable only, same condition |
+| `PolyBotBotFatherSync.g.cs` | Executable only, same condition |
+| `PolyBotHosting.g.cs` | Executable only + `Hosting.Abstractions` referenced |
+| `PolyBotWebhook.g.cs` | Executable only + `Microsoft.AspNetCore.*` referenced |
+
+---
+
+## The `PolyBot.InternalsGenerators` companion
+
+A second generator project, `PolyBot.InternalsGenerators`, generates the internal boilerplate that the main generator reads. It produces:
+
+- The abstract handler attribute bases (`MessageHandlerAttribute`, etc.), one per `UpdateType`, each stamped with `[UpdateHandlerDescriptor(UpdateType.Message, "Message")]`
+- The abstract generated filter DTO bases (`MessageFilter`, `CallbackQueryFilter`, etc.) with their `CanPass(Update)` implementations that extract the payload
+- Per-update-type narrowing filter bases for DTOs shared across multiple update types
+- The `WaitFor{UpdateType}Async(this IUpdateAwaiter, TimeSpan?)` extension methods in namespace `PolyBot.Attributes` (class `PolyBotAwaiterExtensions`), compiled directly into the `PolyBot` library assembly — these are always available regardless of whether any `IUpdateFilter` is discovered in the consuming project
+
+This separation means `PolyBot.dll` (the library the user references) never directly depends on `Telegram.Bot`'s `UpdateType` enum at the source level — the generated bases do — and the main generator can read the handler attribute metadata from compiled symbols rather than hardcoding `UpdateType` member names.
+
+---
+
+## Cross-assembly filter resolution
+
+When a handler in an executable references a filter attribute (`[NonEmptyTextFilter]`) or `With*` extension (`WithNonEmptyTextFilter()`) that was emitted for a filter class living in a referenced **library** assembly, the generator resolves the pairing on demand:
+
+1. The filter attribute class (or the `With*` extension type) comes from the referenced assembly.
+2. The generator calls `FindFilterInAssembly(assembly, stemName, filterInterface)`, which walks the referenced assembly's namespace tree recursively looking for a concrete, non-generic class named `stemName` that implements `IUpdateFilter`.
+3. The fully qualified type name of the found class is used in the emitted `BotRouter` code.
+
+This means no assembly-wide pre-scan is needed — only referenced assemblies that are actually used in handler attributes are walked, and only at the point of use.

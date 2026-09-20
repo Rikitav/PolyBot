@@ -1,0 +1,252 @@
+---
+title: "Bot Commands: Routing, Arguments & BotFather Sync in PolyBot"
+sidebarTitle: "Commands"
+description: "Define slash commands with typed argument extraction, optional parameters, and automatic BotFather menu synchronization using the [Command] attribute."
+---
+
+PolyBot maps incoming Telegram commands to handler methods declaratively. Decorate any `[MessageHandler]` method with `[Command]` to restrict it to messages whose first entity is a bot command. The source generator emits all entity-checking, argument-parsing, and `@botname`-suffix verification code so you never write routing boilerplate by hand.
+
+## The `[Command]` attribute
+
+```csharp
+[MessageHandler]
+[Command(
+    Aliases = ["start"],
+    Description = "Start the bot",
+    Scope = CommandScope.AllPrivateChats,
+    LanguageCode = "en",
+    IsHidden = false
+)]
+public static async Task<Result> StartHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "Welcome!", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+### Properties at a glance
+
+| Property | Type | Default | Purpose |
+|---|---|---|---|
+| `Aliases` | `string[]` | `[]` | Command names without the leading `/`, matched case-insensitively |
+| `Prefix` | `char` | `'/'` | Controls the matching mode (see below) |
+| `NoArgs` | `bool` | `false` | Throws `CommandArgsParseException` if the message carries any tokens after the command |
+| `Description` | `string?` | `null` | BotFather menu description; values over 256 chars are a compile-time error (`CUR022`) |
+| `LanguageCode` | `string?` | `null` | BotFather localization code (e.g. `"en"`, `"ru"`); `null` registers for all languages |
+| `Scope` | `CommandScope` | `Default` | The BotFather audience for the command |
+| `IsHidden` | `bool` | `false` | Routes normally but is excluded from BotFather sync and skips the missing-description warning |
+
+### How command matching works
+
+When `Prefix` is `'/'` (the default), PolyBot checks that the message's first entity is of type `BotCommand`. If the command text includes an `@botname` suffix — such as `/start@MyBot` — the suffix is verified against `PolyBotOptions.BotUsername`, which is populated automatically by `PolyBotClient.RunPollingAsync()` via `GetMe`. A mismatched suffix falls through to the next handler; other handlers (like an echo fallback) continue routing normally.
+
+```csharp
+// /start@TestBot  → matched (username matches)
+// /start@WrongBot → falls through to echo
+[MessageHandler]
+[Command(Aliases = ["start"])]
+public static Task<Result> Start(Message msg) { ... }
+```
+
+For non-`'/'` prefixes, PolyBot matches by `string.StartsWith` (ordinal-ignore-case) against `Message.Text` directly — no entity required. A space (`' '`) or null character (`'\0'`) prefix matches text starting with the alias alone.
+
+```csharp
+// Triggered by "!hi"
+[MessageHandler]
+[Command(Aliases = ["hi"], Prefix = '!')]
+public static Task<Result> Hi(Message msg) { ... }
+
+// Triggered by "time" (no prefix)
+[MessageHandler]
+[Command(Aliases = ["time"], Prefix = ' ')]
+public static Task<Result> Time(Message msg) { ... }
+```
+
+### `CommandScope` values
+
+The `Scope` property maps to Telegram's `BotCommandScope` and controls which chats see the command in the BotFather menu.
+
+| Value | BotFather audience |
+|---|---|
+| `Default` | All chats (the default) |
+| `AllPrivateChats` | Private chats only |
+| `AllGroupChats` | Group and supergroup chats |
+| `AllChatAdministrators` | Chat administrators across all groups |
+
+## Argument extraction
+
+Arguments are the whitespace-separated tokens that follow the command word in the message text. Three attributes let you bind handler parameters to those tokens instead of resolving them from the DI container.
+
+<Warning>
+`[Arg]`, `[Rest]`, and `[Parse]` are only meaningful on `[Command]`-restricted handlers. Placing them on a handler without `[Command]` produces warning `CUR003` and the parameters are treated as normal DI dependencies.
+</Warning>
+
+### `[Arg]` — single token
+
+Binds one whitespace-separated token by position. The token is converted using `TryParse` (invariant culture for numeric types). Set `IsOptional = true` to yield the parameter's default value instead of a parse error when the token is absent.
+
+```csharp
+[MessageHandler]
+[Command(Aliases = ["greet"])]
+public static async Task<Result> Greet(
+    Message msg,
+    ITelegramBotClient bot,
+    [Arg] string name,
+    [Arg(IsOptional = true)] int? times,
+    CancellationToken ct)
+{
+    int repeat = times ?? 1;
+    string greeting = string.Join(", ", Enumerable.Repeat($"Hello, {name}!", repeat));
+    await bot.SendMessage(msg.Chat.Id, greeting, cancellationToken: ct);
+    return Result.Handled();
+}
+// "/greet Alice"    → "Hello, Alice!"
+// "/greet Alice 3"  → "Hello, Alice!, Hello, Alice!, Hello, Alice!"
+```
+
+<Note>
+`[Arg]` parameter types must be the argument type, `Nullable<T>`, or `object`. Any other type produces warning `CUR005` and falls back to DI injection.
+</Note>
+
+### `[Rest]` — remainder string
+
+Binds everything that follows the positionally consumed `[Arg]` tokens as a single trimmed `string`. At most one `[Rest]` parameter is allowed per handler; more produce warning `CUR006`.
+
+```csharp
+[MessageHandler]
+[Command(Aliases = ["search"])]
+public static async Task<Result> Search(
+    Message msg,
+    ITelegramBotClient bot,
+    [Rest] string query,
+    CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"Searching for: {query}", cancellationToken: ct);
+    return Result.Handled();
+}
+// "/search the quick brown fox" → "Searching for: the quick brown fox"
+```
+
+### `[Parse]` — regex match
+
+Binds a `string` parameter to the first match of a regular expression scanned (not anchored) against the remaining text. If there are capturing groups, `Groups[1].Value` is bound; otherwise the whole match is used. A non-match throws `CommandArgsParseException`.
+
+```csharp
+[MessageHandler]
+[Command(Aliases = ["add"])]
+public static async Task<Result> Add(
+    Message msg,
+    ITelegramBotClient bot,
+    [Parse(@"\d+")] string first,
+    [Parse(@"\d+")] string second,
+    CancellationToken ct)
+{
+    int result = int.Parse(first) + int.Parse(second);
+    await bot.SendMessage(msg.Chat.Id, $"Result: {result}", cancellationToken: ct);
+    return Result.Handled();
+}
+// "/add 12 34" → "Result: 46"
+```
+
+<Note>
+`[Parse]` must be applied to a `string` parameter (`CUR009`) and cannot be declared after a `[Rest]` parameter on the same handler (`CUR008`).
+</Note>
+
+## BotFather auto-sync
+
+Commands with a `Description` property are automatically collected into `PolyBotBotFatherSync` and synchronized with BotFather on startup. The generator groups commands by `(Scope, LanguageCode)` and sends one `SetMyCommands` call per unique pair.
+
+```csharp
+[MessageHandler]
+[Command(
+    Aliases = ["help"],
+    Description = "Show the help message",
+    Scope = CommandScope.AllPrivateChats
+)]
+public static Task<Result> Help(Message msg) { ... }
+
+// This command routes normally but does NOT appear in the BotFather menu
+[MessageHandler]
+[Command(Aliases = ["debug"], IsHidden = true)]
+public static Task<Result> Debug(Message msg) { ... }
+```
+
+<Note>
+Only `'/'`-prefixed commands are synchronized; commands with a custom `Prefix` are always hidden from BotFather regardless of `IsHidden`.
+</Note>
+
+BotFather alias names must match `^[a-z0-9_]{1,32}$`; violations are reported as compile-time error `CUR020`.
+
+## Diagnostics reference
+
+<Accordion title="CUR002 – [Command] on a non-Message handler">
+**Severity:** Warning
+
+`[Command]` is placed on a handler whose update payload is not a `Message`. The command filter is ignored and the handler routes unconditionally.
+</Accordion>
+
+<Accordion title="CUR003 – [Arg]/[Rest]/[Parse] without [Command]">
+**Severity:** Warning
+
+An argument attribute appears on a handler that has no `[Command]`. The parameter is treated as a normal DI dependency.
+</Accordion>
+
+<Accordion title="CUR004 – Non-constant Prefix">
+**Severity:** Warning
+
+The `Prefix` property is not a compile-time constant. Falls back to `'/'`.
+</Accordion>
+
+<Accordion title="CUR005 – [Arg] type mismatch">
+**Severity:** Warning
+
+The `[Arg]` parameter type is not the argument type, `Nullable<T>`, or `object`. The parameter is resolved from DI instead.
+</Accordion>
+
+<Accordion title="CUR006 – Multiple [Rest] parameters">
+**Severity:** Warning
+
+More than one `[Rest]` parameter is declared on a handler. Extra parameters beyond the first are treated as ordinary DI parameters.
+</Accordion>
+
+<Accordion title="CUR007 – [Rest] on a non-string parameter">
+**Severity:** Warning
+
+`[Rest]` is applied to a parameter whose type is not `string`. The parameter falls back to DI.
+</Accordion>
+
+<Accordion title="CUR008 – [Parse] after [Rest]">
+**Severity:** Warning
+
+A `[Parse]` parameter is declared after a `[Rest]` parameter. The `[Parse]` parameter falls back to DI since `[Rest]` absorbs all remaining text.
+</Accordion>
+
+<Accordion title="CUR009 – [Parse] on a non-string parameter">
+**Severity:** Warning
+
+`[Parse]` is applied to a parameter whose type is not `string`. Falls back to DI.
+</Accordion>
+
+<Accordion title="CUR020 – Invalid BotFather alias format">
+**Severity:** Error
+
+A command alias does not match `^[a-z0-9_]{1,32}$` and cannot be registered with BotFather.
+</Accordion>
+
+<Accordion title="CUR021 – Missing Description">
+**Severity:** Warning
+
+A `'/'`-prefixed command without `IsHidden = true` has no `Description`. The command is excluded from BotFather sync.
+</Accordion>
+
+<Accordion title="CUR022 – Description over 256 characters">
+**Severity:** Error
+
+The `Description` string exceeds BotFather's 256-character limit.
+</Accordion>
+
+<Accordion title="CUR023 – Duplicate alias in (scope, language) bucket">
+**Severity:** Warning
+
+Two commands with the same alias target the same `(Scope, LanguageCode)` pair. The second registration is discarded.
+</Accordion>

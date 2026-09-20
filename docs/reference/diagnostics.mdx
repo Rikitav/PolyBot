@@ -1,0 +1,282 @@
+---
+title: "PolyBot Compiler Diagnostics: CUR001–CUR036 Guide"
+sidebarTitle: "Diagnostics"
+description: "Complete reference for every PolyBot source-generator diagnostic (CUR001–CUR036) — severity, trigger condition, and fix, grouped by feature area."
+---
+
+The PolyBot source generator reports diagnostics as standard Roslyn compiler messages. Warnings do not prevent compilation but indicate that an attribute or parameter was silently skipped. Errors prevent the affected handler, keyboard, or pattern from being emitted and must be resolved before the router will compile. All diagnostics use the `CUR` prefix and appear in the Error List / build output like any other C# diagnostic.
+
+---
+
+## Handlers & general
+
+<Accordion title="CUR001 — Unsupported handler signature (Warning)">
+**Trigger:** A method decorated with a `[XxxHandler]` attribute returns something other than `Task<Result>`, `ValueTask<Result>`, `Task`, or `ValueTask`.
+
+**Fix:** Change the return type to one of the four supported types. `Task`/`ValueTask` (non-generic) always continues routing; `Task<Result>`/`ValueTask<Result>` lets you control routing with `Result.StopRouting` / `Result.ContinueRouting`.
+
+```csharp
+// ❌ CUR001 — wrong return type
+[MessageHandler]
+public static string BadHandler(Message msg) => "not supported";
+
+// ✅ correct
+[MessageHandler]
+public static Task<Result> GoodHandler(Message msg)
+    => Task.FromResult(Result.StopRouting);
+```
+</Accordion>
+
+---
+
+## Commands
+
+<Accordion title="CUR002 — Command filter on non-message payload (Warning)">
+**Trigger:** `[Command]` is applied to a handler whose update payload is not `Message` (e.g. `[CallbackQueryHandler, Command(...)]`).
+
+**Fix:** Remove `[Command]` from non-message handlers. Commands only make sense for `Message` payloads. The `[Command]` attribute is ignored and the handler runs without a command guard.
+</Accordion>
+
+<Accordion title="CUR003 — Arg, Rest or Parse on non-command handler (Warning)">
+**Trigger:** A parameter on a handler that has no `[Command]` attribute (or has `[Command]` without `Aliases`) is annotated with `[Arg]`, `[Rest]`, or `[Parse]`. The parameter is treated as a normal DI service.
+
+**Fix:** Add `[Command(Aliases = [...])]` to the handler, or remove the `[Arg]`/`[Rest]`/`[Parse]` annotation and inject the value from DI instead.
+</Accordion>
+
+<Accordion title="CUR004 — Non-constant command prefix (Warning)">
+**Trigger:** The `Prefix` named argument on `[Command]` is not a constant `char` literal. The generator falls back to `'/'`.
+
+**Fix:** Use a constant character literal: `Prefix = '!'`.
+</Accordion>
+
+<Accordion title="CUR005 — Incompatible argument parameter type (Warning)">
+**Trigger:** A parameter annotated with `[Arg]` has a type that is not `T`, `Nullable<T>`, or `object`. The parameter is treated as a DI dependency.
+
+**Fix:** Change the parameter type to the argument type, `T?`, or `object`. Primitive types (`int`, `long`, `Guid`, enums, and anything with an accessible `TryParse`) are supported.
+</Accordion>
+
+<Accordion title="CUR006 — Multiple Rest parameters (Warning)">
+**Trigger:** A handler declares more than one `[Rest]` parameter. Extra `[Rest]` parameters are treated as DI dependencies, which will fail at runtime because `string` is not registered.
+
+**Fix:** Keep only one `[Rest]` parameter per handler.
+</Accordion>
+
+<Accordion title="CUR007 — Rest parameter is not a string (Warning)">
+**Trigger:** `[Rest]` is applied to a parameter whose type is not `string`. The parameter is treated as a DI dependency.
+
+**Fix:** Change the parameter type to `string`.
+</Accordion>
+
+<Accordion title="CUR008 — Parse after Rest (Warning)">
+**Trigger:** A `[Parse]` parameter is declared after a `[Rest]` parameter. Because `[Rest]` consumes all remaining text, nothing is left for `[Parse]`. The parameter is treated as a DI dependency.
+
+**Fix:** Reorder parameters so all `[Parse]` parameters appear before `[Rest]`.
+</Accordion>
+
+<Accordion title="CUR009 — Parse parameter is not a string (Warning)">
+**Trigger:** `[Parse]` is applied to a parameter whose type is not `string`. The parameter is treated as a DI dependency.
+
+**Fix:** Change the parameter type to `string`.
+</Accordion>
+
+<Accordion title="CUR020 — Command alias is not a valid BotFather command (Error)">
+**Trigger:** An alias in `[Command(Aliases = [...])]` does not match `^[a-z0-9_]{1,32}$` — BotFather's required format for command names.
+
+**Fix:** Use only lowercase ASCII letters, digits, and underscores; keep the name between 1 and 32 characters.
+</Accordion>
+
+<Accordion title="CUR021 — Command has no BotFather description (Warning)">
+**Trigger:** A `[Command]` with `Aliases` has no `Description` set and `IsHidden` is `false`. The command cannot be synchronized with BotFather.
+
+**Fix:** Add `Description = "Short description"` to `[Command]`, or set `IsHidden = true` if you intentionally do not want the command in the menu.
+</Accordion>
+
+<Accordion title="CUR022 — Command description exceeds 256 characters (Error)">
+**Trigger:** `[Command].Description` is longer than 256 characters. BotFather rejects descriptions that exceed this limit.
+
+**Fix:** Shorten the description to at most 256 characters.
+</Accordion>
+
+<Accordion title="CUR023 — Duplicate command in the same scope and language (Warning)">
+**Trigger:** Two or more handlers declare the same alias for the same `CommandScope` and `LanguageCode` combination. Only the first is sent to BotFather.
+
+**Fix:** Deduplicate the alias across the affected handlers, or assign different `Scope`/`LanguageCode` values to each so they target different BotFather menus.
+</Accordion>
+
+---
+
+## State
+
+<Accordion title="CUR010 — State type argument must be an enum (Error)">
+**Trigger:** The type argument `TEnum` of `[State<TEnum>]` or `[NoState<TEnum>]` is not an `enum` type. The attribute is ignored.
+
+**Fix:** Use an `enum` type as the type argument: `[State<RegistrationStep>(RegistrationStep.AwaitingAge)]`.
+</Accordion>
+
+<Accordion title="CUR011 — Mutually exclusive state conditions (Warning)">
+**Trigger:** A handler declares both `[State<TEnum>(value)]` and `[NoState<TEnum>]` for the same `(TEnum, StateKey)` pair. The conditions are AND-ed, so the handler never matches.
+
+**Fix:** Remove one of the conflicting attributes.
+</Accordion>
+
+---
+
+## Filters
+
+<Accordion title="CUR012 — Generic filter class (Warning)">
+**Trigger:** A class implementing `IUpdateFilter` has one or more generic type parameters. The generator cannot emit a wrapper attribute for a generic class; the filter is skipped.
+
+**Fix:** Make the filter class non-generic. If you need parameterized behavior, use constructor injection instead.
+</Accordion>
+
+---
+
+## Awaits
+
+<Accordion title="CUR013 — Update awaiter without an await site (Warning)">
+**Trigger:** A handler takes an `IUpdateAwaiter` parameter but the generator found no `WaitFor*Async(...)` call on it in the method body. If the handler were to call `WaitFor*Async` at runtime without the corresponding branch in the router, the polling loop would deadlock.
+
+**Fix:** Call `WaitFor*Async` directly on the `IUpdateAwaiter` parameter (not through a wrapper method — the generator does not follow indirection by design). If you do not intend to suspend the handler, remove the `IUpdateAwaiter` parameter.
+</Accordion>
+
+<Accordion title="CUR014 — TextMatches on a non-Message await target (Warning)">
+**Trigger:** `.TextMatches(...)` is chained on a `WaitFor*Async` call whose target DTO is not a message-shaped payload (`Message`). The text check can never match; no implicit await branch is generated.
+
+**Fix:** Remove `.TextMatches(...)` from the chain, or change the awaited type to a message-shaped DTO.
+</Accordion>
+
+<Accordion title="CUR015 — Unknown filter in await chain (Warning)">
+**Trigger:** A `.With*()` call in an await chain references a filter name that could not be resolved to a known `IUpdateFilter` class. The filter check is not emitted into the await branch.
+
+**Fix:** Ensure the filter class exists in the current compilation (or a referenced library), is concrete (non-abstract), non-generic, and implements `IUpdateFilter`. Check for typos in the `With*` extension name.
+</Accordion>
+
+<Accordion title="CUR016 — Unsupported Where predicate (Warning)">
+**Trigger:** A `.Where(...)` predicate in an await chain does not meet the generator's static-lambda constraints. The predicate must be `static`, non-async, expression-bodied, and reference only the parameter and literals. The predicate is not emitted into the await branch.
+
+**Fix:** Add the `static` modifier, remove any `async` modifier, convert to an expression body, and ensure the body references only the lambda parameter (no statics, no captured variables).
+
+```csharp
+// ❌ CUR016 — captures variable
+.Where(m => m.Text == expectedText)
+
+// ✅ correct
+.Where(static m => m.Text != null && m.Text.Length > 0)
+```
+</Accordion>
+
+---
+
+## Patterns (callback-data routing)
+
+<Accordion title="CUR024 — Callback pattern can never fit callback_data (Error)">
+**Trigger:** The literal skeleton of a `[Pattern]` template is already longer than Telegram's 64-byte `callback_data` limit. No update can ever match the template.
+
+**Fix:** Shorten the literal segments of the template so the skeleton fits within 64 bytes.
+</Accordion>
+
+<Accordion title="CUR025 — Callback pattern placeholders can never fit callback_data (Error)">
+**Trigger:** The literal skeleton plus the minimum non-empty size of each placeholder (1 byte each) already exceeds 64 bytes. No valid data can ever match.
+
+**Fix:** Shorten the template or reduce the number of non-wildcard placeholders.
+</Accordion>
+
+<Accordion title="CUR026 — Callback pattern placeholder has no [Arg] parameter (Error)">
+**Trigger:** A `{name}` placeholder in a `[Pattern]` template has no matching `[Arg]`-annotated parameter on the handler.
+
+**Fix:** Add `[Arg] T name` to the handler parameter list, or remove the `{name}` placeholder from the template.
+</Accordion>
+
+<Accordion title="CUR027 — [Arg] parameter is not captured by the callback pattern (Error)">
+**Trigger:** A handler has an `[Arg]`-annotated parameter but the `[Pattern]` template contains no matching `{name}` placeholder.
+
+**Fix:** Add a `{paramName}` or `{paramName:constraint}` placeholder to the template, or remove the `[Arg]` annotation and let the parameter be resolved from DI.
+</Accordion>
+
+<Accordion title="CUR028 — [Arg] type has no accessible TryParse (Error)">
+**Trigger:** The type of an `[Arg]` parameter used in a `[Pattern]` has no accessible static `TryParse(string, out T)` or `TryParse(ReadOnlySpan<char>, out T)` method. The parameter binds to `default(T)` in the generated code.
+
+**Fix:** Use a type that has an accessible `TryParse`, or add one to a custom type. BCL numerics, `bool`, `Guid`, `DateTime`, and all enums are automatically supported.
+</Accordion>
+
+<Accordion title="CUR029 — [Pattern] requires a CallbackQuery handler (Error)">
+**Trigger:** `[Pattern]` is applied to a handler that is not a `[CallbackQueryHandler]`. The pattern is ignored.
+
+**Fix:** Remove `[Pattern]` from the handler, or change the handler attribute to `[CallbackQueryHandler]`.
+</Accordion>
+
+<Accordion title="CUR030 — Callback pattern constraint does not match parameter type (Error)">
+**Trigger:** A placeholder constraint (e.g. `{id:int}`) does not match the C# type of the corresponding `[Arg]` parameter (e.g. the parameter is `string`), or the constraint name is unknown.
+
+**Fix:** Align the constraint with the parameter type, or remove the constraint to accept any string segment.
+</Accordion>
+
+<Accordion title="CUR031 — Malformed callback pattern (Error)">
+**Trigger:** The `[Pattern]` template string is structurally invalid — e.g. unbalanced braces, empty segments, a wildcard `{*name}` that is not the last segment, or an empty placeholder name.
+
+**Fix:** Correct the template syntax. Examples of valid forms: `"item:{id}"`, `"cart:{id:int}:checkout"`, `"logs:{*path}"`.
+</Accordion>
+
+---
+
+## Exception handling
+
+<Accordion title="CUR032 — Exception handler parameter cannot be resolved in the error path (Error)">
+**Trigger:** A parameter of an `[ExceptionHandler]` method is update-bound (e.g. typed as `Message`, `CallbackQuery`) or uses `[Key]` without a constant key. There is no current update in the error path, so these parameters cannot be resolved.
+
+**Fix:** Remove update-bound parameters from the exception handler. Allowed parameter types are `Exception`, `HandleErrorSource`, `ITelegramBotClient`, `CancellationToken`, and DI services (optionally keyed with a constant `[Key]`).
+</Accordion>
+
+<Accordion title="CUR033 — Only one [ExceptionHandler] is allowed (Error)">
+**Trigger:** More than one method is decorated with `[ExceptionHandler]`. Only the first declaration is used.
+
+**Fix:** Remove `[ExceptionHandler]` from all but one method.
+</Accordion>
+
+<Accordion title="CUR034 — Exception handler must return Task or ValueTask (Error)">
+**Trigger:** An `[ExceptionHandler]` method does not return `Task` or `ValueTask`. The attribute is ignored.
+
+**Fix:** Change the return type to `Task` or `ValueTask`.
+</Accordion>
+
+---
+
+## Keyboards
+
+<Accordion title="CUR017 — Unknown keyboard placeholder (Warning)">
+**Trigger:** A `{parameter}` placeholder in `[CallbackButton].CallbackData` does not match any parameter of the declaring `partial` method. The generated implementation will not compile until the mismatch is resolved.
+
+**Fix:** Either add a parameter with the matching name to the method, or remove or rename the placeholder.
+</Accordion>
+
+<Accordion title="CUR018 — Generated keyboard must return InlineKeyboardMarkup (Error)">
+**Trigger:** A method or property annotated with `[CallbackButton]` returns a type other than `InlineKeyboardMarkup`. The generator only implements `InlineKeyboardMarkup` returns.
+
+**Fix:** Change the return type to `Telegram.Bot.Types.ReplyMarkups.InlineKeyboardMarkup`.
+</Accordion>
+
+<Accordion title="CUR019 — Generated keyboard member must be partial (Warning)">
+**Trigger:** A method or property annotated with `[CallbackButton]` is not marked `partial` (or its containing type is not `partial`). The generator cannot provide the implementation.
+
+**Fix:** Add `partial` to the method (or property in C# 13) and to every enclosing type.
+</Accordion>
+
+---
+
+## Rate limiting
+
+<Accordion title="CUR035 — Invalid [Throttled] configuration (Warning)">
+**Trigger:** A `[Throttled]` attribute has an invalid or non-constant value for `Limit`, `PeriodMilliseconds`, `Scope`, or `Action`. The affected value is clamped to its default (`Limit=1`, `PeriodMilliseconds=1000`, `Scope=User`, `Action=Ignore`).
+
+**Fix:** Use positive integer literals for `Limit` and `PeriodMilliseconds`, and enum literals for `Scope` and `Action`.
+</Accordion>
+
+---
+
+## Library projects
+
+<Accordion title="CUR036 — Handlers are not routed in library projects (Warning)">
+**Trigger:** A handler method (decorated with `[XxxHandler]`) is declared in a project with `OutputType=Library`. Library projects do not get a generated router, so the handler never runs.
+
+**Fix:** Move the handler to an executable project (`OutputType=Exe` or `WinExe`). Libraries may only contribute filters, keyboards, and `With*` extensions. See [Library vs Executable](/advanced/library-vs-executable) for details.
+</Accordion>

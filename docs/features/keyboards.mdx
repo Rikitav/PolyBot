@@ -1,0 +1,170 @@
+---
+title: "Keyboards: Fluent Builders and Source-Generated Layouts"
+sidebarTitle: "Keyboards"
+description: "Build keyboards with fluent builders or declare layouts via [CallbackButton] on partial methods — the source generator emits the markup body for you."
+---
+
+PolyBot provides two approaches to constructing Telegram keyboards: a chainable fluent API for runtime-assembled markups, and a declarative source-generated approach where you annotate a `partial` method with `[CallbackButton]` attributes and the generator emits the implementation. Both produce standard `Telegram.Bot` markup types.
+
+<Tabs>
+  <Tab title="Fluent builders">
+    Fluent builders accumulate buttons linearly and then shape them into rows with `Build()` (one button per row) or `Adjust(rowSizes)` (explicit row widths, last size repeated for remaining buttons).
+
+    ### `InlineKeyboardBuilder`
+
+    ```csharp
+    using PolyBot.Keyboards;
+
+    // One button per row
+    InlineKeyboardMarkup linear = new InlineKeyboardBuilder()
+        .WithCallbackButton("Open", "open")
+        .WithCallbackButton("Close", "close")
+        .Build();
+
+    // Two buttons on the first row, one on the second
+    InlineKeyboardMarkup twoByOne = new InlineKeyboardBuilder()
+        .WithCallbackButton("Yes", "confirm:yes")
+        .WithCallbackButton("No", "confirm:no")
+        .WithCallbackButton("Cancel", "confirm:cancel")
+        .Adjust(2, 1);
+
+    // Adjust with a single size repeats for all remaining rows
+    InlineKeyboardMarkup grid = new InlineKeyboardBuilder()
+        .WithCallbackButton("A", "a")
+        .WithCallbackButton("B", "b")
+        .WithCallbackButton("C", "c")
+        .WithCallbackButton("D", "d")
+        .WithCallbackButton("E", "e")
+        .Adjust(2, 1, 2); // rows of 2, 1, 2 → [A B] [C] [D E]
+    ```
+
+    ### `ReplyKeyboardBuilder`
+
+    `ReplyKeyboardBuilder` mirrors the inline builder and always sets `ResizeKeyboard = true` on the produced markup.
+
+    ```csharp
+    using PolyBot.Keyboards;
+
+    ReplyKeyboardMarkup twoColumns = new ReplyKeyboardBuilder()
+        .WithButton("Morning")
+        .WithButton("Afternoon")
+        .WithButton("Evening")
+        .Adjust(2);
+    // → [Morning  Afternoon]
+    //   [Evening]
+    // ResizeKeyboard = true
+    ```
+  </Tab>
+  <Tab title="Generated keyboards">
+    Annotate a `partial` method returning `InlineKeyboardMarkup` with one or more `[CallbackButton]` attribute lists. The source generator emits the method body; each **attribute list** (line) forms one row, each **attribute within a list** forms one column button.
+
+    ```csharp
+    public sealed partial class MyHandlers
+    {
+        // Row 1: [First] [Second]
+        // Row 2: [Cancel] [Apply]
+        [CallbackButton("First",  "first:{val}"),  CallbackButton("Second", "second:{val}")]
+        [CallbackButton("Cancel", "cancel"),        CallbackButton("Apply",  "apply:{val}")]
+        private static partial InlineKeyboardMarkup ActionsKeyboard(int val);
+    }
+    ```
+
+    The `{val}` placeholder in `CallbackData` is replaced with the method parameter at runtime:
+
+    ```csharp
+    InlineKeyboardMarkup kb = MyHandlers.ActionsKeyboard(5);
+    // rows[0][0].CallbackData == "first:5"
+    // rows[1][1].CallbackData == "apply:5"
+    ```
+
+    **C# 13 partial properties** are also supported when there are no parameters (no placeholders):
+
+    ```csharp
+    public sealed partial class MyHandlers
+    {
+        [CallbackButton("Yes", "yes"), CallbackButton("No", "no")]
+        private static partial InlineKeyboardMarkup ConfirmKeyboard { get; }
+    }
+    ```
+
+    ### Using a generated keyboard in a handler
+
+    ```csharp
+    public sealed partial class BotHandlers
+    {
+        [CallbackButton("Help", "help"), CallbackButton("About", "about")]
+        private static partial InlineKeyboardMarkup StartKeyboard();
+
+        [MessageHandler]
+        [Command(Aliases = ["start"], Description = "Start the bot")]
+        public static async Task<Result> Start(Message msg, ITelegramBotClient bot, CancellationToken ct)
+        {
+            await bot.SendMessage(
+                msg.Chat.Id,
+                "Welcome! Choose an option:",
+                replyMarkup: StartKeyboard(),
+                cancellationToken: ct);
+
+            return Result.Handled();
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## `Adjust` row-sizing rules
+
+`Adjust(params int[] rowSizes)` chunks the flat button list into rows using the given widths in order. When the button list is longer than the specified sizes, the **last size is repeated** for all remaining buttons.
+
+```csharp
+// 6 buttons, sizes [2, 1] → rows of 2, 1, 1, 1, 1 (last size 1 repeated)
+new InlineKeyboardBuilder()
+    .WithCallbackButton("A", "a")
+    .WithCallbackButton("B", "b")
+    .WithCallbackButton("C", "c")
+    .WithCallbackButton("D", "d")
+    .WithCallbackButton("E", "e")
+    .WithCallbackButton("F", "f")
+    .Adjust(2, 1);
+// → [A B] [C] [D] [E] [F]
+```
+
+## `{parameter}` placeholders in generated keyboards
+
+Placeholders in `CallbackData` strings reference the declaring method's parameters by name and are interpolated in the generated code at call time. Placeholders that don't match any parameter name produce warning `CUR017`.
+
+```csharp
+// val is interpolated; unknown {extra} would produce CUR017
+[CallbackButton("Item", "item:{val}:{extra}")]
+private static partial InlineKeyboardMarkup ItemKeyboard(int val);
+```
+
+<Note>
+Partial properties have no parameters, so `{parameter}` placeholders only work on methods.
+</Note>
+
+## Requirements for generated keyboards
+
+- The containing type **must be `partial`**.
+- The method or property return type must be `InlineKeyboardMarkup`; any other type is a compile-time error (`CUR018`).
+- Non-`partial` members and generic methods produce warning `CUR019` and are skipped.
+
+## Diagnostics reference
+
+<Accordion title="CUR017 – Unknown placeholder in CallbackData">
+**Severity:** Warning
+
+A `{name}` placeholder in a `[CallbackButton]` attribute's `CallbackData` does not match any parameter of the declaring method. The placeholder will be emitted as a literal string at runtime.
+</Accordion>
+
+<Accordion title="CUR018 – Non-InlineKeyboardMarkup return type">
+**Severity:** Error
+
+A `[CallbackButton]`-annotated method or property does not return `InlineKeyboardMarkup`. The generator skips the member.
+</Accordion>
+
+<Accordion title="CUR019 – Non-partial or generic member">
+**Severity:** Warning
+
+A `[CallbackButton]`-annotated member is not declared `partial`, or the method itself is generic. The generator cannot emit an implementation and skips the member.
+</Accordion>

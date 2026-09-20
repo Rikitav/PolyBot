@@ -1,0 +1,96 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "PolyBot",
+  "theme": "luma",
+  "colors": {
+    "primary": "#2563EB",
+    "light": "#3B82F6",
+    "dark": "#1D4ED8"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/Rikitav/PolyBot"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Rikitav/PolyBot"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/handlers",
+              "concepts/parameter-injection",
+              "concepts/routing-result",
+              "concepts/filters"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/commands",
+              "features/state-machines",
+              "features/keyboards",
+              "features/callback-patterns",
+              "features/inline-awaits",
+              "features/rate-limiting",
+              "features/exception-handling"
+            ]
+          },
+          {
+            "group": "Hosting & Deployment",
+            "pages": [
+              "hosting/polling",
+              "hosting/generic-host",
+              "hosting/webhooks"
+            ]
+          },
+          {
+            "group": "Testing",
+            "pages": [
+              "testing/test-harness",
+              "testing/poly-tests"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "API Reference",
+            "pages": [
+              "reference/polybotoptions",
+              "reference/attributes",
+              "reference/interfaces",
+              "reference/update-extensions",
+              "reference/diagnostics"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/source-generator",
+              "advanced/library-vs-executable"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

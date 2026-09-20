@@ -1,0 +1,205 @@
+---
+title: "Generic Host Integration with AddPolyBotHostedPolling"
+sidebarTitle: "Generic Host"
+description: "Host a PolyBot bot inside a .NET generic host: AddPolyBotHostedPolling registers the generated router and IHostedService polling lifecycle."
+---
+
+When your project references `Microsoft.Extensions.Hosting.Abstractions`, the PolyBot source generator emits `PolyBotPollingHostedService` and the `AddPolyBotHostedPolling` extension method. This integration lets you run a PolyBot bot as an `IHostedService` inside any `IHost`-based application, alongside logging, configuration, and other hosted services.
+
+<Note>
+The hosted-polling integration is **generated only when `Microsoft.Extensions.Hosting.Abstractions` is referenced** in your project. If you are using `PolyBotClient` in a console application without the hosting package, see [Standalone Polling](/hosting/polling) instead.
+</Note>
+
+## What the generated service does
+
+`PolyBotPollingHostedService` implements `IHostedService` and manages the full polling lifecycle:
+
+| Phase | Behaviour |
+|---|---|
+| `StartAsync` | Starts `PollAsync` in the background via `Task.Run`, then awaits `GetMe` to back-fill `PolyBotOptions.BotUsername`. |
+| Background polling (`PollAsync`) | Calls `DeleteWebhook` first (to clear any stale webhook), then enters `ReceiveAsync`, passing each update to the generated router. The loop runs until the stopping token is cancelled. |
+| `StopAsync` | Signals the stopping `CancellationTokenSource`, then waits for the polling task to finish (bounded by the host's shutdown timeout). |
+
+## Registration
+
+Call `AddPolyBotHostedPolling` on your `IServiceCollection`. The method registers `AddPolyBotRouter()`, builds a `ReceiverOptions` from the optional delegate, and adds `PolyBotPollingHostedService` as `IHostedService`.
+
+```csharp
+services.AddPolyBotHostedPolling(receiver =>
+{
+    receiver.DropPendingUpdates = true;
+});
+```
+
+<Warning>
+`PolyBotOptions` must be registered as a singleton **before** calling `AddPolyBotHostedPolling`. The hosted service resolves it from the DI container on construction. Register it yourself before calling `AddPolyBotHostedPolling`.
+</Warning>
+
+The `ReceiverOptions` delegate is optional — omitting it uses defaults (no update drop, all update types, no limit override):
+
+```csharp
+services.AddPolyBotHostedPolling(); // minimal, uses all defaults
+```
+
+## DI wiring
+
+The typical registration order for a generic-host bot:
+
+<Steps>
+  <Step title="Register PolyBotOptions">
+    Register your options instance as a singleton. This is the single source of truth for the bot token, username, and polling settings.
+
+    ```csharp
+    services.AddSingleton(new PolyBotOptions
+    {
+        BotToken = configuration["PolyBot:BotToken"]
+            ?? throw new InvalidOperationException("BotToken is required"),
+    });
+    ```
+  </Step>
+  <Step title="Register ITelegramBotClient">
+    Register the Telegram client. The generated service resolves it by interface.
+
+    ```csharp
+    services.AddSingleton<ITelegramBotClient>(sp =>
+    {
+        PolyBotOptions opts = sp.GetRequiredService<PolyBotOptions>();
+        return new TelegramBotClient(opts.BotToken!);
+    });
+    ```
+  </Step>
+  <Step title="Register application services">
+    Add your own services — handlers' dependencies are resolved from the same container.
+
+    ```csharp
+    services.AddSingleton<IMyService, MyService>();
+    ```
+  </Step>
+  <Step title="Call AddPolyBotHostedPolling">
+    This registers the generated router (`IUpdateHandler`) and the hosted service.
+
+    ```csharp
+    services.AddPolyBotHostedPolling(receiver =>
+    {
+        receiver.DropPendingUpdates = true;
+    });
+    ```
+  </Step>
+</Steps>
+
+## Complete Program.cs example
+
+A minimal `IHost` application that reads configuration from `appsettings.json` and polls until the process is stopped:
+
+<CodeGroup>
+```csharp Program.cs
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using PolyBot;
+using PolyBot.Attributes;
+using PolyBot.Routing;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+
+// --- Handlers ---
+
+namespace MyBot;
+
+public static class BotHandlers
+{
+    [MessageHandler]
+    [Command(Aliases = ["start"], Description = "Start the bot")]
+    public static async Task<Result> Start(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "Hello from generic host!", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    [MessageHandler]
+    public static async Task<Result> Echo(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(msg.Text))
+            await bot.SendMessage(msg.Chat.Id, msg.Text, cancellationToken: ct);
+
+        return Result.Handled();
+    }
+}
+
+// --- Host setup ---
+
+IHost host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices((ctx, services) =>
+    {
+        IConfiguration config = ctx.Configuration;
+
+        // 1. Options
+        services.AddSingleton(new PolyBotOptions
+        {
+            BotToken = config["PolyBot:BotToken"]
+                ?? throw new InvalidOperationException("PolyBot:BotToken is required"),
+            DropPendingUpdates = true,
+        });
+
+        // 2. Telegram client
+        services.AddSingleton<ITelegramBotClient>(sp =>
+        {
+            PolyBotOptions opts = sp.GetRequiredService<PolyBotOptions>();
+            return new TelegramBotClient(opts.BotToken!);
+        });
+
+        // 3. Application services
+        services.AddSingleton<IMyService, MyService>();
+
+        // 4. Router + hosted polling
+        services.AddPolyBotHostedPolling(receiver =>
+        {
+            receiver.DropPendingUpdates = true;
+        });
+    })
+    .Build();
+
+await host.RunAsync();
+```
+
+```json appsettings.json
+{
+  "PolyBot": {
+    "BotToken": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  }
+}
+```
+</CodeGroup>
+
+## Using PolyTests with the hosted service
+
+For integration testing, swap `ITelegramBotClient` for `PolyTests` before calling `AddPolyBotHostedPolling`. Updates injected with `EnqueueUpdate` are delivered to the polling loop exactly as real Telegram updates would be:
+
+```csharp
+PolyTests testClient = new PolyTests();
+
+ServiceCollection services = new ServiceCollection();
+services.AddSingleton(new PolyBotOptions { BotUsername = "test_bot" });
+services.AddSingleton<ITelegramBotClient>(testClient);
+services.AddPolyBotHostedPolling();
+
+await using ServiceProvider provider = services.BuildServiceProvider();
+
+IHostedService hosted = provider.GetRequiredService<IHostedService>();
+await hosted.StartAsync(CancellationToken.None);
+
+testClient.EnqueueUpdate(myUpdate);
+
+// ... assert on testClient.SentRequests ...
+
+await hosted.StopAsync(CancellationToken.None);
+```
+
+<Tip>
+See [PolyTests](/testing/poly-tests) for the full API surface of the in-memory bot client, including `SentRequests` assertions and long-poll semantics.
+</Tip>

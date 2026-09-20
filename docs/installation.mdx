@@ -1,0 +1,212 @@
+---
+title: "Installing PolyBot: NuGet, Config, and DI Wiring"
+sidebarTitle: "Installation"
+description: "Install the PolyBot NuGet package, configure PolyBotOptions, wire up DI services, and understand project requirements for full routing generation."
+---
+
+This page covers everything you need to get PolyBot running in a new or existing project: the NuGet install, project requirements, `PolyBotOptions` configuration, and the minimal service-registration calls.
+
+## Install the NuGet package
+
+PolyBot is distributed as a single NuGet package. Install it with the .NET CLI:
+
+```bash
+dotnet add package PolyBot
+```
+
+Or add it to your `.csproj` directly:
+
+```xml
+<PackageReference Include="PolyBot" Version="1.0.0" />
+```
+
+<Note>
+  **`PolyBot.SourceGenerators` is bundled inside the `PolyBot` package** as an analyzer. There is no separate `PolyBot.SourceGenerators` package to install. The source generator becomes active automatically as soon as you reference `PolyBot`.
+</Note>
+
+## Project requirements
+
+<Steps>
+
+  ### Set `OutputType` to `Exe`
+
+  The routing infrastructure — `BotRouter`, `AddPolyBotRouter()`, BotFather sync, and hosting/webhook integration — is **generated only for runnable assemblies**. Your bot's entry-point project must declare `OutputType` as `Exe` or `WinExe`:
+
+  ```xml
+  <Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+      <OutputType>Exe</OutputType>
+      <TargetFramework>net8.0</TargetFramework>
+      <Nullable>enable</Nullable>
+      <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="PolyBot" Version="1.0.0" />
+    </ItemGroup>
+  </Project>
+  ```
+
+  <Warning>
+    If your project is a **library** (`OutputType` is absent or set to `Library`), the generator emits only filters, `With*` awaiter extension methods, and generated keyboards — **not** `BotRouter` or `AddPolyBotRouter()`. Handlers declared in a library project are reported as diagnostic `CUR036` because they would never be routed. Use library projects for shared filter libraries, not for handler code.
+  </Warning>
+
+  ### Choose a target framework
+
+  `PolyBot` targets `netstandard2.0` and `net10.0`. Any TFM compatible with `netstandard2.0` or later works, including `net8.0` and `net9.0`. Using `net8.0` or above is recommended for best performance and minimal polyfill overhead.
+
+</Steps>
+
+## Configure `PolyBotOptions`
+
+`PolyBotOptions` is the single configuration class for PolyBot. It covers the bot token, API endpoint, polling behaviour, and webhook settings.
+
+### Option 1 — constructor injection (simplest)
+
+Pass a `PolyBotOptions` instance directly to `PolyBotClient`:
+
+```csharp
+PolyBotClient client = new PolyBotClient(new PolyBotOptions()
+{
+    BotToken = "YOUR_BOT_TOKEN",
+    DropPendingUpdates = true,
+});
+client.Services.AddPolyBotRouter();
+await client.RunPollingAsync();
+```
+
+Constructor values take precedence over any configuration section.
+
+### Option 2 — configuration section
+
+`PolyBotClient.Configuration` is a `ConfigurationManager`. Load any standard `Microsoft.Extensions.Configuration` source and put your values under the `"PolyBot"` key:
+
+```csharp
+PolyBotClient client = new PolyBotClient();
+client.Configuration.AddJsonFile("appsettings.json");
+client.Services.AddPolyBotRouter();
+await client.RunPollingAsync();
+```
+
+```json
+{
+  "PolyBot": {
+    "BotToken": "YOUR_BOT_TOKEN",
+    "DropPendingUpdates": true,
+    "AllowedUpdates": "Message, CallbackQuery"
+  }
+}
+```
+
+### Option 3 — register manually (Generic Host / webhook)
+
+When you manage the `IServiceCollection` yourself (e.g. with Generic Host or ASP.NET Core), register a `PolyBotOptions` singleton before calling `AddPolyBotDefaults()`:
+
+```csharp
+services.AddSingleton(new PolyBotOptions() { BotToken = token });
+services.AddPolyBotDefaults();
+services.AddPolyBotRouter();
+```
+
+### `PolyBotOptions` reference
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `BotToken` | `string?` | `null` | **Required** for polling. Not required in test mode. |
+| `BotUsername` | `string?` | `null` | Back-filled from `GetMe` at startup; used for `@botsuffix` command verification. |
+| `BaseUrl` | `string?` | `null` | Custom Bot API server URL. |
+| `UseTestEnvironment` | `bool` | `false` | Route requests to Telegram's test environment. |
+| `PollingLimit` | `int?` | `null` | Maximum updates per `GetUpdates` batch (Telegram allows 1–100). |
+| `PollingOffset` | `int?` | `null` | Initial update offset; leave unset to consume pending updates. |
+| `AllowedUpdates` | `UpdateType[]?` | `null` | Update types to receive; `null` receives all types. |
+| `DropPendingUpdates` | `bool` | `false` | Drop accumulated updates when polling starts or the webhook is set. |
+| `WebhookUrl` | `string?` | `null` | Full HTTPS URL Telegram delivers updates to. |
+| `WebhookSecretToken` | `string?` | `null` | Verified from the `X-Telegram-Bot-Api-Secret-Token` header. |
+| `WebhookMaxConnections` | `int` | `40` | Max simultaneous HTTPS connections to the webhook (1–100). |
+| `DeleteWebhookOnStop` | `bool` | `true` | Call `DeleteWebhook` on graceful shutdown. |
+
+## Service wiring
+
+### Minimal wiring with `PolyBotClient`
+
+`PolyBotClient` calls `AddPolyBotDefaults()` internally, so the minimum setup is:
+
+```csharp
+PolyBotClient client = new PolyBotClient(new PolyBotOptions() { BotToken = token });
+client.Services.AddPolyBotRouter(); // generated — appears after first build
+await client.RunPollingAsync();
+```
+
+### Minimal wiring with a plain `IServiceCollection`
+
+When you supply your own service collection (Generic Host, ASP.NET Core, or unit tests), call both methods:
+
+```csharp
+// 1. Register options (required before AddPolyBotDefaults)
+services.AddSingleton(new PolyBotOptions() { BotToken = token });
+
+// 2. Register PolyBot core services (state machine, update awaiter, etc.)
+services.AddPolyBotDefaults();
+
+// 3. Register the generated router as IUpdateHandler
+services.AddPolyBotRouter();
+```
+
+`AddPolyBotDefaults()` registers the following with **try-add semantics** (your registrations win if added first):
+
+| Service | Default implementation |
+|---|---|
+| `IStateStorage` | `MemoryStateStorage` |
+| `IStateMachine` | `StateMachine` |
+| `IUpdateContextAccessor` | `UpdateContextAccessor` |
+| `IUpdateAwaiter` | `UpdateAwaiter` |
+
+<Tip>
+  To use a custom state storage backend (required for multi-instance bots), register your `IStateStorage` **before** calling `AddPolyBotDefaults()` or `AddPolyBotRouter()`. The try-add semantics mean the first registration wins.
+</Tip>
+
+### Generic Host integration
+
+When `Microsoft.Extensions.Hosting.Abstractions` is referenced, the generator emits a `PolyBotPollingHostedService`. Register it with:
+
+```csharp
+services.AddPolyBotHostedPolling(receiver =>
+{
+    receiver.DropPendingUpdates = true;
+});
+```
+
+### ASP.NET Core webhook integration
+
+When any `Microsoft.AspNetCore.*` package is referenced, the generator emits webhook infrastructure:
+
+```csharp
+// In Program.cs / Startup.cs
+builder.Services.AddPolyBotWebhook();
+
+// ...
+
+app.MapPolyBotWebhook("/bot");
+```
+
+`AddPolyBotWebhook()` registers a hosted service that calls `SetWebhook` on startup and `DeleteWebhook` on shutdown (when `DeleteWebhookOnStop` is `true`). The mapped endpoint validates the `X-Telegram-Bot-Api-Secret-Token` header, deserializes the update, routes it through `BotRouter`, and returns `200 OK`.
+
+## Namespace collision warning
+
+<Warning>
+  Do **not** declare a type named `PolyBotExtensions` in the `PolyBot` namespace anywhere in your project. The source generator emits a `static class PolyBotExtensions` in `namespace PolyBot` containing `AddPolyBotRouter()`. A hand-written class with the same name in the same namespace will cause a compile error.
+</Warning>
+
+## Verify the installation
+
+After adding the package and building once, confirm the generator ran correctly:
+
+```bash
+dotnet build
+```
+
+A successful build with at least one `[XxxHandler]`-decorated method produces no `CUR0xx` errors. You can also inspect the generated files under `obj/` in your project directory if you want to see the emitted router code.
+
+<Note>
+  `AddPolyBotRouter()` is emitted by the source generator and **will not exist until after the first successful build**. New projects may show an IDE "method not found" squiggle until you run `dotnet build` once.
+</Note>

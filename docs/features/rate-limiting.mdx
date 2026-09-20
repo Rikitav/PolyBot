@@ -1,0 +1,118 @@
+---
+title: "Rate Limiting: Sliding-Window Throttles per Handler"
+sidebarTitle: "Rate Limiting"
+description: "Attach sliding-window throttles to any handler with [Throttled], keyed by user, chat, or globally — halt or skip the routing branch on limit exceeded."
+---
+
+PolyBot provides declarative sliding-window rate limiting through the `[Throttled]` attribute. The source generator inlines a `ThrottleGate.TryEnter` guard directly into the handler's routing branch — after the command/pattern/state match guards pass, but before filter resolution or handler invocation — so non-matching updates never consume budget and throttled calls short-circuit with zero extra allocations beyond the gate's bookkeeping.
+
+## The `[Throttled]` attribute
+
+```csharp
+[MessageHandler]
+[Command(Aliases = ["search"], Description = "Search the catalog")]
+[Throttled(Limit = 3, PeriodMilliseconds = 60_000, Scope = ThrottleScope.User, Action = ThrottleAction.Fallthrough)]
+public static async Task<Result> Search(
+    Message msg,
+    ITelegramBotClient bot,
+    [Rest] string query,
+    CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"Results for: {query}", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+### Properties
+
+| Property | Type | Default | Purpose |
+|---|---|---|---|
+| `Limit` | `int` | `1` | Maximum number of invocations permitted within the window |
+| `PeriodMilliseconds` | `int` | `1000` | Duration of the sliding window in milliseconds |
+| `Scope` | `ThrottleScope` | `ThrottleScope.User` | Which identity dimension to bucket by |
+| `Action` | `ThrottleAction` | `ThrottleAction.Ignore` | What to do when the limit is exceeded |
+
+## `ThrottleScope` — bucketing strategies
+
+```csharp
+public enum ThrottleScope
+{
+    User,       // Per user id (from.id); unidentifiable updates share bucket 0
+    Chat,       // Per chat id; unidentifiable updates share bucket 0
+    UserInChat, // Per user-in-chat pair
+    Global,     // One bucket for all users and chats across this handler
+}
+```
+
+Updates whose identity cannot be resolved (e.g. `Poll` updates with no sender) share bucket `0` for that scope. For `Global`, all calls share a single bucket.
+
+<Tip>
+Prefer `ThrottleScope.User` for commands that are expensive per caller. Use `ThrottleScope.Global` for handlers that hit shared external resources (API quotas, database write limits).
+</Tip>
+
+## `ThrottleAction` — behavior on exhaustion
+
+```csharp
+public enum ThrottleAction
+{
+    Ignore,      // Halts the routing branch entirely (like Result.StopRouting)
+    Fallthrough, // Skips this handler; the next candidate handler is evaluated
+}
+```
+
+`Ignore` is useful when you want to silently discard excess calls. `Fallthrough` lets you route over-limit requests to a fallback handler — for example, to reply with a "please slow down" message.
+
+```csharp
+// Main handler: only 1 search per second per user
+[MessageHandler]
+[Command(Aliases = ["search"])]
+[Throttled(Limit = 1, PeriodMilliseconds = 1000, Action = ThrottleAction.Fallthrough)]
+public static async Task<Result> Search(Message msg, ITelegramBotClient bot, [Rest] string query, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"Searching: {query}", cancellationToken: ct);
+    return Result.Handled();
+}
+
+// Fallback handler: catches throttled /search calls (lower Priority = evaluated after Search)
+[MessageHandler]
+[Command(Aliases = ["search"], Priority = -1)]
+public static async Task<Result> SearchThrottled(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "Too many searches. Please wait a moment.", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+## Implementation details
+
+Gates are **static per handler** and instantiated once at application startup. Thread-safety is achieved with a single lock over per-bucket ring buffers. Buckets hold only timestamps of recent calls (sized to `Limit`), so memory is bounded.
+
+The guard is inlined **after** command/pattern/state match guards pass and **before** filter resolution and DI service injection. This means:
+
+1. A request that does not match the command/pattern/state checks never consumes quota.
+2. Throttled calls skip filter resolution and DI service activation entirely — no handler services are injected.
+
+Buckets are **never evicted**. Long-running bots with a very large number of distinct users and `ThrottleScope.User` will accumulate one bucket entry per user. For bots with millions of users, consider a scope with fewer distinct keys (e.g. `Global`) or implement a custom rate-limiter outside PolyBot.
+
+## Example: burst limiter
+
+```csharp
+// Allow at most 5 concurrent calls to /report; excess silently ignored
+[MessageHandler]
+[Command(Aliases = ["report"])]
+[Throttled(Limit = 5, PeriodMilliseconds = 1000, Scope = ThrottleScope.Global, Action = ThrottleAction.Ignore)]
+public static async Task<Result> Report(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    // Expensive computation here
+    await bot.SendMessage(msg.Chat.Id, "Report generated.", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+## Diagnostics reference
+
+<Accordion title="CUR035 – Invalid or non-constant throttle configuration">
+**Severity:** Warning
+
+One or more `[Throttled]` properties (`Limit`, `PeriodMilliseconds`, `Scope`, or `Action`) are non-constant or hold an invalid value. The offending values are clamped to their defaults (`Limit = 1`, `PeriodMilliseconds = 1000`, `Scope = User`, `Action = Ignore`).
+</Accordion>

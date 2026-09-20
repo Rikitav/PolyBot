@@ -1,0 +1,142 @@
+---
+title: "PolyBotOptions: Complete Bot Configuration Reference"
+sidebarTitle: "PolyBotOptions"
+description: "Complete reference for all PolyBotOptions properties — bot identity, client settings, polling, and webhook configuration — with defaults and examples."
+---
+
+`PolyBotOptions` is the single configuration entry point for a PolyBot bot. It covers the bot token and identity, Telegram client settings, long-polling parameters, and webhook parameters. Values are loaded from the `"PolyBot"` configuration section first and then overridden per-property by anything you pass to the `PolyBotClient` constructor.
+
+<Note>
+Constructor values always take precedence over configuration-section values. The merge rules are: `UseTestEnvironment` and `DropPendingUpdates` are OR-ed with the configuration value; `DeleteWebhookOnStop` and `WebhookMaxConnections` unconditionally take the constructor value (even `false` / `0`); all nullable string and array properties use null-coalescing (constructor wins when non-null); and `PollingLimit` / `PollingOffset` use null-coalescing as well.
+</Note>
+
+---
+
+## Bot identity
+
+<ParamField path="BotToken" type="string?" required>
+  The bot token issued by BotFather. Required for `PolyBotClient.RunPollingAsync()` and for webhook hosting; not required in test mode (`RunTest()`).
+</ParamField>
+
+<ParamField path="BotUsername" type="string?">
+  The bot's `@username` (without the `@`). Used to verify `@botsuffix` appended to commands in group chats (e.g. `/start@mybot`). When left unset, `RunPollingAsync()` back-fills it automatically by calling `GetMe` before the polling loop starts — you rarely need to set this explicitly.
+</ParamField>
+
+---
+
+## Client settings
+
+<ParamField path="BaseUrl" type="string?">
+  Optional custom Bot API server base URL. Leave unset to use the official `https://api.telegram.org`. Useful when running a [local Bot API server](https://core.telegram.org/bots/api#using-a-local-bot-api-server).
+</ParamField>
+
+<ParamField path="UseTestEnvironment" type="bool" default="false">
+  Connects to Telegram's [test datacenter](https://core.telegram.org/bots/features#dedicated-test-environment). Tokens from the live environment do not work there; request a separate test token via BotFather in the test datacenter.
+</ParamField>
+
+---
+
+## Polling
+
+<ParamField path="PollingLimit" type="int?">
+  Maximum number of updates returned per `GetUpdates` batch. Telegram allows 1–100; `null` (the default) lets Telegram decide (typically 100).
+</ParamField>
+
+<ParamField path="PollingOffset" type="int?">
+  Initial update offset passed to `GetUpdates`. Leave unset (the default) to pick up from wherever Telegram left off. Rarely needed outside of replaying specific update ranges in tests.
+</ParamField>
+
+<ParamField path="AllowedUpdates" type="UpdateType[]?">
+  Restricts the update types Telegram delivers. `null` (the default) receives all update types. Example: `[UpdateType.Message, UpdateType.CallbackQuery]`.
+
+  In `appsettings.json` use a comma-separated string: `"Message,CallbackQuery"`.
+</ParamField>
+
+<ParamField path="DropPendingUpdates" type="bool" default="false">
+  When `true`, discards all queued updates when polling starts. Useful after deploying a new bot version to avoid re-processing stale messages.
+</ParamField>
+
+---
+
+## Webhook
+
+<ParamField path="WebhookUrl" type="string?">
+  The full HTTPS URL Telegram posts updates to. This must be the externally reachable address of the endpoint registered with `app.MapPolyBotWebhook(...)`. Required for webhook mode; unused in polling mode.
+</ParamField>
+
+<ParamField path="WebhookSecretToken" type="string?">
+  A secret token (up to 256 characters) passed in the `X-Telegram-Bot-Api-Secret-Token` header by Telegram. The generated webhook endpoint rejects requests with a missing header (HTTP 400) or the wrong value (HTTP 401).
+</ParamField>
+
+<ParamField path="WebhookMaxConnections" type="int" default="40">
+  Maximum simultaneous HTTPS connections Telegram maintains to the webhook endpoint. Valid range is 1–100. Higher values improve throughput for high-traffic bots at the cost of server resources.
+</ParamField>
+
+<ParamField path="DeleteWebhookOnStop" type="bool" default="true">
+  When `true`, the generated `PolyBotWebhookHostedService` calls `DeleteWebhook` during graceful shutdown, so Telegram stops sending updates to the endpoint.
+</ParamField>
+
+---
+
+## Configuration sources
+
+`PolyBotOptions` is populated in two phases:
+
+1. **Configuration section** — properties are read by name from the `"PolyBot"` section of any registered `IConfiguration` source (e.g. `appsettings.json`).
+2. **Constructor override** — when you pass a `PolyBotOptions` instance to `new PolyBotClient(options)`, non-null/non-default values from that instance win over the section values.
+
+### Via constructor
+
+```csharp
+await using PolyBotClient client = new PolyBotClient(new PolyBotOptions
+{
+    BotToken = "123456:ABC-DEF...",
+    DropPendingUpdates = true,
+});
+client.Services.AddPolyBotRouter();
+await client.RunPollingAsync();
+```
+
+### Via the `"PolyBot"` configuration section
+
+```csharp
+await using PolyBotClient client = new PolyBotClient();
+client.Configuration.AddJsonFile("appsettings.json");
+client.Services.AddPolyBotRouter();
+await client.RunPollingAsync();
+```
+
+### Via `appsettings.json`
+
+```json
+{
+  "PolyBot": {
+    "BotToken": "123456:ABC-DEF...",
+    "PollingLimit": 50,
+    "DropPendingUpdates": false,
+    "AllowedUpdates": "Message,CallbackQuery,InlineQuery",
+    "WebhookUrl": "https://example.com/bot",
+    "WebhookSecretToken": "my-secret",
+    "WebhookMaxConnections": 40,
+    "DeleteWebhookOnStop": true
+  }
+}
+```
+
+<Tip>
+In `appsettings.json`, `AllowedUpdates` is a comma-separated string of `UpdateType` member names (case-insensitive). Setting it to an empty string or omitting the key entirely means all update types are received.
+</Tip>
+
+### Via DI (generic host)
+
+When using the generic host or ASP.NET Core, register `PolyBotOptions` as a singleton before calling `AddPolyBotDefaults()`:
+
+```csharp
+services.AddSingleton(new PolyBotOptions { BotToken = botToken });
+services.AddPolyBotDefaults();
+services.AddPolyBotRouter();
+```
+
+<Warning>
+`BotToken` is the only property that is truly required for live operation. If it is absent when `RunPollingAsync()` is called, an `InvalidOperationException` is thrown with a message explaining all three ways to provide it.
+</Warning>

@@ -1,0 +1,394 @@
+---
+title: "PolyBot Attributes: Full Routing Attribute Reference"
+sidebarTitle: "Attributes"
+description: "Every PolyBot attribute explained — handler markers, routing guards, parameter binding, rate limiting, keyboard generation, and exception handling."
+---
+
+PolyBot's routing is entirely attribute-driven. You decorate methods with handler attributes (generated at build time), layer on routing guards and parameter-binding annotations, and the Roslyn source generator compiles everything into a hard-coded `BotRouter`. This page documents every public attribute in the `PolyBot.Attributes` namespace.
+
+---
+
+## Handler attributes
+
+Handler attributes mark a method as a handler for a specific Telegram `UpdateType`. They are **generated at build time** by the source generator — you do not write these classes; the generator emits one per `UpdateType` into the `PolyBot.Attributes` namespace.
+
+<Note>
+Generated handler attributes derive from `HandlerAttribute` (the base class documented here). They carry an `[UpdateHandlerDescriptorAttribute]` annotation that records their `UpdateType` and the corresponding `Update` property name, which is how the generator maps methods to router `switch` cases.
+</Note>
+
+The full set of generated attributes mirrors the `UpdateType` enum from Telegram.Bot:
+
+| Attribute | Update type | `Update` property |
+|---|---|---|
+| `[MessageHandler]` | `UpdateType.Message` | `Update.Message` |
+| `[EditedMessageHandler]` | `UpdateType.EditedMessage` | `Update.EditedMessage` |
+| `[ChannelPostHandler]` | `UpdateType.ChannelPost` | `Update.ChannelPost` |
+| `[EditedChannelPostHandler]` | `UpdateType.EditedChannelPost` | `Update.EditedChannelPost` |
+| `[CallbackQueryHandler]` | `UpdateType.CallbackQuery` | `Update.CallbackQuery` |
+| `[InlineQueryHandler]` | `UpdateType.InlineQuery` | `Update.InlineQuery` |
+| `[ChosenInlineResultHandler]` | `UpdateType.ChosenInlineResult` | `Update.ChosenInlineResult` |
+| `[ShippingQueryHandler]` | `UpdateType.ShippingQuery` | `Update.ShippingQuery` |
+| `[PreCheckoutQueryHandler]` | `UpdateType.PreCheckoutQuery` | `Update.PreCheckoutQuery` |
+| `[PollHandler]` | `UpdateType.Poll` | `Update.Poll` |
+| `[PollAnswerHandler]` | `UpdateType.PollAnswer` | `Update.PollAnswer` |
+| `[MyChatMemberHandler]` | `UpdateType.MyChatMember` | `Update.MyChatMember` |
+| `[ChatMemberHandler]` | `UpdateType.ChatMember` | `Update.ChatMember` |
+| `[ChatJoinRequestHandler]` | `UpdateType.ChatJoinRequest` | `Update.ChatJoinRequest` |
+| `[MessageReactionHandler]` | `UpdateType.MessageReaction` | `Update.MessageReaction` |
+| `[MessageReactionCountHandler]` | `UpdateType.MessageReactionCount` | `Update.MessageReactionCount` |
+| `[ChatBoostHandler]` | `UpdateType.ChatBoost` | `Update.ChatBoost` |
+| `[RemovedChatBoostHandler]` | `UpdateType.RemovedChatBoost` | `Update.RemovedChatBoost` |
+| `[BusinessConnectionHandler]` | `UpdateType.BusinessConnection` | `Update.BusinessConnection` |
+
+### `HandlerAttribute` base
+
+**Target:** `Method` · **AllowMultiple:** `false`
+
+All generated handler attributes inherit from `HandlerAttribute`. The only property on the base is:
+
+<ParamField path="Priority" type="int" default="0">
+  Controls the order in which handlers for the same `UpdateType` are evaluated. Higher values run earlier. Handlers with equal priority run in source-file declaration order.
+</ParamField>
+
+```csharp
+[MessageHandler(Priority = 10)]
+public static async Task<Result> HighPriorityHandler(Message msg, CancellationToken ct)
+{
+    // runs before Priority = 0 handlers
+    return Result.ContinueRouting;
+}
+```
+
+### `UpdateHandlerDescriptorAttribute`
+
+**Target:** `Class` — stamped on each generated handler attribute class by the generator itself.
+
+<ParamField path="UpdateType" type="UpdateType">
+  The `UpdateType` this handler attribute corresponds to.
+</ParamField>
+
+<ParamField path="UpdatePropertyName" type="string">
+  The property name on `Telegram.Bot.Types.Update` that holds the payload (e.g. `"Message"`, `"CallbackQuery"`).
+</ParamField>
+
+You will not use this attribute directly; it is read by the generator to resolve the update type of a handler when the handler attribute class is still an error symbol on the first compilation pass.
+
+---
+
+## Routing attributes
+
+### `[Command]`
+
+**Target:** `Method` · **AllowMultiple:** `false`
+
+Restricts a handler to messages whose first entity is a bot command. Only meaningful on handlers whose payload is `Message`. The `@botname` suffix is automatically verified against `PolyBotOptions.BotUsername`.
+
+<ParamField path="Aliases" type="string[]" default="[]">
+  Command names without the leading `'/'`, matched case-insensitively. Example: `Aliases = ["start", "begin"]`.
+</ParamField>
+
+<ParamField path="Prefix" type="char" default="'/'">
+  Matching mode. `'/'` matches via `BotCommand` message entities (the default Telegram command format). `' '` or `'\0'` matches via `string.StartsWith` (ordinal-ignore-case). Any other character requires that character at the start of the text followed by the alias.
+</ParamField>
+
+<ParamField path="NoArgs" type="bool" default="false">
+  When `true`, throws `CommandArgsParseException` if the message contains any tokens after the command name. Extra tokens are silently ignored by default.
+</ParamField>
+
+<ParamField path="Description" type="string?">
+  BotFather menu description for this command. Missing descriptions produce `CUR021` (warning) unless `IsHidden = true`. Descriptions longer than 256 characters are `CUR022` (error).
+</ParamField>
+
+<ParamField path="LanguageCode" type="string?">
+  BotFather localization code (`"en"`, `"ru"`, etc.). `null` (default) registers the command for all languages.
+</ParamField>
+
+<ParamField path="Scope" type="CommandScope" default="CommandScope.Default">
+  The BotFather audience for this command. See `CommandScope` below.
+</ParamField>
+
+<ParamField path="IsHidden" type="bool" default="false">
+  When `true`, the command is matched for routing but excluded from BotFather synchronization. Also suppresses the missing-description warning.
+</ParamField>
+
+```csharp
+[MessageHandler]
+[Command(Aliases = ["start"], Description = "Start the bot", Scope = CommandScope.AllPrivateChats)]
+public static async Task<Result> StartHandler(Message msg, CancellationToken ct)
+{
+    return Result.StopRouting;
+}
+```
+
+### `CommandScope`
+
+Enum that maps to Telegram's `BotCommandScope` variants used during BotFather command synchronization.
+
+| Member | Meaning |
+|---|---|
+| `Default` | All chats (default) |
+| `AllPrivateChats` | Private chats only |
+| `AllGroupChats` | Group and supergroup chats |
+| `AllChatAdministrators` | All chats where the bot is an admin |
+
+### `[Pattern]`
+
+**Target:** `Method` · **AllowMultiple:** `false`
+
+Declares a route template over `CallbackQuery.Data` for a `[CallbackQueryHandler]` method. Segments are separated by `Separator` (default `':'`).
+
+<ParamField path="Template" type="string" required>
+  The segment template. Literal segments (`cart:checkout`) match exactly. `{name}` captures one segment into the `[Arg]` parameter of the same name. `{name:int}` adds a type constraint. A trailing `{*name}` wildcard captures everything remaining (possibly empty).
+</ParamField>
+
+<ParamField path="Separator" type="char" default="':'">
+  The character that splits template segments.
+</ParamField>
+
+```csharp
+[CallbackQueryHandler]
+[Pattern("item:{id}:{action}")]
+public static Task<Result> OnItem(CallbackQuery query, [Arg] int id, [Arg] string action)
+    => Task.FromResult(Result.StopRouting);
+
+[CallbackQueryHandler]
+[Pattern("logs:{*path}")]
+public static Task<Result> OnLogs(CallbackQuery query, [Arg] string path)
+    => Task.FromResult(Result.StopRouting);
+```
+
+<Warning>
+`[Pattern]` on a non-`[CallbackQueryHandler]` method is `CUR029` (error). Templates whose literal skeleton exceeds 64 bytes are `CUR024` (error); templates where the skeleton plus minimum non-empty placeholder sizes exceeds 64 bytes are `CUR025` (error).
+</Warning>
+
+### `[State<TEnum>]`
+
+**Target:** `Method` · **AllowMultiple:** `true`
+
+Restricts the handler to updates whose stored `TEnum` state (keyed by the update's identity) equals `State`. Multiple `[State<TEnum>]` attributes for the same `(TEnum, StateKey)` pair are OR-ed; attributes for different pairs are AND-ed.
+
+<ParamField path="State" type="TEnum" required>
+  The state value that must be active for this handler to run.
+</ParamField>
+
+<ParamField path="Key" type="StateKey" default="StateKey.UserId">
+  Which identity of the incoming update is used to look up the state. See `StateKey` in the [Interfaces reference](/reference/interfaces).
+</ParamField>
+
+```csharp
+public enum RegistrationStep { AwaitingName, AwaitingAge, Completed }
+
+[MessageHandler]
+[State<RegistrationStep>(RegistrationStep.AwaitingAge)]
+public static async Task<Result> HandleAge(Message msg, IStateMachine fsm)
+{
+    await fsm.SetAsync(RegistrationStep.Completed);
+    return Result.StopRouting;
+}
+```
+
+### `[NoState<TEnum>]`
+
+**Target:** `Method` · **AllowMultiple:** `true`
+
+Restricts the handler to updates where the identity was resolved but has **no** stored `TEnum` state. Useful for "entry" handlers that kick off a conversation flow. Updates whose key cannot be resolved do not match `[NoState]`.
+
+<ParamField path="Key" type="StateKey" default="StateKey.UserId">
+  Which identity to check for the absence of state.
+</ParamField>
+
+```csharp
+[MessageHandler]
+[Command(Aliases = ["register"])]
+[NoState<RegistrationStep>]
+public static async Task<Result> StartRegistration(IStateMachine fsm)
+{
+    await fsm.SetAsync(RegistrationStep.AwaitingName);
+    return Result.StopRouting;
+}
+```
+
+<Warning>
+Declaring both `[State<TEnum>]` and `[NoState<TEnum>]` for the same `(TEnum, StateKey)` pair on one handler produces `CUR011` (warning). The conditions are AND-ed, so the handler never matches.
+</Warning>
+
+---
+
+## Parameter attributes
+
+These attributes go on individual method **parameters** to control how the generator binds them.
+
+### `[Arg]`
+
+**Target:** `Parameter` · **AllowMultiple:** `false`
+
+Binds a parameter to one positional whitespace-separated argument token from the command text, or to a named `{placeholder}` segment in a `[Pattern]` template. Only effective on `[Command]`-restricted or `[Pattern]`-restricted handlers; on other handlers it is `CUR003` (warning) and the parameter is resolved from DI.
+
+<ParamField path="Name" type="string?">
+  Explicit argument name used in parse error messages. When `null` (default), the C# parameter name is used.
+</ParamField>
+
+<ParamField path="IsOptional" type="bool" default="false">
+  When `true`, a missing token yields `default(T)` instead of a parse error.
+</ParamField>
+
+```csharp
+[MessageHandler, Command(Aliases = ["ban"])]
+public static Task<Result> BanUser(
+    Message msg,
+    [Arg] long userId,
+    [Arg(IsOptional = true)] string? reason)
+    => Task.FromResult(Result.StopRouting);
+```
+
+Accepted parameter types: the exact argument type `T`, `Nullable<T>`, or `object`. Other types produce `CUR005` (warning) and fall back to DI.
+
+### `[Rest]`
+
+**Target:** `Parameter` · **AllowMultiple:** `false`
+
+Binds a `string` parameter to everything remaining in the message text after all positional `[Arg]` tokens have been consumed. There can be at most one `[Rest]` parameter per handler; the result is never `null`. Multiple `[Rest]` attributes produce `CUR006` (warning); non-`string` type produces `CUR007` (warning).
+
+```csharp
+[MessageHandler, Command(Aliases = ["echo"])]
+public static Task<Result> Echo(Message msg, [Rest] string text)
+    => Task.FromResult(Result.StopRouting);
+```
+
+### `[Parse]`
+
+**Target:** `Parameter` · **AllowMultiple:** `false`
+
+Binds a `string` parameter to the match of a regular expression scanned (not anchored) over the remaining text. With no capturing groups the whole match is bound; with groups, `Groups[1].Value` is used. `[Parse]` after `[Rest]` is `CUR008` (warning); non-`string` type is `CUR009` (warning).
+
+<ParamField path="Pattern" type="string" required>
+  The regular expression to scan against the remaining text.
+</ParamField>
+
+```csharp
+[MessageHandler, Command(Aliases = ["find"])]
+public static Task<Result> Find(Message msg, [Parse(@"#(\w+)")] string tag)
+    => Task.FromResult(Result.StopRouting);
+```
+
+### `[Key]`
+
+**Target:** `Parameter` · **AllowMultiple:** `false`
+
+Resolves a handler or exception-handler parameter from the DI container as a **keyed service** using the specified key.
+
+<ParamField path="ServiceKey" type="object" required>
+  The key passed to `IKeyedServiceProvider.GetRequiredKeyedService<T>(key)`. Must be a constant string or integer so the generator can emit it inline.
+</ParamField>
+
+```csharp
+[MessageHandler, Command(Aliases = ["status"])]
+public static Task<Result> Status([Key("primary")] IDatabase db)
+    => Task.FromResult(Result.StopRouting);
+```
+
+---
+
+## Rate limiting
+
+### `[Throttled]`
+
+**Target:** `Method` · **AllowMultiple:** `false`
+
+Applies a sliding-window rate limit to a handler. The generator inlines a `ThrottleGate.TryEnter` call at the top of the handler's routing branch — before filter resolution or handler invocation — so non-matching updates never consume budget. Gates are static per handler and thread-safe.
+
+<ParamField path="Limit" type="int" default="1">
+  Maximum number of allowed requests within the window.
+</ParamField>
+
+<ParamField path="PeriodMilliseconds" type="int" default="1000">
+  The sliding-window duration in milliseconds.
+</ParamField>
+
+<ParamField path="Scope" type="ThrottleScope" default="ThrottleScope.User">
+  Which identity the rate-limit bucket is keyed by. See `ThrottleScope` below.
+</ParamField>
+
+<ParamField path="Action" type="ThrottleAction" default="ThrottleAction.Ignore">
+  What happens when the limit is exceeded. See `ThrottleAction` below.
+</ParamField>
+
+```csharp
+[MessageHandler, Command(Aliases = ["search"])]
+[Throttled(Limit = 3, PeriodMilliseconds = 60_000, Scope = ThrottleScope.User, Action = ThrottleAction.Fallthrough)]
+public static Task<Result> Search(Message msg, [Rest] string query)
+    => Task.FromResult(Result.StopRouting);
+```
+
+<Warning>
+Invalid or non-constant `Limit` / `PeriodMilliseconds` / `Scope` / `Action` values produce `CUR035` (warning) and are clamped to their defaults.
+</Warning>
+
+### `ThrottleScope`
+
+| Member | Bucket key |
+|---|---|
+| `User` | Sender user id; updates without a user share bucket `0` |
+| `Chat` | Chat id; updates without a chat share bucket `0` |
+| `UserInChat` | Combined user + chat id pair |
+| `Global` | A single bucket for all users and chats |
+
+### `ThrottleAction`
+
+| Member | Behaviour when limit exceeded |
+|---|---|
+| `Ignore` | Halts the entire routing branch (equivalent to `Result.StopRouting`) |
+| `Fallthrough` | Skips this handler and continues evaluating remaining candidates |
+
+---
+
+## Keyboard generation
+
+### `[CallbackButton]`
+
+**Target:** `Method`, `Property` · **AllowMultiple:** `true`
+
+Declares one button of a generated inline keyboard on a `partial` method or property returning `InlineKeyboardMarkup`. The generator emits the implementation. Each **attribute list** (one line of `[CallbackButton(...), CallbackButton(...)]`) forms one keyboard row; attributes within the list form the columns.
+
+<ParamField path="Text" type="string" required>
+  The button label displayed to the user.
+</ParamField>
+
+<ParamField path="CallbackData" type="string" required>
+  The callback data string. May contain `{parameterName}` placeholders referencing the declaring method's parameters (not supported on properties, which have no parameters). Unknown placeholders produce `CUR017` (warning).
+</ParamField>
+
+```csharp
+// Two rows: [First, Second] then [Cancel, Apply]
+[CallbackButton("First", "first:{val}"), CallbackButton("Second", "second:{val}")]
+[CallbackButton("Cancel", "cancel"),     CallbackButton("Apply",  "apply:{val}")]
+private static partial InlineKeyboardMarkup ActionsKeyboard(int val);
+```
+
+The containing type (and all enclosing types) must be `partial`. Non-`partial` members produce `CUR019` (warning). A non-`InlineKeyboardMarkup` return type produces `CUR018` (error).
+
+---
+
+## Exception handling
+
+### `[ExceptionHandler]`
+
+**Target:** `Method` · **AllowMultiple:** `false`
+
+Marks the bot's single exception handler. The generated `BotRouter.HandleErrorAsync` calls this method for every update-processing failure instead of silently swallowing the error.
+
+Parameter resolution follows the same rules as regular handlers, with these sources available in the error path: `Exception`, `HandleErrorSource`, `ITelegramBotClient`, `CancellationToken`, DI services, and keyed services (`[Key]`). There is no current update in the error path — update-bound parameters are `CUR032` (error). The method must return `Task` or `ValueTask` (`CUR034` otherwise). Declaring more than one `[ExceptionHandler]` is `CUR033` (error); the first declaration wins.
+
+A throw from inside the exception handler itself is swallowed so the polling loop survives.
+
+```csharp
+[ExceptionHandler]
+public static Task OnError(
+    Exception exception,
+    HandleErrorSource source,
+    ILogger<BotHandlers> log)
+{
+    log.LogError(exception, "{Source}: {Message}", source, exception.Message);
+    return Task.CompletedTask;
+}
+```

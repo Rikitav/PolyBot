@@ -1,0 +1,227 @@
+---
+title: "PolyBot Library vs Executable: OutputType Explained"
+sidebarTitle: "Library vs Executable"
+description: "How OutputType controls what PolyBot generates, when to use filter libraries, cross-assembly filter usage, and a full example with a shared filter library."
+---
+
+The PolyBot source generator produces different output depending on the `OutputType` of the consuming project. Understanding this distinction lets you share filters and keyboards across multiple bot projects without duplicating logic or causing type collisions.
+
+---
+
+## The `OutputType` switch
+
+The generator reads the MSBuild `OutputType` property from the analyzer config:
+
+```xml
+<!-- Library project — filters, keyboards, With* extensions only -->
+<PropertyGroup>
+  <OutputType>Library</OutputType>
+</PropertyGroup>
+
+<!-- Executable project — full routing infrastructure -->
+<PropertyGroup>
+  <OutputType>Exe</OutputType>
+</PropertyGroup>
+```
+
+| Generated artifact | Library | Exe / WinExe |
+|---|---|---|
+| `[XxxFilter]` wrapper attributes | ✅ | ✅ |
+| `With*` awaiter extensions | ✅ | ✅ |
+| Generated keyboards (`[CallbackButton]`) | ✅ | ✅ |
+| `BotRouter` + `AddPolyBotRouter()` | ❌ | ✅ |
+| `PolyBotBotFatherSync` | ❌ | ✅ |
+| `PolyBotPollingHostedService` | ❌ | ✅ (when Hosting.Abstractions referenced) |
+| `PolyBotWebhookHostedService` | ❌ | ✅ (when AspNetCore referenced) |
+
+---
+
+## Library projects
+
+A library project contributes **filters and keyboards** that other PolyBot bots can consume. It emits:
+
+- One `[XxxFilterAttribute]` per discovered concrete `IUpdateFilter` class
+- One `WithXxx()` extension per discovered filter
+- Implementations for any `partial` keyboard methods/properties decorated with `[CallbackButton]`
+
+No routing infrastructure (`BotRouter`, `AddPolyBotRouter`, hosting/webhook integrations) is emitted. This is intentional — if two library projects both emitted `BotRouter`, a bot that referenced both would get a type collision.
+
+### Handlers in libraries → `CUR036`
+
+Declaring a handler method (`[MessageHandler]`, `[CallbackQueryHandler]`, etc.) in a library project produces `CUR036` (warning):
+
+```text
+Handler 'StartHandler' is declared in a library project: only runnable assemblies
+(OutputType Exe/WinExe) get a generated router, so this handler never runs.
+```
+
+The warning exists because a developer may accidentally put handlers in the wrong project. Move them to the executable.
+
+<Warning>
+`CUR036` is a warning, not an error, to accommodate incremental refactoring. However, any handler decorated with `[XxxHandler]` in a library project is silently ignored at runtime — there is no router to call it.
+</Warning>
+
+---
+
+## Executable projects
+
+An executable project (Exe or WinExe) emits the full routing infrastructure in addition to filters and keyboards. The output includes:
+
+- `BotRouter` — the `IUpdateHandler` implementation with the hard-coded `switch` routing
+- `PolyBotExtensions.AddPolyBotRouter()` — the DI registration extension method
+- `PolyBotBotFatherSync` — the generated `IBotFatherSync` implementation
+- Hosting/webhook integrations (when the matching packages are referenced)
+
+All handlers declared in the executable are compiled into the router. Filters defined in the executable itself are also available as attributes and `With*` extensions, just like in a library.
+
+---
+
+## Cross-assembly filter usage
+
+A handler in an executable can use a filter that is defined (and whose `[XxxFilter]` attribute is emitted) in a referenced library. The generator resolves the pairing at build time:
+
+```text
+MyBot.exe
+  └── references MyFilters.dll (OutputType=Library)
+       └── public class NonEmptyTextFilter : MessageFilter
+            └── [NonEmptyTextFilter] wrapper emitted in MyFilters.dll
+```
+
+When the generator for `MyBot.exe` encounters `[NonEmptyTextFilter]` on a handler method and does not find `NonEmptyTextFilter` in the executable's own source, it looks in the referenced assembly (`MyFilters.dll`) for a concrete, non-generic class named `NonEmptyTextFilter` that implements `IUpdateFilter`. The fully qualified name from the library is then used in the generated `BotRouter` code.
+
+The same applies to `With*` extensions in await chains: `WithNonEmptyTextFilter()` resolves back to `global::MyFilters.NonEmptyTextFilter` in the emitted router branch.
+
+No assembly-wide pre-scan of `MyFilters.dll` is needed — resolution happens on demand, only for the names that actually appear in handler attributes.
+
+---
+
+## Project structure example
+
+Here is a concrete two-project setup: a shared filter library and a bot executable.
+
+### Filter library (`MyBot.Filters.csproj`)
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PolyBot" Version="*" />
+  </ItemGroup>
+</Project>
+```
+
+```csharp
+// MyBot.Filters/NonEmptyTextFilter.cs
+using PolyBot.Routing;
+using Telegram.Bot.Types;
+
+namespace MyBot.Filters;
+
+// The generator emits [NonEmptyTextFilter] and WithNonEmptyTextFilter()
+// into PolyBot.Attributes, available to any exe that references this library.
+public sealed class NonEmptyTextFilter : MessageFilter
+{
+    protected override bool CanPass(Message message)
+        => !string.IsNullOrEmpty(message.Text);
+}
+```
+
+```csharp
+// MyBot.Filters/RegisteredUserFilter.cs
+using MyBot.Filters.Data;
+using PolyBot.Routing;
+using Telegram.Bot.Types;
+
+namespace MyBot.Filters;
+
+public sealed class RegisteredUserFilter : IUpdateFilter
+{
+    private readonly IUserRepository _users;
+
+    public RegisteredUserFilter(IUserRepository users) => _users = users;
+
+    public bool CanPass(Update update)
+    {
+        long? userId = update.GetUserId();
+        return userId.HasValue && _users.IsRegistered(userId.Value);
+    }
+}
+```
+
+### Bot executable (`MyBot.csproj`)
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PolyBot" Version="*" />
+    <ProjectReference Include="..\MyBot.Filters\MyBot.Filters.csproj" />
+  </ItemGroup>
+</Project>
+```
+
+```csharp
+// MyBot/Handlers.cs
+using MyBot.Filters;         // not strictly needed — attribute is in PolyBot.Attributes
+using PolyBot.Attributes;
+using PolyBot.Routing;
+using Telegram.Bot.Types;
+
+namespace MyBot;
+
+public static class Handlers
+{
+    // [NonEmptyTextFilter] was emitted by the generator for MyBot.Filters.dll.
+    // The generator for MyBot.exe finds NonEmptyTextFilter in the library and
+    // wires it into the BotRouter automatically.
+    [MessageHandler]
+    [NonEmptyTextFilter]
+    [RegisteredUserFilter]
+    public static async Task<Result> Echo(
+        Message msg,
+        ITelegramBotClient bot,
+        CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, msg.Text!, cancellationToken: ct);
+        return Result.StopRouting;
+    }
+}
+```
+
+```csharp
+// MyBot/Program.cs
+using MyBot.Filters.Data;
+using PolyBot;
+
+await using PolyBotClient client = new PolyBotClient(new PolyBotOptions
+{
+    BotToken = Environment.GetEnvironmentVariable("BOT_TOKEN")
+});
+
+// Register the library filter that needs DI injection
+client.Services.AddSingleton<IUserRepository, SqlUserRepository>();
+client.Services.AddPolyBotRouter(); // registers BotRouter, generated by MyBot.exe's generator
+await client.RunPollingAsync();
+```
+
+---
+
+## Use cases for the library pattern
+
+- **Shared filter libraries** — write authentication, rate-check, or content-moderation filters once and reuse them across multiple bot executables.
+- **Shared keyboard definitions** — `[CallbackButton]` keyboards emitted in a library are available to any bot that references it.
+- **Testing** — a `TestFilters.dll` library can provide test-only filters (e.g. always-pass or always-fail) that are referenced by integration test projects.
+
+<Tip>
+Because filter wrapper attributes and `With*` extensions are generated into the `PolyBot.Attributes` namespace regardless of which assembly they originate from, handler code in the executable does not need to reference the library namespace explicitly — only the library project needs to be listed as a `<ProjectReference>`.
+</Tip>

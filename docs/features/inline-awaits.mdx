@@ -1,0 +1,222 @@
+---
+title: "Inline Awaits: Suspending Handlers Mid-Conversation"
+sidebarTitle: "Inline Awaits"
+description: "Pause a handler and resume it on a later matching update — regex filters, static predicates, and optional timeouts keep the polling loop fully unblocked."
+---
+
+Inline awaits let a handler pause mid-conversation and resume when a matching update arrives — all without blocking the polling thread or holding any connections open. While a handler is suspended, the rest of the routing pipeline continues processing other users' updates normally.
+
+## How it works
+
+Inject `IUpdateAwaiter` into a handler, call one of the generated `WaitFor{UpdateType}Async()` extension methods, chain any filter conditions, and call a terminal method that registers the await and returns `Task<T?>`. The handler suspends at that point; the generated router resumes it when a future update satisfies the declared conditions.
+
+```csharp
+[MessageHandler]
+[Command(Aliases = ["register"])]
+public static async Task<Result> Register(
+    Message msg,
+    IUpdateAwaiter awaiter,
+    ITelegramBotClient bot,
+    CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "How old are you?", cancellationToken: ct);
+
+    Message? reply = await awaiter.WaitForMessageAsync()
+        .TextMatches(@"my age is \d+")
+        .ByUserId(ct);
+
+    if (reply is null)
+        return Result.Handled(); // cancelled
+
+    await bot.SendMessage(msg.Chat.Id, $"Got it: {reply.Text}", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+<Note>
+The `Result` returned by a suspended-then-resumed handler does **not** affect routing. Once a handler suspends, the update that triggered the suspension is already considered handled.
+</Note>
+
+## Builder chain
+
+### Entry point — `WaitForMessageAsync()` and friends
+
+The source generator emits one `WaitFor{UpdateType}Async()` extension method per Telegram.Bot update type. The most common is `WaitForMessageAsync()`, which matches any message-shaped payload (`Message`, `EditedMessage`, `ChannelPost`, `EditedChannelPost`, `BusinessMessage`, `EditedBusinessMessage`, `GuestMessage`).
+
+```csharp
+// Await any message from the same user
+Message? msg = await awaiter.WaitForMessageAsync().ByUserId(ct);
+
+// Await any CallbackQuery from the same user
+CallbackQuery? cb = await awaiter.WaitForCallbackQueryAsync().ByUserId(ct);
+```
+
+An optional timeout overload causes the await to complete with `null` on expiry:
+
+```csharp
+// Completes with null after 30 seconds
+Message? msg = await awaiter.WaitForMessageAsync(TimeSpan.FromSeconds(30)).ByUserId(ct);
+```
+
+### `TextMatches(pattern)` — regex filter
+
+Restricts the await to updates whose message `Text` (falling back to `Caption`) matches the regex. Multiple `.TextMatches()` calls are AND-ed.
+
+```csharp
+Message? msg = await awaiter.WaitForMessageAsync()
+    .TextMatches(@"^\d+$")       // only pure-number messages
+    .ByUserId(ct);
+```
+
+<Warning>
+Using `TextMatches` on an await whose target DTO is not a message-shaped payload (e.g. `WaitForCallbackQueryAsync`) produces warning `CUR014` and no implicit await branch is generated for that site.
+</Warning>
+
+### `With{FilterName}()` — generated filter conditions
+
+The generator emits one `With{FilterName}()` extension method per discovered concrete `IUpdateFilter` implementation. These are the same filters used with `[XxxFilter]` handler attributes.
+
+```csharp
+Message? msg = await awaiter.WaitForMessageAsync()
+    .WithNonEmptyTextFilter()
+    .ByUserId(ct);
+```
+
+<Note>
+Referencing an unknown filter name produces warning `CUR015`. The filter check will not be emitted into the await branch.
+</Note>
+
+### `Where(static lambda)` — inline predicate
+
+Splices a static lambda directly into the generated router branch. The predicate is evaluated before the update is claimed by the awaiter.
+
+```csharp
+Message? msg = await awaiter.WaitForMessageAsync()
+    .Where(static m => m.Text != null && m.Text.Length > 3)
+    .ByUserId(ct);
+```
+
+**Constraints on `Where` lambdas** (violation → `CUR016`, predicate not emitted):
+
+- Must be declared `static` (prevents captures; the `static` modifier makes accidental captures a compile error)
+- Must be non-async
+- Must be expression-bodied (no block body)
+- Body may only reference the lambda parameter and literals — no external variables or members
+
+### Terminal methods — `ByUserId`, `ByChatId`, `ByUserInChat`
+
+The terminal method registers the await and determines which identity dimension to key on.
+
+| Method | Matches updates from |
+|---|---|
+| `ByUserId(ct)` | The same user id as the current update |
+| `ByChatId(ct)` | The same chat id as the current update |
+| `ByUserInChat(ct)` | The same user-in-chat pair as the current update |
+
+```csharp
+// Wait for any message in the same chat, from any user
+Message? msg = await awaiter.WaitForMessageAsync()
+    .Where(static m => m.Text == "knock knock")
+    .ByChatId(ct);
+```
+
+## Identity and lifetime
+
+Each await is **single-shot**: it is removed once claimed or once the timeout expires. Two await sites with different declarative signatures (different payload types, `TextMatches` patterns, filter types, or `Where` flag) on the same identity can coexist — the router validates the signature before claiming.
+
+Awaits are keyed by a numeric identity (user/chat id pair probed most-specific-first). The registration's signature is held in per-site static constant arrays compared by reference and ordinal equality, so a different await site cannot accidentally claim another site's pending await.
+
+## Non-matching updates fall through
+
+While a handler is suspended, updates that do not satisfy the await's conditions fall through to normal routing. Other handlers continue working for the same user during the wait.
+
+```csharp
+// /register starts the flow, waits for "my age is \d+"
+// Intermediate messages like "hello" still reach other handlers (e.g. an echo handler)
+Message? reply = await awaiter.WaitForMessageAsync()
+    .TextMatches(@"my age is \d+")
+    .ByUserId(ct);
+```
+
+## Complete multi-step conversation example
+
+<Steps>
+  <Step title="User sends /onboard">
+    The handler sends a greeting and registers an await keyed by the user's id, waiting for a text message.
+  </Step>
+  <Step title="User sends their name">
+    The await claims the update, the handler resumes, stores the name, and registers a second await.
+  </Step>
+  <Step title="User sends their city">
+    The second await is claimed, the handler finalizes the onboarding flow and returns.
+  </Step>
+</Steps>
+
+```csharp
+[MessageHandler]
+[Command(Aliases = ["onboard"])]
+public static async Task<Result> Onboard(
+    Message msg,
+    IUpdateAwaiter awaiter,
+    ITelegramBotClient bot,
+    CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "Welcome! What is your name?", cancellationToken: ct);
+
+    Message? nameMsg = await awaiter.WaitForMessageAsync(TimeSpan.FromMinutes(5))
+        .WithNonEmptyTextFilter()
+        .ByUserId(ct);
+
+    if (nameMsg is null)
+    {
+        await bot.SendMessage(msg.Chat.Id, "Timed out. Run /onboard to try again.", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    string name = nameMsg.Text!;
+    await bot.SendMessage(msg.Chat.Id, $"Hi, {name}! Which city are you in?", cancellationToken: ct);
+
+    Message? cityMsg = await awaiter.WaitForMessageAsync(TimeSpan.FromMinutes(5))
+        .WithNonEmptyTextFilter()
+        .ByUserId(ct);
+
+    if (cityMsg is null)
+    {
+        await bot.SendMessage(msg.Chat.Id, "Timed out. Run /onboard to try again.", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    await bot.SendMessage(
+        msg.Chat.Id,
+        $"All set, {name} from {cityMsg.Text}!",
+        cancellationToken: ct);
+
+    return Result.Handled();
+}
+```
+
+## Diagnostics reference
+
+<Accordion title="CUR013 – IUpdateAwaiter injected but no WaitFor* found">
+**Severity:** Warning
+
+A handler parameter is typed as `IUpdateAwaiter` but the source generator found no `WaitFor*Async` call on it in the method body. The handler will run to completion inline. If the handler does call `WaitFor*Async` through a wrapper method, the await will deadlock the sequential poller — call `WaitFor*Async` directly on the `IUpdateAwaiter` parameter instead.
+</Accordion>
+
+<Accordion title="CUR014 – TextMatches on a non-message await">
+**Severity:** Warning
+
+`TextMatches` is chained onto an await whose target DTO is not message-shaped. The text-match condition can never be satisfied and no await branch is emitted for that site.
+</Accordion>
+
+<Accordion title="CUR015 – Unknown filter in await chain">
+**Severity:** Warning
+
+An await chain references a filter type that could not be resolved during generation. The filter check will not be emitted into the await branch.
+</Accordion>
+
+<Accordion title="CUR016 – Where predicate fails static-lambda constraints">
+**Severity:** Warning
+
+A `Where` predicate does not satisfy all static-lambda constraints (must be `static`, non-async, expression-bodied, and reference only the parameter). The predicate is not emitted into the await branch and is never evaluated.
+</Accordion>

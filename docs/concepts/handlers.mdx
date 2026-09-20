@@ -1,0 +1,173 @@
+---
+title: "Handlers: Writing and Routing Telegram Updates in PolyBot"
+sidebarTitle: "Handlers"
+description: "Learn how PolyBot handler methods work, how the source generator builds a typed router, and how priority and fall-through routing control execution order."
+---
+
+Handler methods are the core unit of PolyBot. Each handler is a static or instance method decorated with an update-type attribute. The Roslyn source generator discovers them at compile time and emits a hard-coded `BotRouter` — no reflection, no runtime discovery.
+
+## What is a handler?
+
+A handler is any method that:
+
+1. Carries exactly one `[XxxHandler]` attribute from the `PolyBot.Attributes` namespace.
+2. Returns `Task<Result>`, `ValueTask<Result>`, `Task`, or `ValueTask`.
+
+```csharp
+using PolyBot.Attributes;
+using PolyBot.Routing;
+using Telegram.Bot.Types;
+
+[MessageHandler]
+public static async Task<Result> EchoHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, msg.Text ?? string.Empty, cancellationToken: ct);
+    return Result.Continue;
+}
+```
+
+Returning plain `Task` or `ValueTask` (without `Result`) always continues routing — the generator treats the absence of a result value as an implicit `Result.Continue`.
+
+<Note>
+A handler whose return type does not match any of these four forms is skipped and reported as diagnostic **`CUR001`** (warning). Always use `Task<Result>`, `ValueTask<Result>`, `Task`, or `ValueTask`.
+</Note>
+
+## The `HandlerAttribute` base class
+
+Every generated `[XxxHandler]` attribute inherits from `HandlerAttribute` in the `PolyBot.Attributes` namespace:
+
+```csharp
+namespace PolyBot.Attributes;
+
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+public class HandlerAttribute : Attribute
+{
+    /// <summary>
+    /// Routing priority. Defaults to 0.
+    /// </summary>
+    public int Priority { get; set; } = 0;
+}
+```
+
+<Note>
+The `Priority` property follows **higher value = earlier execution**. A handler with `Priority = 0` runs before one with `Priority = -1`. This is confirmed by DETAILS.md and the test suite, and is the authoritative definition.
+</Note>
+
+## Generated update-type attributes
+
+The source generator emits one attribute per `UpdateType` into the `PolyBot.Attributes` namespace. These attributes **do not exist until after the first build** — the Roslyn source generator must run to produce them. You never write these by hand; once the `PolyBot.SourceGenerators` package is referenced and a build has completed, the full set is available. For Telegram.Bot 22.10 the full set includes:
+
+| Attribute | Update type |
+|---|---|
+| `[MessageHandler]` | `Message` |
+| `[EditedMessageHandler]` | `EditedMessage` |
+| `[ChannelPostHandler]` | `ChannelPost` |
+| `[EditedChannelPostHandler]` | `EditedChannelPost` |
+| `[CallbackQueryHandler]` | `CallbackQuery` |
+| `[InlineQueryHandler]` | `InlineQuery` |
+| `[ChosenInlineResultHandler]` | `ChosenInlineResult` |
+| `[ShippingQueryHandler]` | `ShippingQuery` |
+| `[PreCheckoutQueryHandler]` | `PreCheckoutQuery` |
+| `[PollHandler]` | `Poll` |
+| `[PollAnswerHandler]` | `PollAnswer` |
+| `[MyChatMemberHandler]` | `MyChatMember` |
+| `[ChatMemberHandler]` | `ChatMember` |
+| `[ChatJoinRequestHandler]` | `ChatJoinRequest` |
+| `[MessageReactionHandler]` | `MessageReaction` |
+| `[MessageReactionCountHandler]` | `MessageReactionCount` |
+| `[ChatBoostHandler]` | `ChatBoost` |
+| `[RemovedChatBoostHandler]` | `RemovedChatBoost` |
+| `[BusinessConnectionHandler]` | `BusinessConnection` |
+
+## Priority ordering
+
+Handlers for the same update type are sorted by `Priority` — **higher values run first**. When two handlers share the same priority (including the default of `0`), they keep their source declaration order.
+
+```csharp
+// Runs second (Priority 0 is the default)
+[MessageHandler]
+public static async Task<Result> EchoHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"echo:{msg.Text}", cancellationToken: ct);
+    return Result.Continue;
+}
+
+// Runs first because Priority = 5
+[MessageHandler(Priority = 5)]
+public static async Task<Result> LoggingHandler(Message msg, ILogger<BotRouter> log)
+{
+    log.LogInformation("Received message from {UserId}", msg.From?.Id);
+    return Result.Continue;
+}
+```
+
+<Tip>
+Use negative priorities (e.g. `Priority = -1`) for handlers that should run after all the default-priority handlers — this keeps the default `0` as the "normal" slot and reserves positive values for pre-processing steps like logging or auth checks.
+</Tip>
+
+## Fall-through routing
+
+`Result.Continue` tells the router to keep going; `Result.StopRouting` (or its alias `Result.Handled()`) ends the routing chain for that update. See [Routing Result](/concepts/routing-result) for a full explanation.
+
+```csharp
+// This handler always stops routing — no other MessageHandler will run after it.
+[MessageHandler(Priority = -1)]
+[Command(Aliases = ["start"], Description = "Start the bot")]
+public static async Task<Result> StartHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "Welcome!", cancellationToken: ct);
+    return Result.StopRouting;
+}
+
+// Catch-all: runs when no higher-priority handler stopped routing.
+[MessageHandler(Priority = 0)]
+public static async Task<Result> EchoHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"echo:{msg.Text}", cancellationToken: ct);
+    return Result.Continue;
+}
+```
+
+## Static vs instance handlers
+
+Handlers may be static or instance methods. The generator treats them differently:
+
+- **Static handlers** are called directly with no object allocation.
+- **Instance handlers** are activated per invocation: the generated router calls `GetRequiredService<ContainingType>()` on the current `IServiceProvider` before every invocation. Register the containing class in DI accordingly.
+
+```csharp
+// Static handler — no DI registration of the class needed
+public static class Commands
+{
+    [MessageHandler]
+    public static async Task<Result> PingHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "pong", cancellationToken: ct);
+        return Result.Handled();
+    }
+}
+
+// Instance handler — MyService must be registered in DI
+public class MyService
+{
+    private readonly IDatabase _db;
+
+    public MyService(IDatabase db) => _db = db;
+
+    [MessageHandler]
+    public async Task<Result> SaveHandler(Message msg, CancellationToken ct)
+    {
+        await _db.SaveAsync(msg.Text, ct);
+        return Result.Handled();
+    }
+}
+```
+
+```csharp
+// Registration for the instance handler case:
+services.AddScoped<MyService>();
+```
+
+<Warning>
+Do not define a type named `PolyBotExtensions` in the `PolyBot` namespace. The source generator emits that class name and a collision will cause a compile error.
+</Warning>

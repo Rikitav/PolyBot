@@ -1,0 +1,248 @@
+---
+title: "PolyBot Webhook Setup with ASP.NET Core Minimal API"
+sidebarTitle: "Webhooks"
+description: "Receive Telegram updates via HTTPS with AddPolyBotWebhook and MapPolyBotWebhook: secret-token verification, deserialization, lifecycle management."
+---
+
+When any `Microsoft.AspNetCore.*` package is referenced in your project, the PolyBot source generator emits `PolyBotWebhookHostedService`, `AddPolyBotWebhook`, and `MapPolyBotWebhook`. These wire up a production-ready webhook endpoint in a minimal-API or MVC application: Telegram sends HTTPS POST requests, PolyBot verifies the secret token, deserializes the update, and routes it through the generated `BotRouter`.
+
+<Note>
+The webhook integration is **generated only when a `Microsoft.AspNetCore.*` package is referenced**. It is never emitted in library projects or console-only executables that lack ASP.NET Core.
+</Note>
+
+## Registration
+
+Two calls configure the webhook integration:
+
+| Call | Where | What it does |
+|---|---|---|
+| `services.AddPolyBotWebhook(configure?)` | `IServiceCollection` | Registers the router, `PolyBotOptions`, and `PolyBotWebhookHostedService`. |
+| `app.MapPolyBotWebhook(pattern?)` | `IEndpointRouteBuilder` | Maps a POST endpoint (default path `"/bot"`) that handles incoming updates. |
+
+### AddPolyBotWebhook
+
+The signature is:
+
+```csharp
+IServiceCollection AddPolyBotWebhook(
+    this IServiceCollection services,
+    Action<PolyBotOptions>? configure = null)
+```
+
+The configure delegate receives the `PolyBotOptions` that will be used by the hosted service and the endpoint handler. Use it to set the webhook URL, secret token, and connection limits:
+
+```csharp
+services.AddPolyBotWebhook(options =>
+{
+    options.WebhookUrl = "https://yourdomain.com/bot";
+    options.WebhookSecretToken = "s3cr3t-t0ken";
+    options.WebhookMaxConnections = 40;
+    options.DeleteWebhookOnStop = true;
+});
+```
+
+If `PolyBotOptions` is already registered as a singleton before `AddPolyBotWebhook` is called, the hosted service will use that instance and apply the configure delegate on top of it.
+
+### MapPolyBotWebhook
+
+The signature is:
+
+```csharp
+IEndpointConventionBuilder MapPolyBotWebhook(
+    this IEndpointRouteBuilder endpoints,
+    string pattern = "/bot")
+```
+
+Maps the POST route after `AddPolyBotWebhook`. The path defaults to `"/bot"` and can be anything your reverse proxy exposes:
+
+```csharp
+app.MapPolyBotWebhook("/bot");       // explicit path
+app.MapPolyBotWebhook();             // defaults to /bot
+```
+
+## Webhook options
+
+All webhook-specific settings live in `PolyBotOptions`:
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `WebhookUrl` | `string?` | `null` | **Required.** The absolute HTTPS URL Telegram will POST updates to. Must match the path registered with `MapPolyBotWebhook`. |
+| `WebhookSecretToken` | `string?` | `null` | Secret token passed in the `X-Telegram-Bot-Api-Secret-Token` header by Telegram. |
+| `WebhookMaxConnections` | `int` | `40` | Max simultaneous HTTPS connections Telegram keeps open to this endpoint (1–100). |
+| `DeleteWebhookOnStop` | `bool` | `true` | When `true` (the default), `DeleteWebhook` is called during graceful shutdown. |
+| `DropPendingUpdates` | `bool` | `false` | When `true`, pending updates are dropped when `SetWebhook` is called. |
+| `AllowedUpdates` | `UpdateType[]?` | `null` | Update types to receive. `null` receives all. |
+
+## PolyBotWebhookHostedService lifecycle
+
+The generated `PolyBotWebhookHostedService` handles the Telegram webhook lifecycle automatically:
+
+<Steps>
+  <Step title="StartAsync — SetWebhook">
+    On host startup, calls `SetWebhook` with `WebhookUrl`, `WebhookSecretToken`, `WebhookMaxConnections`, `AllowedUpdates`, and `DropPendingUpdates`. Throws `InvalidOperationException` if `WebhookUrl` is null or empty.
+  </Step>
+  <Step title="StopAsync — DeleteWebhook">
+    On graceful shutdown, if `DeleteWebhookOnStop` is `true` (the default), calls `DeleteWebhook`. This is safe to disable if you want Telegram to keep sending updates to the URL after the process stops (e.g. during a rolling deployment).
+  </Step>
+</Steps>
+
+## Request handling
+
+The generated `HandlePolyBotWebhookAsync` request delegate runs for every POST to the mapped path:
+
+<Steps>
+  <Step title="Secret token verification">
+    If `WebhookSecretToken` is set, the `X-Telegram-Bot-Api-Secret-Token` header is checked:
+    - Header absent → **400 Bad Request**
+    - Header value doesn't match → **401 Unauthorized**
+    - Header matches → continues
+  </Step>
+  <Step title="Deserialization">
+    The request body stream is deserialized using Telegram.Bot's source-generated `JsonBotSerializerContext`. Malformed JSON or a missing/zero update ID → **400 Bad Request**.
+  </Step>
+  <Step title="Routing">
+    `IUpdateHandler.HandleUpdateAsync` is called with `ITelegramBotClient` and the deserialized `Update`. Both are resolved from `HttpContext.RequestServices`.
+  </Step>
+  <Step title="Response">
+    Returns **200 OK** after the handler completes. Telegram expects any 2xx response within the timeout; PolyBot always returns 200.
+  </Step>
+</Steps>
+
+<Warning>
+Services are resolved from `HttpContext.RequestServices` — the per-request DI scope. Scoped and transient services registered with the root container behave as expected. If you need per-request state, register services as scoped.
+</Warning>
+
+## Complete Program.cs example
+
+A minimal ASP.NET Core application wired to receive Telegram webhook updates:
+
+<CodeGroup>
+```csharp Program.cs
+using PolyBot;
+using PolyBot.Attributes;
+using PolyBot.Routing;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+
+// --- Handlers ---
+
+namespace WebhookBot;
+
+public static class BotHandlers
+{
+    [MessageHandler]
+    [Command(Aliases = ["start"], Description = "Start the bot")]
+    public static async Task<Result> Start(
+        Message msg,
+        ITelegramBotClient bot,
+        CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "Hello via webhook!", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    [MessageHandler]
+    public static async Task<Result> Echo(
+        Message msg,
+        ITelegramBotClient bot,
+        CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(msg.Text))
+            await bot.SendMessage(msg.Chat.Id, msg.Text, cancellationToken: ct);
+
+        return Result.Handled();
+    }
+
+    [CallbackQueryHandler]
+    public static async Task<Result> OnCallback(
+        CallbackQuery query,
+        ITelegramBotClient bot,
+        CancellationToken ct)
+    {
+        await bot.AnswerCallbackQuery(query.Id, cancellationToken: ct);
+        return Result.Handled();
+    }
+}
+
+// --- App setup ---
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+// Register the Telegram client
+builder.Services.AddSingleton<ITelegramBotClient>(_ =>
+    new TelegramBotClient(
+        builder.Configuration["PolyBot:BotToken"]
+            ?? throw new InvalidOperationException("PolyBot:BotToken is required")));
+
+// Register PolyBot webhook integration
+builder.Services.AddPolyBotWebhook(options =>
+{
+    options.WebhookUrl = builder.Configuration["PolyBot:WebhookUrl"]
+        ?? throw new InvalidOperationException("PolyBot:WebhookUrl is required");
+    options.WebhookSecretToken = builder.Configuration["PolyBot:WebhookSecretToken"];
+    options.WebhookMaxConnections = 40;
+    options.DeleteWebhookOnStop = true;
+    options.DropPendingUpdates = true;
+});
+
+WebApplication app = builder.Build();
+
+// Map the bot endpoint
+app.MapPolyBotWebhook("/bot");
+
+app.Run();
+```
+
+```json appsettings.json
+{
+  "PolyBot": {
+    "BotToken": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+    "WebhookUrl": "https://yourdomain.com/bot",
+    "WebhookSecretToken": "your-secret-token-here"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+```
+</CodeGroup>
+
+## Testing the webhook endpoint
+
+Use `PolyTests` as `ITelegramBotClient` and call the endpoint method directly to test secret verification, deserialization, and routing without running a real HTTP server:
+
+```csharp
+PolyTests testClient = new PolyTests();
+
+ServiceCollection services = new ServiceCollection();
+services.AddPolyBotDefaults();
+services.AddSingleton<ITelegramBotClient>(testClient);
+services.AddPolyBotWebhook(options =>
+{
+    options.WebhookUrl = "https://example.com/bot";
+    options.WebhookSecretToken = "s3cr3t";
+});
+
+await using ServiceProvider provider = services.BuildServiceProvider();
+
+// Resolve the hosted service to apply the options configure delegate
+IHostedService hosted = provider.GetRequiredService<IHostedService>();
+await hosted.StartAsync(CancellationToken.None);
+
+// After StartAsync, SetWebhook was called with the configured URL and secret
+SetWebhookRequest set = testClient.SentRequests.OfType<SetWebhookRequest>().Single();
+Assert.AreEqual("https://example.com/bot", set.Url);
+Assert.AreEqual("s3cr3t", set.SecretToken);
+
+await hosted.StopAsync(CancellationToken.None);
+
+// DeleteWebhookOnStop = true by default, so DeleteWebhook is called on stop
+Assert.AreEqual(1, testClient.SentRequests.OfType<DeleteWebhookRequest>().Count());
+```
+
+<Tip>
+See [PolyTests](/testing/poly-tests) for full `SentRequests` assertions, and [Test Harness](/testing/test-harness) for the simpler `UpdateMocker`-based approach that works without ASP.NET Core.
+</Tip>

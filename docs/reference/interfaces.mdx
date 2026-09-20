@@ -1,0 +1,319 @@
+---
+title: "PolyBot Interfaces, Implementations, and DI Defaults"
+sidebarTitle: "Interfaces"
+description: "Reference for PolyBot interfaces — IUpdateFilter, IStateMachine, IStateStorage, IUpdateAwaiter, IBotFatherSync — with implementations and DI defaults."
+---
+
+PolyBot exposes a set of focused interfaces that you interact with at runtime: a gate interface for filtering updates, a typed FSM facade for managing conversation state, a raw storage interface for custom persistence, an awaiter interface for suspending handlers mid-conversation, and a BotFather sync interface for managing command menus. This page documents each interface, its methods, and the concrete implementations registered by default.
+
+---
+
+## `IUpdateFilter`
+
+**Namespace:** `PolyBot.Routing`
+
+A synchronous gate over an incoming update, evaluated by the generated router before invoking a handler that carries filter attributes. The source generator discovers every concrete, non-abstract, non-generic class that implements `IUpdateFilter` and emits a matching `[XxxFilterAttribute]` in `PolyBot.Attributes`.
+
+```csharp
+public interface IUpdateFilter
+{
+    bool CanPass(Update update);
+}
+```
+
+<ResponseField name="CanPass(Update update)" type="bool">
+  Returns `true` if the update is allowed through to the handler. Returning `false` skips the handler entirely.
+</ResponseField>
+
+**Usage:** Implement the interface directly (for raw `Update` access) or subclass one of the generated abstract DTO bases (`MessageFilter`, `CallbackQueryFilter`, etc.) whose `CanPass(Update)` extracts the payload and delegates to `CanPass(TDto)`.
+
+```csharp
+// Subclass the generated MessageFilter base to work directly with the Message payload
+public sealed class NonEmptyTextFilter : MessageFilter
+{
+    protected override bool CanPass(Message message)
+        => !string.IsNullOrEmpty(message.Text);
+}
+```
+
+At runtime the router resolves each filter from the service container first (`GetService<T>()`), falling back to `ActivatorUtilities.CreateInstance`. Parameterless filters work without being registered; filters with constructor dependencies should be registered in DI.
+
+<Note>
+Filter attributes (`[NonEmptyTextFilter]`) and `With*` extensions (`WithNonEmptyTextFilter()`) are emitted by the generator, not written by hand. See the [Source Generator](/advanced/source-generator) page for details.
+</Note>
+
+---
+
+## `IStateMachine`
+
+**Namespace:** `PolyBot.State`
+
+A typed facade over `IStateStorage` scoped to the update currently being routed. Keys are resolved from the current update via `StateKeyResolver`. Inject into handler parameters directly — the generator maps the `IStateMachine` parameter to `GetRequiredService<IStateMachine>()`.
+
+```csharp
+public interface IStateMachine
+{
+    ValueTask<TEnum?> GetAsync<TEnum>(
+        StateKey keyType = StateKey.UserId,
+        CancellationToken ct = default)
+        where TEnum : struct, Enum;
+
+    ValueTask SetAsync<TEnum>(
+        TEnum state,
+        StateKey keyType = StateKey.UserId,
+        CancellationToken ct = default)
+        where TEnum : struct, Enum;
+
+    ValueTask ResetAsync<TEnum>(
+        StateKey keyType = StateKey.UserId,
+        CancellationToken ct = default)
+        where TEnum : struct, Enum;
+}
+```
+
+<ResponseField name="GetAsync<TEnum>(StateKey, CancellationToken)" type="ValueTask<TEnum?>">
+  Returns the current state for the resolved key, or `null` when no current update is active, the key is unresolvable, or no state is stored.
+</ResponseField>
+
+<ResponseField name="SetAsync<TEnum>(TEnum, StateKey, CancellationToken)" type="ValueTask">
+  Stores `state` for the resolved key. Throws `InvalidOperationException` when the key cannot be resolved — silent state loss is worse than a visible failure.
+</ResponseField>
+
+<ResponseField name="ResetAsync<TEnum>(StateKey, CancellationToken)" type="ValueTask">
+  Removes the stored state for the resolved key, if any. Throws `InvalidOperationException` when the key cannot be resolved.
+</ResponseField>
+
+### `StateKey` enum
+
+| Member | Resolved from |
+|---|---|
+| `UserId` | Sending user's id — available for most update types |
+| `ChatId` | Chat id — available for message, callback, and chat-related updates |
+| `UserInChat` | Combined `"{chatId}_{userId}"` — both ids must be present |
+
+### Extension methods: `StateMachineExtensions`
+
+**Namespace:** `PolyBot.State`
+
+Two convenience methods walk forward/backward through an ordered enum:
+
+```csharp
+// Move one step forward: no state → first value → next value → (past last) → null + clear
+ValueTask<TEnum?> AdvanceAsync<TEnum>(
+    this IStateMachine machine,
+    StateKey keyType = StateKey.UserId,
+    CancellationToken ct = default)
+    where TEnum : struct, Enum;
+
+// Move one step back: any value → previous value; from first value (or no state) → null + clear
+ValueTask<TEnum?> RollbackAsync<TEnum>(
+    this IStateMachine machine,
+    StateKey keyType = StateKey.UserId,
+    CancellationToken ct = default)
+    where TEnum : struct, Enum;
+```
+
+Both methods return the resulting state (or `null` when cleared). Both throw `InvalidOperationException` when a write is required but the key cannot be resolved.
+
+```csharp
+[MessageHandler, State<Step>(Step.AwaitingAge)]
+public static async Task<Result> HandleAge(Message msg, IStateMachine fsm)
+{
+    Step? next = await fsm.AdvanceAsync<Step>();
+    // next == Step.Completed (or null if Step.AwaitingAge was the last value)
+    return Result.StopRouting;
+}
+```
+
+---
+
+## `IStateStorage`
+
+**Namespace:** `PolyBot.State`
+
+The raw persistence layer for FSM states. `IStateMachine` wraps this with update-context awareness; use `IStateStorage` directly when you need to read or modify state outside the routing loop (e.g. admin commands that reset another user's state).
+
+```csharp
+public interface IStateStorage
+{
+    ValueTask<TEnum?> GetStateAsync<TEnum>(
+        string key,
+        CancellationToken ct = default)
+        where TEnum : struct, Enum;
+
+    ValueTask SetStateAsync<TEnum>(
+        string key,
+        TEnum state,
+        CancellationToken ct = default)
+        where TEnum : struct, Enum;
+
+    ValueTask ClearStateAsync<TEnum>(
+        string key,
+        CancellationToken ct = default)
+        where TEnum : struct, Enum;
+}
+```
+
+<ResponseField name="GetStateAsync<TEnum>(string, CancellationToken)" type="ValueTask<TEnum?>">
+  Returns the stored state for `key`, or `null` when none (or an expired entry) exists.
+</ResponseField>
+
+<ResponseField name="SetStateAsync<TEnum>(string, TEnum, CancellationToken)" type="ValueTask">
+  Stores `state` for `key`, replacing any previously stored state.
+</ResponseField>
+
+<ResponseField name="ClearStateAsync<TEnum>(string, CancellationToken)" type="ValueTask">
+  Removes the state stored for `key`, if any.
+</ResponseField>
+
+Implementations namespace keys internally by enum type, so states of different enum types never collide for the same raw key string.
+
+### `MemoryStateStorage` (default implementation)
+
+**Namespace:** `PolyBot.State`
+
+The built-in `IStateStorage` backed by a `ConcurrentDictionary<(Type, string), Entry>`. Suitable for development and single-instance bots; not shared across process restarts or multiple app instances.
+
+```csharp
+// Single constructor — defaultExpiration is optional
+public MemoryStateStorage(TimeSpan? defaultExpiration = null)
+```
+
+```csharp
+// Without expiration (entries live forever)
+new MemoryStateStorage()
+
+// With a 30-minute expiration (entries expire 30 minutes after last write)
+new MemoryStateStorage(TimeSpan.FromMinutes(30))
+```
+
+<Warning>
+`MemoryStateStorage` is process-local. For multi-instance deployments register a custom `IStateStorage` (backed by Redis, a database, etc.) **before** calling `AddPolyBotRouter()`. `AddPolyBotDefaults()` registers `MemoryStateStorage` with try-add semantics, so your registration wins if it comes first.
+</Warning>
+
+---
+
+## `IUpdateAwaiter`
+
+**Namespace:** `PolyBot.Awaits`
+
+Enables conversation-style inline awaiting: a handler builds a typed await registration, the framework suspends the handler and resumes it when a matching update arrives — without blocking the polling loop.
+
+```csharp
+public interface IUpdateAwaiter
+{
+    UpdateAwaiterBuilder<TUpdate> WaitForAsync<TUpdate>(TimeSpan? timeout = null)
+        where TUpdate : class;
+
+    ValueTask<bool> TryDeliverAsync(
+        long? userId,
+        long? chatId,
+        Update update,
+        object payload,
+        Type payloadType,
+        string[] patterns,
+        Type[] filterTypes,
+        bool hasWhereCondition,
+        CancellationToken ct = default);
+}
+```
+
+<ResponseField name="WaitForAsync<TUpdate>(TimeSpan?)" type="UpdateAwaiterBuilder<TUpdate>">
+  Starts building a single-shot await for a `TUpdate` payload. Chain marker methods (`TextMatches`, `WithFilter`, `Where`) then call a terminal method (`ByUserId`, `ByChatId`, `ByUserInChat`) to register the await and return a `Task<TUpdate?>`.
+</ResponseField>
+
+<ResponseField name="TryDeliverAsync(...)" type="ValueTask<bool>">
+  Router-facing delivery hook called by the generated router after the branch's static conditions have already passed. You never call this directly. Returns `true` when the update was claimed by a pending await; `false` lets it fall through to normal routing.
+</ResponseField>
+
+**Usage example:**
+
+```csharp
+[MessageHandler, Command(Aliases = ["register"])]
+public static async Task<Result> Register(
+    Message msg,
+    IUpdateAwaiter awaiter,
+    CancellationToken ct)
+{
+    // Generated WaitForMessageAsync is a WaitForAsync<Message> shorthand
+    Message? age = await awaiter.WaitForMessageAsync()
+        .TextMatches(@"^\d+$")
+        .ByUserId(ct);
+
+    if (age is null) return Result.StopRouting; // timeout
+    // process age.Text ...
+    return Result.StopRouting;
+}
+```
+
+<Note>
+`WaitForMessageAsync()` and all other `WaitFor*Async()` extension methods are generated into `PolyBot.Attributes` by the source generator. `With*` extensions are emitted one-per-discovered-filter. These generated methods are marker calls — the generator reads them syntactically to emit the correct branch conditions into the router.
+</Note>
+
+### `UpdateAwaiterBuilder<TUpdate>`
+
+Returned by `WaitForAsync<TUpdate>`. Fluent builder for configuring the await before registering it.
+
+| Method | Description |
+|---|---|
+| `.TextMatches(string pattern)` | Require the message text/caption to match a regex (message payloads only; `CUR014` on others) |
+| `.Where(static m => ...)` | Inline predicate spliced verbatim into the router branch; must be `static`, non-async, expression-bodied, and reference only the parameter (`CUR016` otherwise) |
+| `.WithFilter(IUpdateFilter filter)` | Apply a filter instance (not statically analyzable; type is not keyed) |
+| `.WithFilter<TFilter>()` | Apply a filter by type (type becomes part of the registration key) |
+| `.ByUserId(CancellationToken)` | Register keyed by current update's user id — returns `Task<TUpdate?>` |
+| `.ByChatId(CancellationToken)` | Register keyed by current update's chat id |
+| `.ByUserInChat(CancellationToken)` | Register keyed by user-in-chat pair |
+
+---
+
+## `IBotFatherSync`
+
+**Namespace:** `PolyBot.BotFather`
+
+Holds the commands discovered from `[Command]` attributes and synchronizes them with BotFather via `SetMyCommands`. The concrete implementation `PolyBotBotFatherSync` is generated by the source generator and registered automatically by `AddPolyBotRouter()`.
+
+```csharp
+public interface IBotFatherSync
+{
+    IReadOnlyList<BotCommand> DiscoveredCommands { get; }
+    Task SyncCommandsAsync(CancellationToken ct = default);
+}
+```
+
+<ResponseField name="DiscoveredCommands" type="IReadOnlyList<BotCommand>">
+  All commands found at build time that are not marked `IsHidden = true`. Read-only.
+</ResponseField>
+
+<ResponseField name="SyncCommandsAsync(CancellationToken)" type="Task">
+  Groups commands by `(Scope, LanguageCode)` and sends one `SetMyCommands` API call per group. Called automatically by `PolyBotClient.RunPollingAsync()` before polling starts.
+</ResponseField>
+
+---
+
+## DI registration defaults
+
+`AddPolyBotDefaults()` registers the following with try-add semantics (your earlier registrations win):
+
+| Service | Implementation | Lifetime |
+|---|---|---|
+| `IStateStorage` | `MemoryStateStorage` | Singleton |
+| `IStateMachine` | `StateMachine` | Singleton |
+| `IUpdateContextAccessor` | `UpdateContextAccessor` | Singleton |
+| `IUpdateAwaiter` | `UpdateAwaiter` | Singleton |
+
+`AddPolyBotRouter()` calls `AddPolyBotDefaults()` first, then additionally registers (without try-add — these always replace):
+
+| Service | Implementation | Lifetime |
+|---|---|---|
+| `BotRouter` | Generated `BotRouter` | Singleton |
+| `IUpdateHandler` | Forwarded to `BotRouter` | Singleton |
+| `IBotFatherSync` | Generated `PolyBotBotFatherSync` | Singleton |
+
+`ITelegramBotClient` is registered separately — by `PolyBotClient.BuildProvider()` when using the standalone runner, or by your own DI setup when using the generic host or ASP.NET Core.
+
+To override `IStateStorage` with a custom implementation, register it **before** `AddPolyBotRouter()` (which calls `AddPolyBotDefaults()` internally — try-add semantics mean your earlier registration wins):
+
+```csharp
+services.AddSingleton<IStateStorage, RedisStateStorage>();
+services.AddPolyBotRouter(); // internally calls AddPolyBotDefaults(); try-add skips MemoryStateStorage
+```

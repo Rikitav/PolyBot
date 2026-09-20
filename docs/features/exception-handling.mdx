@@ -1,0 +1,142 @@
+---
+title: "Exception Handling: Centralised Bot Error Reporting"
+sidebarTitle: "Exception Handling"
+description: "Centralise bot error handling with one [ExceptionHandler] method: receive the exception and source, inject DI services, and keep the polling loop alive."
+---
+
+By default, errors thrown from handler methods propagate out of the generated router. Decorating one method with `[ExceptionHandler]` changes this: the generated router invokes it from `HandleErrorAsync` for every update-handling failure instead of letting errors bubble unhandled. The method receives the exception alongside any DI services it needs, and a throw from the handler itself is swallowed to keep the polling loop alive.
+
+## Declaring an exception handler
+
+```csharp
+[ExceptionHandler]
+public static Task OnError(
+    Exception exception,
+    HandleErrorSource source,
+    ILogger<BotHandlers> logger,
+    CancellationToken ct)
+{
+    logger.LogError(exception, "Bot error in {Source}", source);
+    return Task.CompletedTask;
+}
+```
+
+Place `[ExceptionHandler]` on exactly one `static` or `instance` method anywhere in your project. The method must return `Task` or `ValueTask`.
+
+## Parameter resolution
+
+Parameters are resolved the same way as handler parameters, with two differences:
+
+- `Exception`, `HandleErrorSource`, `ITelegramBotClient`, and `CancellationToken` are injected from the error callback arguments directly.
+- Everything else is resolved from the DI container — including keyed services via `[Key("name")] T`.
+- **Update-bound parameters are not available.** There is no current update in the error path. Declaring a parameter that would normally be bound to an update payload (e.g. `Message`, `Update`) or a keyed service without a constant key is rejected at compile time with `CUR032`.
+
+```csharp
+// ITelegramBotClient, Exception, HandleErrorSource, and CancellationToken
+// come from the error callback; IErrorReporter comes from DI
+[ExceptionHandler]
+public static async Task OnError(
+    ITelegramBotClient bot,
+    Exception exception,
+    HandleErrorSource source,
+    IErrorReporter reporter,
+    CancellationToken ct)
+{
+    await reporter.ReportAsync(exception, source, ct);
+}
+```
+
+### Keyed service injection
+
+```csharp
+[ExceptionHandler]
+public static Task OnError(
+    Exception exception,
+    [Key("alerts")] INotificationService alerts)
+{
+    alerts.Send($"Bot error: {exception.Message}");
+    return Task.CompletedTask;
+}
+```
+
+## Return types
+
+The method must return `Task` or `ValueTask`. Any other return type is a compile-time error (`CUR034`). Both `async`/`await` and synchronous (`return Task.CompletedTask`) styles work.
+
+```csharp
+// Both are valid
+[ExceptionHandler] public static Task OnError(Exception ex) { ... }
+[ExceptionHandler] public static async ValueTask OnError(Exception ex) { ... }
+```
+
+## Fault isolation
+
+A throw inside the `[ExceptionHandler]` method itself is caught and swallowed by the generated router. This guarantees the polling loop survives even if your error reporting logic has a bug.
+
+<Warning>
+Because throws from `[ExceptionHandler]` are swallowed, make sure your error handler logs or reports synchronously before awaiting anything that could fail. Otherwise you may lose error context silently.
+</Warning>
+
+## Only one handler allowed
+
+Declaring more than one method with `[ExceptionHandler]` is a compile-time error (`CUR033`). There is exactly one `HandleErrorAsync` override in the generated router.
+
+## Full example with structured logging
+
+```csharp
+public sealed partial class BotHandlers
+{
+    [ExceptionHandler]
+    public static Task OnError(
+        Exception exception,
+        HandleErrorSource source,
+        ITelegramBotClient bot,
+        ILogger<BotHandlers> logger,
+        CancellationToken ct)
+    {
+        switch (exception)
+        {
+            case ApiRequestException apiEx:
+                logger.LogWarning(
+                    apiEx,
+                    "Telegram API error {ErrorCode} in {Source}",
+                    apiEx.ErrorCode,
+                    source);
+                break;
+
+            case OperationCanceledException:
+                // Normal shutdown, don't log
+                break;
+
+            default:
+                logger.LogError(
+                    exception,
+                    "Unhandled exception in {Source}",
+                    source);
+                break;
+        }
+
+        return Task.CompletedTask;
+    }
+}
+```
+
+## Diagnostics reference
+
+<Accordion title="CUR032 – Update-bound or invalid-keyed parameter in exception handler">
+**Severity:** Error
+
+A `[ExceptionHandler]` method declares a parameter that is update-bound (e.g. `Message`, `Update`, `CallbackQuery`) or keyed with a non-constant key. There is no current update in the error path; the parameter is dropped.
+</Accordion>
+
+<Accordion title="CUR033 – Multiple [ExceptionHandler] methods">
+**Severity:** Error
+
+More than one method carries `[ExceptionHandler]`. Only one `HandleErrorAsync` override is generated; declare exactly one exception handler.
+</Accordion>
+
+<Accordion title="CUR034 – Invalid return type">
+**Severity:** Error
+
+The `[ExceptionHandler]` method does not return `Task` or `ValueTask`. The method is rejected and no error override is generated.
+</Accordion>

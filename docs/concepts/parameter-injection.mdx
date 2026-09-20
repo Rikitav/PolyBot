@@ -1,0 +1,182 @@
+---
+title: "Parameter Injection: How Handler Arguments Are Resolved"
+sidebarTitle: "Parameter Injection"
+description: "Understand PolyBot's parameter resolution order — bot client, cancellation token, typed update payloads, keyed services, and plain DI services."
+---
+
+When the generated `BotRouter` calls your handler, it resolves every parameter automatically. You never build a parameter list by hand — just declare what you need and the generator emits the injection code at compile time.
+
+## Resolution order
+
+Parameters are matched against the following sources in order. The first match wins; a parameter is never tested against a lower-priority source if a higher one already applies.
+
+| Parameter type | Resolved from |
+|---|---|
+| `ITelegramBotClient` | the `botClient` argument of `HandleUpdateAsync` |
+| `CancellationToken` | the `cancellationToken` argument |
+| `Update` | the raw `update` argument |
+| assignable from the update payload | the extracted payload (`Message`, `CallbackQuery`, `InlineQuery`, …) |
+| `[Key("x")] T` | `GetRequiredKeyedService<T>("x")` — constant string or int key |
+| anything else | `GetRequiredService<T>()` |
+
+## Examples for each injection pattern
+
+### `ITelegramBotClient` — the bot itself
+
+The client is passed straight through from `IUpdateHandler.HandleUpdateAsync`. Declare it in any position:
+
+```csharp
+[MessageHandler]
+public static async Task<Result> SendHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "Hello!", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+### `CancellationToken` — shutdown signal
+
+The cancellation token from the polling loop is forwarded automatically. Propagate it to every async call:
+
+```csharp
+[MessageHandler]
+public static async Task<Result> DelayHandler(Message msg, CancellationToken ct)
+{
+    await Task.Delay(TimeSpan.FromSeconds(1), ct);
+    return Result.Continue;
+}
+```
+
+### `Update` — the raw update envelope
+
+Request the full `Update` object when you need fields that are not part of a single payload:
+
+```csharp
+using Telegram.Bot.Types;
+
+[MessageHandler]
+public static Task<Result> InspectHandler(Update update)
+{
+    Console.WriteLine($"Update #{update.Id}");
+    return Task.FromResult(Result.Continue);
+}
+```
+
+### Payload types — strongly typed DTO injection
+
+Declare a parameter whose type is the payload DTO (or a base type it derives from). The generator extracts the payload from the update and injects it directly. The payload is resolved from whichever `Update` property carries a value assignable to that type:
+
+```csharp
+// Message injected from Update.Message
+[MessageHandler]
+public static async Task<Result> MessageHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"You said: {msg.Text}", cancellationToken: ct);
+    return Result.Handled();
+}
+
+// CallbackQuery injected from Update.CallbackQuery
+[CallbackQueryHandler]
+public static async Task<Result> ButtonHandler(CallbackQuery query, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.AnswerCallbackQuery(query.Id, cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+### `[Key("x")] T` — keyed DI services
+
+Apply `[Key]` from `PolyBot.Attributes` to resolve a service registered under a specific key. The key must be a compile-time constant string or integer:
+
+```csharp
+using PolyBot.Attributes;
+
+// Handler using a keyed service
+[MessageHandler(Priority = -1)]
+[Command(Aliases = ["start"], Description = "Start the bot")]
+public static async Task<Result> StartHandler(
+    Message msg,
+    ITelegramBotClient bot,
+    [Key("lol")] IKeyedService keyed,
+    CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"Keyed: {keyed.Name}", cancellationToken: ct);
+    return Result.StopRouting;
+}
+```
+
+```csharp
+// Registration
+services.AddKeyedSingleton<IKeyedService, KeyedService>("lol", new KeyedService("my-key"));
+```
+
+### Anything else — plain DI services
+
+Any parameter type not matched by the rules above is resolved with `GetRequiredService<T>()`. This is how you inject application services:
+
+```csharp
+public interface IWelcomeService { string Name { get; } }
+
+[MessageHandler]
+public static async Task<Result> WelcomeHandler(
+    Message msg,
+    ITelegramBotClient bot,
+    IWelcomeService welcome,
+    CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"Welcome from {welcome.Name}!", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+```csharp
+services.AddSingleton<IWelcomeService, WelcomeService>();
+```
+
+## Combining injection patterns
+
+All resolution rules compose freely within one signature. The generator handles them independently, in the order they appear in the parameter list:
+
+```csharp
+[MessageHandler(Priority = -1)]
+[Command(Aliases = ["start"], Description = "Start the bot")]
+public static async Task<Result> StartHandler(
+    Message msg,                         // payload
+    ITelegramBotClient bot,              // bot client
+    [Key("lol")] IKeyedService keyed,   // keyed service
+    IWelcomeService welcome,             // plain DI
+    CancellationToken ct)               // cancellation token
+{
+    await bot.SendMessage(msg.Chat.Id, $"start:{keyed.Name}:{welcome.Name}", cancellationToken: ct);
+    return Result.StopRouting;
+}
+```
+
+## Restrictions in `[ExceptionHandler]` methods
+
+Exception handlers follow the same injection rules, with one important difference: there is no current update in the error path, so **update-bound parameters are rejected**. Declaring `Message`, `CallbackQuery`, or any other payload type in an `[ExceptionHandler]` signature produces diagnostic `CUR032`.
+
+Parameters that **are** available in exception handlers:
+
+- `Exception` — the caught exception
+- `HandleErrorSource` — the error source enum from Telegram.Bot
+- `ITelegramBotClient` — the bot client
+- `CancellationToken` — the cancellation token
+- `[Key("x")] T` — keyed DI services
+- Any other type — resolved via `GetRequiredService<T>()`
+
+```csharp
+[ExceptionHandler]
+public static async Task OnError(
+    Exception exception,
+    HandleErrorSource source,
+    ITelegramBotClient bot,
+    CancellationToken ct)
+{
+    await bot.SendMessage(424242, $"error:{exception.GetType().Name}", cancellationToken: ct);
+}
+```
+
+<Warning>
+Declaring more than one `[ExceptionHandler]` method is a compile error (`CUR033`). Exception handler methods must return `Task` or `ValueTask` — returning `Task<Result>` is rejected with `CUR034`.
+</Warning>

@@ -1,0 +1,234 @@
+---
+title: "PolyTests: Offline ITelegramBotClient for PolyBot Tests"
+sidebarTitle: "PolyTests"
+description: "PolyTests is PolyBot's offline ITelegramBotClient double: enqueue synthetic updates with long-poll semantics and assert outgoing requests, no token needed."
+---
+
+`PolyTests` is an in-memory implementation of `ITelegramBotClient` designed for automated testing. Register it instead of the real `TelegramBotClient` and you get a fully offline, deterministic test double that delivers synthetic updates to the polling loop with long-poll semantics and records every outgoing request for assertions.
+
+## Class overview
+
+```csharp
+public sealed class PolyTests : ITelegramBotClient
+```
+
+`PolyTests` requires no constructor arguments — instantiate it directly and pass it to DI:
+
+```csharp
+PolyTests testClient = new PolyTests();
+services.AddSingleton<ITelegramBotClient>(testClient);
+```
+
+## Injecting updates
+
+### EnqueueUpdate
+
+Adds a single update to the internal queue. If the polling loop is waiting (blocking on a long-poll), the signal fires immediately and the update is delivered in the next `GetUpdates` batch.
+
+```csharp
+testClient.EnqueueUpdate(new Update
+{
+    Id = 1,
+    Message = new Message
+    {
+        Id = 1,
+        Text = "hello",
+        From = new User { Id = 42, FirstName = "Alice" },
+        Chat = new Chat { Id = 1, Type = ChatType.Private },
+    },
+});
+```
+
+### EnqueueUpdates
+
+Enqueues multiple updates in order. Each update signals the polling loop independently, so updates are never lost even if they arrive faster than the loop processes them.
+
+```csharp
+testClient.EnqueueUpdates(new[]
+{
+    new Update { Id = 1, Message = new Message { Id = 1, Text = "first",
+        From = new User { Id = 10, FirstName = "Test" },
+        Chat = new Chat { Id = 1, Type = ChatType.Private } } },
+    new Update { Id = 2, Message = new Message { Id = 2, Text = "second",
+        From = new User { Id = 10, FirstName = "Test" },
+        Chat = new Chat { Id = 1, Type = ChatType.Private } } },
+});
+```
+
+## Asserting outgoing requests
+
+`SentRequests` returns an `IReadOnlyList<object>` snapshot of every request the framework sent through the client, in the order they were made:
+
+```csharp
+IReadOnlyList<object> sent = testClient.SentRequests;
+```
+
+The list contains the strongly-typed request objects from `Telegram.Bot.Requests`. Use LINQ to filter:
+
+```csharp
+// Assert a specific message was sent
+SendMessageRequest? reply = sent
+    .OfType<SendMessageRequest>()
+    .FirstOrDefault(r => r.ChatId == 42);
+
+Assert.IsNotNull(reply);
+Assert.AreEqual("echo:hello", reply.Text);
+
+// Assert a webhook was deleted on shutdown
+Assert.AreEqual(1, sent.OfType<DeleteWebhookRequest>().Count());
+
+// Assert BotFather commands were set
+Assert.IsTrue(sent.OfType<SetMyCommandsRequest>().Any());
+```
+
+## BotUser
+
+The `User` returned by `GetMe` calls. Its type is `Telegram.Bot.Types.User`. The default value is:
+
+```csharp
+public User BotUser { get; set; } = new User
+{
+    Id = 1,
+    IsBot = true,
+    FirstName = "PolyBotTestBot",
+    Username = "poly_test_bot",
+};
+```
+
+Override it before the test runs when your handlers read the bot's identity:
+
+```csharp
+testClient.BotUser = new User
+{
+    Id = 999,
+    IsBot = true,
+    FirstName = "MyBot",
+    Username = "my_actual_bot",
+};
+```
+
+## Supported requests
+
+`PolyTests` answers the subset of Telegram API requests that PolyBot's own infrastructure uses. Anything outside this list throws `NotSupportedException`.
+
+| Request type | Response |
+|---|---|
+| `GetMeRequest` | Returns `BotUser` |
+| `GetUpdatesRequest` | Returns queued updates with long-poll semantics; waits for `EnqueueUpdate` if the queue is empty |
+| `SetWebhookRequest` | Returns `true` |
+| `DeleteWebhookRequest` | Returns `true` |
+| `SetMyCommandsRequest` | Returns `true` |
+| `SendMessageRequest` | Returns a fabricated `Message` with an auto-incremented ID |
+| `AnswerCallbackQueryRequest` | Returns `true` |
+| Anything else | Throws `NotSupportedException` |
+
+<Warning>
+If your handlers call API methods not in the supported list (e.g. `SendPhoto`, `EditMessageText`, `PinChatMessage`), the test will throw `NotSupportedException`. Either avoid those calls in the test path or create your own `ITelegramBotClient` mock that handles them.
+</Warning>
+
+## Long-poll semantics
+
+`GetUpdatesRequest` is handled with genuine long-poll behaviour:
+
+1. If the queue contains updates, they are dequeued immediately (up to `request.Limit`, defaulting to 100) and returned as a batch.
+2. If the queue is empty, the method waits asynchronously until either `EnqueueUpdate` signals an update or the `CancellationToken` is cancelled.
+3. When `StopAsync` cancels the token, `GetUpdatesRequest` throws `OperationCanceledException`, ending the polling loop cleanly.
+
+This means you can start the hosted service, enqueue an update, and let the loop deliver it — no `Task.Delay` polling or manual timing in tests.
+
+## Using PolyTests with AddPolyBotHostedPolling
+
+Register `PolyTests` as `ITelegramBotClient` before calling `AddPolyBotHostedPolling`. The hosted service picks up the test client from DI:
+
+```csharp
+[TestMethod]
+public async Task HostedPolling_DeliversEnqueuedUpdates()
+{
+    PolyTests testClient = new PolyTests();
+
+    ServiceCollection services = new ServiceCollection();
+    services.AddSingleton(new PolyBotOptions { BotUsername = "testbot" });
+    services.AddSingleton<ITelegramBotClient>(testClient);
+    services.AddSingleton<IWelcomeService, WelcomeService>();
+    services.AddPolyBotRouter();
+    services.AddPolyBotHostedPolling();
+
+    await using ServiceProvider provider = services.BuildServiceProvider();
+
+    IHostedService hosted = provider.GetRequiredService<IHostedService>();
+    await hosted.StartAsync(CancellationToken.None);
+
+    // Inject a /start command
+    testClient.EnqueueUpdate(new Update
+    {
+        Id = 500,
+        Message = new Message
+        {
+            Id = 500,
+            Text = "/start",
+            Entities = [new MessageEntity { Type = MessageEntityType.BotCommand, Offset = 0, Length = 6 }],
+            From = new User { Id = 710, FirstName = "Test" },
+            Chat = new Chat { Id = 711, Type = ChatType.Private },
+        },
+    });
+
+    // Wait for the handler to run and send a reply
+    bool delivered = false;
+    for (int i = 0; i < 50 && !delivered; i++)
+    {
+        delivered = testClient.SentRequests
+            .OfType<SendMessageRequest>()
+            .Any(r => r.Text.StartsWith("Welcome", StringComparison.Ordinal));
+
+        if (!delivered)
+            await Task.Delay(20);
+    }
+
+    await hosted.StopAsync(CancellationToken.None);
+
+    Assert.IsTrue(delivered, "the /start handler should have sent a welcome message");
+
+    // DeleteWebhook is called on startup by the polling service
+    Assert.IsTrue(testClient.SentRequests.OfType<DeleteWebhookRequest>().Any());
+    Assert.IsTrue(testClient.SentRequests.OfType<GetUpdatesRequest>().Any());
+}
+```
+
+## Using PolyTests with AddPolyBotWebhook
+
+For webhook integration tests, resolve the hosted service to trigger `StartAsync`, which calls `SetWebhook`, then stop it to trigger `DeleteWebhook`:
+
+```csharp
+[TestMethod]
+public async Task Webhook_LifecycleSetsAndDeletesWebhook()
+{
+    PolyTests testClient = new PolyTests();
+
+    ServiceCollection services = new ServiceCollection();
+    services.AddPolyBotDefaults();
+    services.AddSingleton<ITelegramBotClient>(testClient);
+    services.AddPolyBotWebhook(options =>
+    {
+        options.WebhookUrl = "https://example.com/bot";
+        options.WebhookSecretToken = "s3cr3t";
+    });
+
+    await using ServiceProvider provider = services.BuildServiceProvider();
+
+    IHostedService hosted = provider.GetRequiredService<IHostedService>();
+    await hosted.StartAsync(CancellationToken.None);
+    await hosted.StopAsync(CancellationToken.None);
+
+    // SetWebhook was called with correct parameters
+    SetWebhookRequest set = testClient.SentRequests.OfType<SetWebhookRequest>().Single();
+    Assert.AreEqual("https://example.com/bot", set.Url);
+    Assert.AreEqual("s3cr3t", set.SecretToken);
+
+    // DeleteWebhook was called on stop (DeleteWebhookOnStop = true by default)
+    Assert.AreEqual(1, testClient.SentRequests.OfType<DeleteWebhookRequest>().Count());
+}
+```
+
+<Tip>
+`PolyTests` is also used internally by `PolyBotClient.RunTest()`. If you prefer the higher-level `UpdateMocker` API (with its `Message`, `Command`, `Callback`, and `InlineQuery` helpers), see [Test Harness](/testing/test-harness).
+</Tip>

@@ -1,0 +1,229 @@
+---
+title: "Callback-Data Patterns: Typed Route Templates for Callbacks"
+sidebarTitle: "Callback Patterns"
+description: "Declare route templates over CallbackQuery.Data with [Pattern]: match literal segments, extract typed captures via TryParse, and catch wildcard tails."
+---
+
+When a user taps an inline keyboard button, Telegram delivers a `CallbackQuery` whose `Data` field is a short string you chose when building the keyboard. Rather than parsing that string yourself, PolyBot lets you declare a route template with `[Pattern]` and extract typed captures directly into handler parameters — the same `[Arg]` ergonomics used for command arguments.
+
+## The `[Pattern]` attribute
+
+```csharp
+[CallbackQueryHandler]
+[Pattern("item:{id}:{action}")]
+public static Task<Result> OnItem(
+    CallbackQuery query,
+    [Arg] int id,
+    [Arg] string action)
+{
+    // id and action are extracted and type-checked before this runs
+    return Task.FromResult(Result.Handled());
+}
+```
+
+`[Pattern]` declares a segment template over `CallbackQuery.Data`. Segments are separated by `Separator` (default `':'`). A non-matching update falls through to the next handler without throwing.
+
+| Property | Type | Default | Purpose |
+|---|---|---|---|
+| `Template` | `string` | (required) | The segment template, e.g. `"item:{id}:{action}"` |
+| `Separator` | `char` | `':'` | The character that divides segments |
+
+## Template syntax
+
+### Literal segments
+
+Plain text matches the segment value exactly (ordinal comparison).
+
+```csharp
+// Only matches "cart:checkout" exactly
+[Pattern("cart:checkout")]
+public static Task<Result> Checkout(CallbackQuery query) { ... }
+```
+
+### Named placeholders — `{name}`
+
+Captures one segment into the `[Arg]`-annotated parameter with the same name. When the parameter type is `string`, the segment value is bound directly. For numeric and enum types, the generator inlines a `TryParse` check; a failing parse causes the handler to fall through.
+
+```csharp
+// Matches "cart:checkout:42" — "42" must parse as int
+[Pattern("cart:checkout:{orderId}")]
+public static Task<Result> CheckoutOrder(CallbackQuery query, [Arg] int orderId) { ... }
+```
+
+Name inference follows the same rules as command `[Arg]`: when the `[Arg]` attribute is placed without an explicit name, the parameter name is used.
+
+### Type constraints — `{name:type}`
+
+An inline type constraint (e.g. `{id:int}`) is checked against the parameter's declared type. A mismatch between the constraint and the parameter type is a compile-time error (`CUR030`).
+
+```csharp
+// {id:int} makes the constraint explicit in the template itself
+[Pattern("product:{id:int}")]
+public static Task<Result> OnProduct(CallbackQuery query, [Arg] int id) { ... }
+```
+
+### Wildcard tail — `{*name}`
+
+A trailing `{*name}` placeholder captures everything after the preceding segment separator into a `string` parameter. The captured value may be empty. Only one wildcard is allowed, and it must be the last segment.
+
+```csharp
+// "logs:a/b/c" → path = "a/b/c"
+// "logs:"      → path = ""
+[Pattern("logs:{*path}")]
+public static Task<Result> OnLogs(CallbackQuery query, [Arg] string path) { ... }
+```
+
+## Type conversion rules
+
+| Parameter type | Conversion |
+|---|---|
+| `string` | Raw segment value, no conversion |
+| Numeric types (`int`, `decimal`, `long`, …) | `TryParse` with `InvariantCulture` |
+| `Enum` subtypes | `Enum.TryParse` (case-insensitive) |
+| Other types with `TryParse` | `TryParse` with `InvariantCulture` |
+
+A failed parse causes the pattern guard to emit `false` and the handler falls through to the next candidate — no exception is thrown.
+
+## Zero-allocation matching
+
+The `CallbackPatternMatcher` / `CallbackSegments` implementation is zero-allocation per update: segment bounds are recomputed by scanning the `callback_data` string rather than splitting it into an array. This means pattern routing adds no heap pressure on the hot path.
+
+## The 64-byte `callback_data` limit
+
+Telegram enforces a 64-byte limit on `callback_data`. PolyBot enforces this at compile time:
+
+- **`CUR024`** (error) — the literal skeleton of the template alone exceeds 64 bytes and can never fit regardless of captured values.
+- **`CUR025`** (error) — the literal skeleton plus the minimum non-empty sizes for each placeholder already exceeds 64 bytes.
+
+<Warning>
+Keep templates short and prefer integer IDs over long strings in callback data to stay well within the 64-byte limit.
+</Warning>
+
+## Complete examples
+
+<Tabs>
+  <Tab title="Simple pattern">
+    ```csharp
+    // Matches "menu:settings" or "menu:help"
+    [CallbackQueryHandler]
+    [Pattern("menu:{section}")]
+    public static async Task<Result> OnMenu(
+        CallbackQuery query,
+        ITelegramBotClient bot,
+        [Arg] string section,
+        CancellationToken ct)
+    {
+        await bot.AnswerCallbackQuery(query.Id, $"Opening {section}", cancellationToken: ct);
+        return Result.Handled();
+    }
+    ```
+  </Tab>
+  <Tab title="Type-constrained pattern">
+    ```csharp
+    // Matches "item:42:delete" — second segment must parse as int
+    [CallbackQueryHandler]
+    [Pattern("item:{id:int}:{action}")]
+    public static async Task<Result> OnItem(
+        CallbackQuery query,
+        ITelegramBotClient bot,
+        [Arg] int id,
+        [Arg] string action,
+        CancellationToken ct)
+    {
+        await bot.AnswerCallbackQuery(query.Id, $"Action '{action}' on item {id}", cancellationToken: ct);
+        return Result.Handled();
+    }
+    ```
+  </Tab>
+  <Tab title="Wildcard pattern">
+    ```csharp
+    // Matches "logs:server/app/error.log" — everything after "logs:" is captured
+    [CallbackQueryHandler]
+    [Pattern("logs:{*path}")]
+    public static async Task<Result> OnLogs(
+        CallbackQuery query,
+        ITelegramBotClient bot,
+        [Arg] string path,
+        CancellationToken ct)
+    {
+        await bot.SendMessage(
+            query.Message!.Chat.Id,
+            $"Fetching log: {path}",
+            cancellationToken: ct);
+
+        return Result.Handled();
+    }
+    ```
+  </Tab>
+  <Tab title="Decimal capture">
+    ```csharp
+    // "pay:19.99" → amount = 19.99m (invariant culture parse)
+    // "pay:oops"  → falls through (unparsable)
+    [CallbackQueryHandler]
+    [Pattern("pay:{amount}")]
+    public static async Task<Result> OnPay(
+        CallbackQuery query,
+        ITelegramBotClient bot,
+        [Arg] decimal amount,
+        CancellationToken ct)
+    {
+        await bot.SendMessage(
+            query.Message!.Chat.Id,
+            $"Paying {amount:C}",
+            cancellationToken: ct);
+
+        return Result.Handled();
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Diagnostics reference
+
+<Accordion title="CUR024 – Template literal skeleton exceeds 64 bytes">
+**Severity:** Error
+
+The literal portion of the template (all segments and separators, excluding placeholder values) is already over 64 bytes. The template can never produce valid `callback_data`.
+</Accordion>
+
+<Accordion title="CUR025 – Template with minimum placeholder sizes exceeds 64 bytes">
+**Severity:** Error
+
+Even assuming the minimum non-empty value (1 byte) for each placeholder, the template exceeds 64 bytes.
+</Accordion>
+
+<Accordion title="CUR026 – Placeholder without matching [Arg] parameter">
+**Severity:** Error
+
+A `{name}` placeholder in the template has no corresponding `[Arg]`-annotated parameter on the handler method.
+</Accordion>
+
+<Accordion title="CUR027 – [Arg] parameter not captured by template">
+**Severity:** Error
+
+A handler parameter carries `[Arg]` but its name does not appear as a placeholder in the template.
+</Accordion>
+
+<Accordion title="CUR028 – Parameter type lacks TryParse">
+**Severity:** Error
+
+A captured parameter's type does not have an accessible `TryParse` method (and is not `string` or an enum). The generator cannot emit a type-safe extraction.
+</Accordion>
+
+<Accordion title="CUR029 – [Pattern] on a non-callback handler">
+**Severity:** Error
+
+`[Pattern]` is applied to a handler that is not a `[CallbackQueryHandler]`. The attribute has no effect outside callback-query routing.
+</Accordion>
+
+<Accordion title="CUR030 – Constraint/type mismatch">
+**Severity:** Error
+
+The inline type constraint in `{name:type}` does not match the declared type of the corresponding `[Arg]` parameter.
+</Accordion>
+
+<Accordion title="CUR031 – Malformed template">
+**Severity:** Error
+
+The template string is structurally invalid (e.g. unclosed braces, wildcard not in tail position).
+</Accordion>

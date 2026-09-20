@@ -1,0 +1,191 @@
+---
+title: "Test PolyBot Handlers with RunTest and UpdateMocker"
+sidebarTitle: "Test Harness"
+description: "Test PolyBot handlers offline with RunTest and UpdateMocker: push synthetic messages, commands, callbacks, and inline queries, then assert sent requests."
+---
+
+PolyBot's test harness lets you exercise your handler code in complete isolation — no bot token, no Telegram servers, no real HTTP. `PolyBotClient.RunTest()` builds the service provider, swaps in an in-memory `PolyTests` client, and returns an `UpdateMocker` that pushes synthetic updates directly into the generated router.
+
+## RunTest
+
+Call `RunTest(CancellationToken cancellationToken = default)` instead of `RunPollingAsync()`. The method:
+
+1. Builds the service provider the same way as polling, but skips the bot-token requirement
+2. Resolves the `IUpdateHandler` (your generated `BotRouter`)
+3. Registers `PolyTests` as `ITelegramBotClient` — fully offline, no network calls
+4. Returns an `UpdateMocker` bound to that provider and handler
+
+```csharp
+PolyBotClient client = new PolyBotClient();
+client.Services.AddPolyBotRouter();
+// Register your own services as usual
+client.Services.AddSingleton<IMyService, MyService>();
+
+UpdateMocker mock = client.RunTest();
+```
+
+<Note>
+`BotClient` becomes accessible on the `PolyBotClient` after `RunTest()` is called, just like after `RunPollingAsync()`. Accessing it before either method is called throws `InvalidOperationException`.
+</Note>
+
+## UpdateMocker
+
+`UpdateMocker` is the test controller returned by `RunTest()`. It exposes:
+
+| Member | Type | Description |
+|---|---|---|
+| `Services` | `IServiceProvider` | The built service provider — resolve services for assertions. |
+| `BotClient` | `PolyTests` | The in-memory bot client. Use `SentRequests` to assert outgoing API calls. |
+| `Update(Update update, CancellationToken cancellationToken = default)` | `Task<Update>` | Pushes any raw `Update` through the router; auto-assigns `Id` if zero. |
+| `Message(string text, long userId = 42, long chatId = 1, CancellationToken cancellationToken = default)` | `Task<Update>` | Pushes a plain text message with auto-incremented `Message.Id`. |
+| `Command(string command, long userId = 42, long chatId = 1, CancellationToken cancellationToken = default)` | `Task<Update>` | Pushes a bot-command message; the leading `/` is optional and added automatically. |
+| `Callback(string data, long userId = 42, CancellationToken cancellationToken = default)` | `Task<Update>` | Pushes a callback query with the given `Data` string. |
+| `InlineQuery(string query, long userId = 42, CancellationToken cancellationToken = default)` | `Task<Update>` | Pushes an inline query with the given `Query` string. |
+
+### Default IDs
+
+All helper methods default to `userId = 42` and `chatId = 1` (where applicable), so you only specify them when your test exercises multi-user or multi-chat logic:
+
+```csharp
+await mock.Message("hello");                      // userId=42, chatId=1
+await mock.Message("hello", userId: 99);          // userId=99, chatId=1
+await mock.Message("hello", userId: 10, chatId: 20);
+```
+
+### Return value
+
+Every method returns the `Update` that was routed, with its auto-assigned IDs populated. This lets you write deterministic assertions about the update sequence:
+
+```csharp
+Update first  = await mock.Message("one");
+Update second = await mock.Message("two");
+
+Assert.IsTrue(first.Id < second.Id);   // IDs are monotonically increasing
+```
+
+### Asserting outgoing API calls
+
+`mock.BotClient.SentRequests` is an `IReadOnlyList<object>` of every request the handler sent through `ITelegramBotClient`, in order. Filter by request type to assert specific calls:
+
+```csharp
+IReadOnlyList<object> sent = mock.BotClient.SentRequests;
+
+// Assert a SendMessage was sent
+SendMessageRequest? reply = sent.OfType<SendMessageRequest>().FirstOrDefault();
+Assert.IsNotNull(reply);
+Assert.AreEqual("Hello!", reply.Text);
+
+// Assert a callback query was answered
+Assert.IsTrue(sent.OfType<AnswerCallbackQueryRequest>().Any());
+```
+
+## Complete test example
+
+This example covers a message handler, a `/start` command, and a callback query — reading configuration from a JSON file and asserting all three outgoing requests:
+
+```csharp
+[TestMethod]
+public async Task Bot_HandlesMessageCommandAndCallback()
+{
+    // Write a minimal config file with a bot token (ignored in test mode)
+    string configPath = Path.GetTempFileName() + ".json";
+    File.WriteAllText(configPath, """
+        { "PolyBot": { "BotToken": "1:test", "BotUsername": "mybot" } }
+        """);
+
+    try
+    {
+        await using PolyBotClient client = new PolyBotClient();
+        client.Configuration.AddJsonFile(configPath);
+        client.Services.AddSingleton<IGreetingService, GreetingService>();
+        client.Services.AddPolyBotRouter();
+
+        UpdateMocker mock = client.RunTest();
+
+        // Plain text message
+        Update msgUpdate = await mock.Message("hello world", userId: 100);
+        Assert.IsTrue(msgUpdate.Id > 0);
+
+        // Bot command — leading slash is optional
+        Update cmdUpdate = await mock.Command("start", userId: 200);
+        Assert.IsTrue(cmdUpdate.Id > msgUpdate.Id); // monotonically increasing
+
+        // Callback query
+        Update cbUpdate = await mock.Callback("item:42:open", userId: 300);
+
+        // Inline query
+        await mock.InlineQuery("search term", userId: 400);
+
+        // Assert outgoing API calls
+        IReadOnlyList<object> sent = mock.BotClient.SentRequests;
+
+        Assert.IsTrue(
+            sent.OfType<SendMessageRequest>().Any(r => r.Text.Contains("hello")),
+            "Echo handler should have replied to the plain message");
+
+        Assert.IsTrue(
+            sent.OfType<SendMessageRequest>().Any(r => r.Text.StartsWith("Welcome")),
+            "/start handler should have sent a welcome message");
+
+        Assert.IsTrue(
+            sent.OfType<AnswerCallbackQueryRequest>().Any(),
+            "Callback handler should have answered the callback query");
+    }
+    finally
+    {
+        File.Delete(configPath);
+    }
+}
+```
+
+## Pushing arbitrary updates
+
+For update types that don't have a dedicated helper method, use `mock.Update(new Update { ... })` directly. The `Id` is auto-assigned when it is zero:
+
+```csharp
+Update pollUpdate = await mock.Update(new Update
+{
+    Poll = new Poll
+    {
+        Id = "poll-1",
+        Question = "Favourite colour?",
+        Options = [],
+        TotalVoterCount = 0,
+        IsClosed = false,
+        IsAnonymous = true,
+        Type = PollType.Regular,
+    },
+});
+
+Assert.IsTrue(pollUpdate.Id > 0);
+```
+
+## Configuration binding in test mode
+
+`PolyBotClient` binds `Configuration` exactly the same way in test mode as it does for polling. You can attach a JSON file, environment variables, or in-memory values:
+
+<Tabs>
+  <Tab title="JSON file">
+    ```csharp
+    client.Configuration.AddJsonFile("appsettings.Test.json");
+    ```
+  </Tab>
+  <Tab title="In-memory">
+    ```csharp
+    client.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["PolyBot:BotUsername"] = "testbot",
+    });
+    ```
+  </Tab>
+  <Tab title="Constructor override">
+    ```csharp
+    PolyBotClient client = new PolyBotClient(
+        new PolyBotOptions { BotUsername = "testbot" });
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+`BotToken` is not required in test mode — `PolyBotClient` detects a missing token and silently swaps in `PolyTests`. You only need a token when calling `RunPollingAsync`.
+</Tip>

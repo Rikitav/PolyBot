@@ -1,0 +1,253 @@
+---
+title: "Finite State Machines: Per-User Conversation Flows"
+sidebarTitle: "State Machines"
+description: "Gate handlers on per-user enum states, drive transitions via IStateMachine, compose OR/AND predicates across enums, and register a custom IStateStorage."
+---
+
+PolyBot's FSM support lets you guide users through multi-step conversation flows without any manual state management in your routing logic. You annotate handler methods with state predicates; the source generator emits the state checks inline in the router, and `IStateMachine` gives you a typed, update-scoped API to read and write state from handler code.
+
+## Core concepts
+
+A *state* is an enum value associated with a user's (or chat's) identity. Two attributes control which states a handler matches:
+
+- **`[State<TEnum>(value)]`** — restricts the handler to updates where the resolved identity currently holds the given enum value.
+- **`[NoState<TEnum>]`** — restricts the handler to updates where the resolved identity has *no* stored state for `TEnum`. This is the typical entry point into a flow.
+- Handlers with **neither attribute** are fully stateless and always execute when reached.
+
+```csharp
+public enum RegistrationStep
+{
+    AwaitingName,
+    AwaitingAge,
+    Completed,
+}
+
+// Fires only when the user has no RegistrationStep state yet
+[MessageHandler]
+[Command(Aliases = ["register"])]
+[NoState<RegistrationStep>]
+public static async Task<Result> StartRegistration(Message msg, IStateMachine fsm, ITelegramBotClient bot, CancellationToken ct)
+{
+    await fsm.SetAsync(RegistrationStep.AwaitingName);
+    await bot.SendMessage(msg.Chat.Id, "What's your name?", cancellationToken: ct);
+    return Result.Handled();
+}
+
+// Fires only when the user is in the AwaitingName step
+[MessageHandler]
+[State<RegistrationStep>(RegistrationStep.AwaitingName)]
+public static async Task<Result> CollectName(Message msg, IStateMachine fsm, ITelegramBotClient bot, CancellationToken ct)
+{
+    await fsm.SetAsync(RegistrationStep.AwaitingAge);
+    await bot.SendMessage(msg.Chat.Id, $"Nice to meet you, {msg.Text}! How old are you?", cancellationToken: ct);
+    return Result.Handled();
+}
+
+// Fires only when the user is in the AwaitingAge step
+[MessageHandler]
+[State<RegistrationStep>(RegistrationStep.AwaitingAge)]
+public static async Task<Result> CollectAge(Message msg, IStateMachine fsm, ITelegramBotClient bot, CancellationToken ct)
+{
+    await fsm.SetAsync(RegistrationStep.Completed);
+    await bot.SendMessage(msg.Chat.Id, "Registration complete!", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+## StateKey: choosing the identity dimension
+
+Both `[State<TEnum>]` and `[NoState<TEnum>]` accept an optional `StateKey` parameter that controls which identity from the incoming update is used as the storage key.
+
+```csharp
+public enum StateKey
+{
+    UserId,      // The sending user's id (default)
+    ChatId,      // The chat's id
+    UserInChat,  // Combined "{chatId}_{userId}" — requires both ids
+}
+```
+
+### Key resolution table
+
+| `StateKey` | Resolved from |
+|---|---|
+| `UserId` | `Message`/`EditedMessage`/`ChannelPost`/`EditedChannelPost` `.From.Id`; `CallbackQuery`/`InlineQuery`/`ChosenInlineResult`/`ShippingQuery`/`PreCheckoutQuery`/`MyChatMember`/`ChatMember`/`ChatJoinRequest` `.From.Id`; `PollAnswer.User.Id`; `MessageReaction.User.Id`; `BusinessConnection.User.Id` |
+| `ChatId` | The same message/chat payloads' `.Chat.Id`; `CallbackQuery.Message.Chat.Id`; `PollAnswer.VoterChat.Id`; `ChatBoost.Chat.Id`; `BusinessConnection.UserChatId` |
+| `UserInChat` | `"{chatId}_{userId}"` — both must resolve |
+
+<Warning>
+Updates without a resolvable identity (e.g. plain `Poll` updates) match **neither** `[State]` nor `[NoState]`. They pass through all state-gated handlers silently.
+</Warning>
+
+## Combining multiple state attributes
+
+Within one handler, attributes sharing the same `(TEnum, StateKey)` pair are **OR-ed** — any listed state value matches. Attributes with *different* pairs are **AND-ed** — all conditions must hold simultaneously.
+
+```csharp
+// Matches when RegistrationStep is AwaitingName OR AwaitingAge (same enum + same key = OR)
+[State<RegistrationStep>(RegistrationStep.AwaitingName)]
+[State<RegistrationStep>(RegistrationStep.AwaitingAge)]
+public static Task<Result> InProgress(Message msg) { ... }
+
+// Matches when RegistrationStep == Completed AND WizardStep == Confirming (different enums = AND)
+[State<RegistrationStep>(RegistrationStep.Completed)]
+[State<WizardStep>(WizardStep.Confirming)]
+public static Task<Result> BothActive(Message msg) { ... }
+```
+
+<Warning>
+Combining `[State<TEnum>]` and `[NoState<TEnum>]` for the same enum and `StateKey` on one handler produces warning `CUR011` — the conditions are AND-ed and the handler will never match.
+</Warning>
+
+## The `IStateMachine` interface
+
+Inject `IStateMachine` into any handler to read and write state for the update currently being routed. Keys are resolved from the current update automatically.
+
+```csharp
+public interface IStateMachine
+{
+    // Returns the current state or null when unresolvable or not stored
+    ValueTask<TEnum?> GetAsync<TEnum>(StateKey keyType = StateKey.UserId, CancellationToken ct = default)
+        where TEnum : struct, Enum;
+
+    // Stores state; throws if no current update or key is unresolvable
+    ValueTask SetAsync<TEnum>(TEnum state, StateKey keyType = StateKey.UserId, CancellationToken ct = default)
+        where TEnum : struct, Enum;
+
+    // Removes stored state; throws if no current update or key is unresolvable
+    ValueTask ResetAsync<TEnum>(StateKey keyType = StateKey.UserId, CancellationToken ct = default)
+        where TEnum : struct, Enum;
+}
+```
+
+`GetAsync` never throws — it returns `null` when there is no current update, the key is unresolvable, or no state has been stored. `SetAsync` and `ResetAsync` throw `InvalidOperationException` on unresolvable keys to surface silent state loss as a visible failure.
+
+## `AdvanceAsync` and `RollbackAsync`
+
+For ordered state enums, `StateMachineExtensions` provides two convenience transitions that walk one step forward or backward through the enum's declared values.
+
+```csharp
+// AdvanceAsync: no state → first value → next value → (past last) clears state, returns null
+RegistrationStep? next = await fsm.AdvanceAsync<RegistrationStep>();
+
+// RollbackAsync: any value → previous value → (at first or no state) clears state, returns null
+RegistrationStep? prev = await fsm.RollbackAsync<RegistrationStep>();
+```
+
+The full progression for `RegistrationStep { AwaitingName, AwaitingAge, Completed }`:
+
+| Before | `AdvanceAsync` result | Stored after |
+|---|---|---|
+| (none) | `AwaitingName` | `AwaitingName` |
+| `AwaitingName` | `AwaitingAge` | `AwaitingAge` |
+| `AwaitingAge` | `Completed` | `Completed` |
+| `Completed` | `null` | (cleared) |
+
+## State storage
+
+### `MemoryStateStorage` (default)
+
+`AddPolyBotDefaults()` registers an in-memory `MemoryStateStorage` as the `IStateStorage` singleton. It is keyed by `(EnumType, rawKey)` pairs, so different enum types never collide for the same identity.
+
+```csharp
+// Default: no expiration
+services.AddSingleton<IStateStorage>(new MemoryStateStorage());
+
+// With optional per-entry expiration
+services.AddSingleton<IStateStorage>(new MemoryStateStorage(TimeSpan.FromMinutes(30)));
+```
+
+<Warning>
+`MemoryStateStorage` is process-local. It is suitable for development and single-instance bots; for multi-instance or persistent deployments, register a custom `IStateStorage` implementation.
+</Warning>
+
+### Custom `IStateStorage`
+
+Implement `IStateStorage` to back state in Redis, a database, or any other store. Register it **before** `AddPolyBotRouter()` so PolyBot's try-add semantics pick up your implementation instead of the default.
+
+```csharp
+public interface IStateStorage
+{
+    ValueTask<TEnum?> GetStateAsync<TEnum>(string key, CancellationToken ct = default)
+        where TEnum : struct, Enum;
+
+    ValueTask SetStateAsync<TEnum>(string key, TEnum state, CancellationToken ct = default)
+        where TEnum : struct, Enum;
+
+    ValueTask ClearStateAsync<TEnum>(string key, CancellationToken ct = default)
+        where TEnum : struct, Enum;
+}
+```
+
+```csharp
+// Register BEFORE AddPolyBotRouter()
+services.AddSingleton<IStateStorage, RedisStateStorage>();
+services.AddPolyBotRouter();
+```
+
+## Complete registration flow example
+
+<Steps>
+  <Step title="User sends /register with no active state">
+    `[NoState<RegistrationStep>]` matches. The handler sets state to `AwaitingName` and asks for the user's name.
+  </Step>
+  <Step title="User replies with their name">
+    `[State<RegistrationStep>(RegistrationStep.AwaitingName)]` matches. The handler saves the name, advances state to `AwaitingAge`, and asks for their age.
+  </Step>
+  <Step title="User replies with their age">
+    `[State<RegistrationStep>(RegistrationStep.AwaitingAge)]` matches. The handler saves the age, sets state to `Completed`, and confirms registration.
+  </Step>
+  <Step title="Subsequent messages">
+    Neither `[NoState]` nor either `[State]` matches because the state is `Completed` (and no handler declares that state). Other stateless handlers continue to route normally.
+  </Step>
+</Steps>
+
+```csharp
+public enum RegistrationStep { AwaitingName, AwaitingAge, Completed }
+
+[MessageHandler]
+[Command(Aliases = ["register"])]
+[NoState<RegistrationStep>]
+public static async Task<Result> StartRegistration(
+    Message msg, IStateMachine fsm, ITelegramBotClient bot, CancellationToken ct)
+{
+    await fsm.SetAsync(RegistrationStep.AwaitingName);
+    await bot.SendMessage(msg.Chat.Id, "What is your name?", cancellationToken: ct);
+    return Result.Handled();
+}
+
+[MessageHandler]
+[State<RegistrationStep>(RegistrationStep.AwaitingName)]
+public static async Task<Result> CollectName(
+    Message msg, IStateMachine fsm, ITelegramBotClient bot, CancellationToken ct)
+{
+    // Persist name here, e.g. via a scoped service from DI
+    await fsm.SetAsync(RegistrationStep.AwaitingAge);
+    await bot.SendMessage(msg.Chat.Id, $"Hello, {msg.Text}! How old are you?", cancellationToken: ct);
+    return Result.Handled();
+}
+
+[MessageHandler]
+[State<RegistrationStep>(RegistrationStep.AwaitingAge)]
+public static async Task<Result> CollectAge(
+    Message msg, IStateMachine fsm, ITelegramBotClient bot, CancellationToken ct)
+{
+    await fsm.SetAsync(RegistrationStep.Completed);
+    await bot.SendMessage(msg.Chat.Id, "Registration complete! Welcome aboard.", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+## Diagnostics reference
+
+<Accordion title="CUR010 – [State]/[NoState] type argument is not an enum">
+**Severity:** Error
+
+The type argument of `[State<TEnum>]` or `[NoState<TEnum>]` is not an enum type. The attribute is ignored and the handler routes unconditionally.
+</Accordion>
+
+<Accordion title="CUR011 – [State] and [NoState] declared for the same enum and StateKey">
+**Severity:** Warning
+
+A handler declares both `[State<TEnum>]` and `[NoState<TEnum>]` for the same enum type and `StateKey`. The conditions are AND-ed, which means the handler can never match any update. Remove one of the conflicting attributes.
+</Accordion>

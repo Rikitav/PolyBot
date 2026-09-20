@@ -1,0 +1,198 @@
+---
+title: "PolyBotClient Standalone Polling: No IHost Required"
+sidebarTitle: "Polling"
+description: "Run a PolyBot bot without IHost or ASP.NET Core: PolyBotClient manages the service collection, configuration, BotFather sync, and long polling."
+---
+
+`PolyBotClient` is the self-contained runtime for running a PolyBot bot without `IHost` or ASP.NET Core. It owns a service collection, a configuration manager, and the polling loop — wire up your generated router, call `RunPollingAsync`, and the client takes care of everything else.
+
+## The PolyBotClient class
+
+`PolyBotClient` implements `IAsyncDisposable`. Use it with `await using` so the underlying `ServiceProvider` is disposed when polling ends.
+
+| Member | Type / Signature | Description |
+|---|---|---|
+| `PolyBotClient(PolyBotOptions? curatorOptions = null)` | Constructor | Creates the client. The optional `PolyBotOptions` argument overrides individual values read from configuration. |
+| `Services` | `IServiceCollection` | The service collection you register your router and services into before polling starts. |
+| `Configuration` | `ConfigurationManager` | An empty `ConfigurationManager`. Add sources (e.g. `AddJsonFile`) before calling `RunPollingAsync`. |
+| `BotClient` | `ITelegramBotClient` | The resolved bot client. Only available after `RunPollingAsync` or `RunTest` has been called — throws `InvalidOperationException` otherwise. |
+| `RunPollingAsync(CancellationToken)` | `Task` | Starts the polling loop. Returns when the token is cancelled or an unhandled exception propagates. |
+| `RunTest(CancellationToken)` | `UpdateMocker` | Builds the provider in test mode (no token required), swaps in an in-memory `PolyTests` client, and returns an `UpdateMocker` for pushing synthetic updates. |
+| `DisposeAsync()` | `ValueTask` | Disposes the built `ServiceProvider` and releases all registered services. |
+
+<Note>
+Users of `PolyBotClient` do **not** need to call `AddPolyBotDefaults()` manually. `PolyBotClient` calls it internally inside `BuildProvider()` (the method invoked by both `RunPollingAsync` and `RunTest`).
+</Note>
+
+## Configuring PolyBotOptions
+
+All options live in a single `PolyBotOptions` instance. `PolyBotClient` reads values from the `"PolyBot"` configuration section first, then applies any values passed via the constructor — so constructor values take precedence over `appsettings.json`.
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `BotToken` | `string?` | `null` | **Required for polling.** The bot token from @BotFather. |
+| `BotUsername` | `string?` | `null` | Filled automatically by `GetMe` on startup; used to verify `@botname` command suffixes. |
+| `BaseUrl` | `string?` | `null` | Custom Bot API server base URL (local Bot API). |
+| `UseTestEnvironment` | `bool` | `false` | Use the Bot API test environment. |
+| `PollingLimit` | `int?` | `null` | Max updates per `GetUpdates` batch (1–100). `null` lets Telegram pick. |
+| `PollingOffset` | `int?` | `null` | Starting update offset. Leave `null` to start from pending updates. |
+| `AllowedUpdates` | `UpdateType[]?` | `null` | Update types to receive. `null` receives all types. |
+| `DropPendingUpdates` | `bool` | `false` | Skip updates that arrived while the bot was offline. |
+| `WebhookUrl` | `string?` | `null` | The absolute HTTPS URL Telegram POSTs updates to (used by the webhook integration). |
+| `WebhookSecretToken` | `string?` | `null` | Secret token verified from the `X-Telegram-Bot-Api-Secret-Token` header. |
+| `WebhookMaxConnections` | `int` | `40` | Max simultaneous HTTPS connections Telegram keeps open to the webhook (1–100). |
+| `DeleteWebhookOnStop` | `bool` | `true` | When `true`, `DeleteWebhook` is called on graceful shutdown of the webhook hosted service. |
+
+<Note>
+`BotToken` is the only property required for `RunPollingAsync`. All others are optional and have sensible defaults.
+</Note>
+
+### appsettings.json configuration
+
+The configuration section key is exactly `"PolyBot"`. Each property name is used verbatim as the key inside that section. `AllowedUpdates` is a comma-separated list of `UpdateType` names.
+
+```json appsettings.json
+{
+  "PolyBot": {
+    "BotToken": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+    "UseTestEnvironment": false,
+    "PollingLimit": 100,
+    "AllowedUpdates": "Message,CallbackQuery",
+    "DropPendingUpdates": true
+  }
+}
+```
+
+Attach the file to the client's configuration manager before calling `RunPollingAsync`:
+
+```csharp
+PolyBotClient client = new PolyBotClient();
+client.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
+client.Services.AddPolyBotRouter();
+await client.RunPollingAsync();
+```
+
+## Startup sequence
+
+When `RunPollingAsync` is called, the following happens in order:
+
+<Steps>
+  <Step title="Build the service provider">
+    `PolyBotClient` merges configuration values and constructor overrides into a `PolyBotOptions`, calls `AddPolyBotDefaults()` to register core services, registers `ITelegramBotClient` using the bot token, and calls `Services.BuildServiceProvider()`.
+  </Step>
+  <Step title="Sync BotFather commands">
+    If `IBotFatherSync` is registered (it is when you call `AddPolyBotRouter()`), `SyncCommandsAsync` is called. This sends one `SetMyCommands` request to BotFather per distinct (scope, language) group discovered from your `[Command]` attributes.
+  </Step>
+  <Step title="Resolve BotUsername via GetMe">
+    `GetMe` is called and the returned username is stored in `PolyBotOptions.BotUsername`. This enables `@botname` suffix verification in command routing without hardcoding your username.
+  </Step>
+  <Step title="Start polling">
+    `ReceiveAsync` runs in the foreground, passing each received `Update` through the generated `BotRouter`. The call blocks until the provided `CancellationToken` is cancelled.
+  </Step>
+</Steps>
+
+## Cancellation and graceful shutdown
+
+Pass a `CancellationToken` to `RunPollingAsync` to stop polling cleanly. The current in-flight update finishes processing before the method returns.
+
+```csharp
+using CancellationTokenSource cts = new CancellationTokenSource();
+Console.CancelKeyPress += (_, e) =>
+{
+    e.Cancel = true;
+    cts.Cancel();
+};
+
+await using PolyBotClient client = new PolyBotClient();
+client.Services.AddPolyBotRouter();
+await client.RunPollingAsync(cts.Token);
+```
+
+## Minimal example
+
+The smallest possible bot: read the token from the environment, register the generated router, poll forever.
+
+```csharp Program.cs
+using PolyBot;
+
+await using PolyBotClient client = new PolyBotClient(
+    new PolyBotOptions { BotToken = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN") });
+
+client.Services.AddPolyBotRouter();
+await client.RunPollingAsync();
+```
+
+## Full EchoBot example
+
+This is the complete EchoBot sample from the repository. It reads the token from the first command-line argument, falls back to an environment variable, defines a `/start` command and a plain-message echo handler, and uses a generated inline keyboard.
+
+<CodeGroup>
+```csharp Program.cs
+using Microsoft.Extensions.Configuration;
+using PolyBot;
+using PolyBot.Attributes;
+using PolyBot.Routing;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
+
+namespace EchoBot;
+
+public sealed partial class BotHandlers
+{
+    [CallbackButton("Help", "help"), CallbackButton("About", "about")]
+    private static partial InlineKeyboardMarkup StartKeyboard();
+
+    [MessageHandler(Priority = -1)]
+    [Command(Aliases = ["start"], Description = "Start the bot")]
+    public static async Task<Result> Start(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "Welcome! I echo everything you say.",
+            replyMarkup: StartKeyboard(), cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    [MessageHandler(Priority = 0)]
+    public static async Task<Result> Echo(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, msg.Text ?? string.Empty, cancellationToken: ct);
+        return Result.Handled();
+    }
+}
+
+public static class Program
+{
+    public static async Task Main(string[] args)
+    {
+        string? token = args.Length > 0
+            ? args[0]
+            : Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
+
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new InvalidOperationException(
+                "No bot token provided: pass it as the first argument " +
+                "or set the TELEGRAM_BOT_TOKEN environment variable.");
+        }
+
+        PolyBotClient client = new PolyBotClient(new PolyBotOptions { BotToken = token });
+        client.Services.AddPolyBotRouter();
+
+        await client.RunPollingAsync();
+    }
+}
+```
+
+```json appsettings.json
+{
+  "PolyBot": {
+    "DropPendingUpdates": true,
+    "AllowedUpdates": "Message,CallbackQuery"
+  }
+}
+```
+</CodeGroup>
+
+<Tip>
+The `PolyBotOptions` constructor argument and `appsettings.json` compose: set `BotToken` in code (or environment) and tune polling behaviour in the JSON file. The constructor always wins on a per-property basis.
+</Tip>

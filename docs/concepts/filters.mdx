@@ -1,0 +1,270 @@
+---
+title: "Update Filters: Gating Handlers with Custom Logic"
+sidebarTitle: "Filters"
+description: "How IUpdateFilter implementations become generated attributes, how stacked filters use AND semantics, and how PolyBot resolves filter instances from DI."
+---
+
+Filters are synchronous gates that run before a handler's body. Implement `IUpdateFilter`, let the source generator discover your class, and decorate handlers with the generated `[XxxFilter]` attribute — no manual registration of the attribute itself required.
+
+## The `IUpdateFilter` interface
+
+```csharp
+namespace PolyBot.Routing;
+
+public interface IUpdateFilter
+{
+    /// <summary>
+    /// Evaluates the update; returning false skips the handler.
+    /// </summary>
+    bool CanPass(Update update);
+}
+```
+
+`CanPass` is synchronous and receives the raw `Update` envelope. Return `true` to allow the handler to run; return `false` to skip it and continue routing to the next handler.
+
+## How filter attributes are generated
+
+The source generator scans every concrete (non-abstract), non-generic `IUpdateFilter` implementation reachable from your compilation — your project and all referenced assemblies, including nested classes. For each one it emits a wrapper attribute in `PolyBot.Attributes` with `AllowMultiple = true`. For example, a class named `EchoBot.NonEmptyTextFilter` becomes `[NonEmptyTextFilter]`.
+
+You never write these attributes by hand. Once a filter class exists, its attribute is available automatically.
+
+<Warning>
+Generic filter classes are skipped and reported as diagnostic **`CUR012`**. The generator cannot emit a type-safe attribute wrapper for an open generic — make your filter class non-generic and parameterise it through the constructor or through a DI-resolved service instead.
+</Warning>
+
+## Generated abstract DTO bases
+
+Working with the raw `Update` envelope is verbose. The generator emits an abstract base per payload DTO that extracts the payload before calling your override. These bases **do not exist until after the first build** — the source generator must run to produce them. They live in the `PolyBot` namespace:
+
+```csharp
+// Generated abstract base — namespace PolyBot (conceptual; you do not write this)
+namespace PolyBot;
+
+public abstract class MessageFilter : global::PolyBot.Routing.IUpdateFilter
+{
+    public bool CanPass(Update update)
+    {
+        Message? payload = /* first-match extraction from Update */;
+        return payload is not null && CanPass(payload);
+    }
+
+    protected virtual Message? Extract(Update update) => /* first-match probe */;
+
+    protected abstract bool CanPass(Message message);
+}
+```
+
+For Telegram.Bot 22.10 the generator produces the following bases:
+
+| Base class | Payload type |
+|---|---|
+| `MessageFilter` | `Message` (also catches `EditedMessage`, etc.) |
+| `EditedMessageFilter` | `EditedMessage` only |
+| `ChannelPostFilter` | `ChannelPost` |
+| `EditedChannelPostFilter` | `EditedChannelPost` |
+| `BusinessMessageFilter` | `BusinessMessage` |
+| `EditedBusinessMessageFilter` | `EditedBusinessMessage` |
+| `GuestMessageFilter` | `GuestMessage` |
+| `CallbackQueryFilter` | `CallbackQuery` |
+| `InlineQueryFilter` | `InlineQuery` |
+| `ChosenInlineResultFilter` | `ChosenInlineResult` |
+| `ShippingQueryFilter` | `ShippingQuery` |
+| `PreCheckoutQueryFilter` | `PreCheckoutQuery` |
+| `PollFilter` | `Poll` |
+| `PollAnswerFilter` | `PollAnswer` |
+| `MyChatMemberFilter` | `MyChatMember` |
+| `ChatMemberFilter` | `ChatMember` |
+| `ChatJoinRequestFilter` | `ChatJoinRequest` |
+| `MessageReactionFilter` | `MessageReaction` |
+| `MessageReactionCountFilter` | `MessageReactionCount` |
+| `ChatBoostFilter` | `ChatBoost` |
+| `RemovedChatBoostFilter` | `RemovedChatBoost` |
+| `BusinessConnectionFilter` | `BusinessConnection` |
+| `DeletedBusinessMessagesFilter` | `DeletedBusinessMessages` |
+| `PurchasedPaidMediaFilter` | `PurchasedPaidMedia` |
+
+## Writing a concrete filter
+
+Subclass the appropriate generated base (from the `PolyBot` namespace) and override the payload-typed `CanPass` method:
+
+```csharp
+using PolyBot;
+using Telegram.Bot.Types;
+
+public sealed class NonEmptyTextFilter : MessageFilter
+{
+    protected override bool CanPass(Message message)
+        => !string.IsNullOrEmpty(message.Text);
+}
+```
+
+The generator emits `[NonEmptyTextFilter]` automatically. Apply it to any handler:
+
+```csharp
+[MessageHandler]
+[NonEmptyTextFilter]
+public static async Task<Result> TextOnlyHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, $"You wrote: {msg.Text}", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+## A filter that always passes or always denies
+
+Parameterless filters like the ones below need no DI registration — the router instantiates them with `ActivatorUtilities.CreateInstance` if they are not found in the container:
+
+```csharp
+public sealed class AllowAllFilter : MessageFilter
+{
+    protected override bool CanPass(Message message) => true;
+}
+
+public sealed class DenyAllFilter : MessageFilter
+{
+    protected override bool CanPass(Message message) => false;
+}
+```
+
+```csharp
+[MessageHandler(Priority = -1)]
+[Command(Aliases = ["allow"], Description = "Allow demo")]
+[AllowAllFilter]
+public static async Task<Result> AllowHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "allowed", cancellationToken: ct);
+    return Result.Handled();
+}
+
+[MessageHandler(Priority = -1)]
+[Command(Aliases = ["deny"], Description = "Deny demo")]
+[DenyAllFilter]
+public static async Task<Result> DenyHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    // Never reached — DenyAllFilter.CanPass always returns false
+    await bot.SendMessage(msg.Chat.Id, "denied", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+When `DenyAllFilter` vetoes the handler, routing falls through to the next matching handler normally — it does not throw or stop the pipeline.
+
+## Filters with DI dependencies
+
+If your filter has constructor dependencies, register it in the service collection. The router calls `GetService<T>()` first and only falls back to `ActivatorUtilities.CreateInstance` when the filter is not registered:
+
+```csharp
+public interface IGateService
+{
+    bool Open { get; }
+}
+
+// DiGateFilter depends on IGateService — must be registered in DI
+public sealed class DiGateFilter : MessageFilter
+{
+    private readonly IGateService _gate;
+    private bool _consumed;
+
+    public DiGateFilter(IGateService gate)
+    {
+        _gate = gate;
+    }
+
+    protected override bool CanPass(Message message)
+    {
+        if (!_gate.Open || _consumed)
+            return false;
+
+        _consumed = true;
+        return true;
+    }
+}
+```
+
+```csharp
+services.AddSingleton<IGateService, GateService>();
+services.AddSingleton<DiGateFilter>();
+```
+
+```csharp
+[MessageHandler(Priority = -1)]
+[Command(Aliases = ["gate"], Description = "Gate demo")]
+[DiGateFilter]
+public static async Task<Result> GateHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "gate:open", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+## Multiple filters — AND semantics
+
+Stacking multiple filter attributes means every filter must pass, evaluated left-to-right (in attribute declaration order). The first `false` result short-circuits evaluation and skips the handler:
+
+```csharp
+[InlineQueryHandler]
+[AllowAllFilter]      // evaluated first
+[NonEmptyTextFilter]  // evaluated second — only reached if AllowAllFilter passed
+public static Task<Result> OnInline(InlineQuery query) { ... }
+```
+
+<Note>
+Evaluation order is attribute declaration order on the method. There is no way to configure evaluation order separately from attribute order.
+</Note>
+
+## Runtime resolution
+
+<Steps>
+  <Step title="Router resolves filter from DI">
+    The generated router calls `GetService<DiGateFilter>()` (or whichever filter type). If the service is registered, that instance is used.
+  </Step>
+  <Step title="Fallback to ActivatorUtilities">
+    If `GetService` returns `null`, the router calls `ActivatorUtilities.CreateInstance(provider, typeof(DiGateFilter))`. This means parameterless filters and filters whose constructor dependencies are all resolvable from DI work without an explicit `AddSingleton` / `AddTransient` call.
+  </Step>
+  <Step title="CanPass is called">
+    The resolved instance's `CanPass(Update update)` is invoked. For DTO-based filters, the generated base extracts the payload before calling your `protected override bool CanPass(TDto payload)`.
+  </Step>
+  <Step title="False result skips the handler">
+    If any filter returns `false`, the handler's body is not entered. The router continues to the next handler in priority order.
+  </Step>
+</Steps>
+
+## Filters in library projects
+
+Filters can live in a separate class library and be referenced by a PolyBot application. The source generator runs in the library project and emits:
+
+- The `[XxxFilter]` attribute wrapper into `PolyBot.Attributes`.
+- The `With{FilterName}()` extension for inline-await chains into `PolyBot.Attributes`.
+
+It does **not** emit routing infrastructure (`BotRouter`, `PolyBotExtensions`, etc.) — those are only generated for executable projects. This means filter libraries are fully portable and cause no type collisions when referenced.
+
+```csharp
+// In a library project: PolyBot.Tests.Fixtures
+using PolyBot.Routing;
+using Telegram.Bot.Types;
+
+namespace PolyBot.Tests.Fixtures;
+
+public sealed class FixtureFilter : IUpdateFilter
+{
+    public bool CanPass(Update update)
+        => update.Message?.Text?.Contains("magicword", StringComparison.OrdinalIgnoreCase) == true;
+}
+```
+
+```csharp
+// In the app project — [FixtureFilter] comes from the library assembly
+[MessageHandler(Priority = -6)]
+[FixtureFilter]
+public static async Task<Result> OnFixtureFiltered(Message msg, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat.Id, "fixture-pass", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+The test suite confirms this behaviour — `PolyBot.Attributes.FixtureFilterAttribute` and `PolyBot.Attributes.PolyBotAwaiterExtensions` are present in the library assembly, while `PolyBot.BotRouter` and `PolyBot.PolyBotExtensions` are absent.
+
+<Tip>
+Organise shared filters into a dedicated library project and reference it from multiple bots. Each bot gets the filter's generated attribute and await extension without duplicating the filter logic.
+</Tip>
