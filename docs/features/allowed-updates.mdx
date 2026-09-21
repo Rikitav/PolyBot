@@ -1,0 +1,176 @@
+---
+title: "Allowed Updates: Compile-Time Inference & Overrides in PolyBot"
+sidebarTitle: "Allowed Updates"
+description: "Automatically infer Telegram allowed update types from handler signatures and conversation await sites, or customize them using the [AllowedUpdates] assembly attribute."
+---
+
+Telegram requires bots to specify an `allowed_updates` array when configuring long polling or registering webhooks. Rather than requiring you to maintain this list manually, PolyBot analyzes your declared handlers and conversational await sites at compile time to infer the minimum necessary set of `UpdateType` values. The source generator emits this set directly into `BotRouter.AllowedUpdates` and registers it in dependency injection.
+
+## How inference works
+
+During compilation, the PolyBot source generator scans your project to determine which update types your bot can receive:
+
+1. **Handler parameter types:** Handlers decorated with attributes like `[MessageHandler]` or `[CallbackQueryHandler]` contribute their respective update type (e.g. `UpdateType.Message`, `UpdateType.CallbackQuery`).
+2. **Conversational await sites:** Types waited upon within conversation steps (such as `await context.NextMessageAsync()`) contribute their mapped update types to ensure multi-turn dialogs receive expected responses.
+3. **Filtering:** The `UpdateType.Unknown` member is ignored and automatically excluded from the inferred set.
+
+```csharp
+public sealed class SupportHandlers
+{
+    // Infers UpdateType.Message
+    [MessageHandler]
+    public static async Task<Result> OnMessage(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "Hello!", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    // Infers UpdateType.CallbackQuery
+    [CallbackQueryHandler]
+    public static async Task<Result> OnCallback(CallbackQuery query, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.AnswerCallbackQuery(query.Id, cancellationToken: ct);
+        return Result.Handled();
+    }
+}
+```
+
+<Note>
+PolyBot logs diagnostic `CUR039` at compile time detailing the exact update types and total count inferred for your project.
+</Note>
+
+### Raw `Update` handlers
+
+If any handler accepts a raw `Telegram.Bot.Types.Update` parameter instead of a strongly-typed payload, the generator cannot predict which payload types the handler inspects. When this occurs, PolyBot issues warning `CUR037` and automatically falls back to requesting all known `UpdateType` members from Telegram.
+
+```csharp
+// Causes CUR037: AllowedUpdates falls back to all known update types
+[MessageHandler]
+public static Task<Result> CatchAll(Update update, CancellationToken ct)
+{
+    return Task.FromResult(Result.Handled());
+}
+```
+
+## The `[AllowedUpdates]` attribute
+
+To override or augment the compile-time inference without changing handler signatures, declare `[assembly: AllowedUpdates]` in any source file (such as `AssemblyInfo.cs`).
+
+```csharp
+using PolyBot.Attributes;
+using Telegram.Bot.Types.Enums;
+
+[assembly: AllowedUpdates(
+    Include = [UpdateType.InlineQuery],
+    Exclude = [UpdateType.ChannelPost]
+)]
+```
+
+### Properties at a glance
+
+| Property | Type | Default | Purpose |
+|---|---|---|---|
+| `Include` | `UpdateType[]?` | `null` | Additional update types to request even if no handler or await site references them |
+| `Exclude` | `UpdateType[]?` | `null` | Update types to strip from the inferred set; handlers for excluded types emit `CUR038` |
+| `IncludeAll` | `bool` | `false` | When `true`, requests an empty array (`Array.Empty<UpdateType>()`), signalling Telegram to deliver all updates except `ChatMember` |
+
+### Excluding update types
+
+When an update type is specified in `Exclude`, the source generator removes it from the final array. If any handler exists in your project that handles the excluded type, the compiler issues warning `CUR038` to alert you that the handler will never receive updates.
+
+```csharp
+[assembly: AllowedUpdates(Exclude = [UpdateType.Message])]
+
+public sealed class Handlers
+{
+    // CUR038: UpdateType.Message is excluded; this handler will not receive updates
+    [MessageHandler]
+    public static Task<Result> OnMessage(Message msg) => Task.FromResult(Result.Handled());
+}
+```
+
+### Requesting all updates with `IncludeAll`
+
+Setting `IncludeAll = true` instructs the generator to emit an empty `UpdateType[]` array. In the Telegram Bot API, an empty allowed updates array signals that the bot requests all update types except `ChatMember`.
+
+```csharp
+using PolyBot.Attributes;
+
+[assembly: AllowedUpdates(IncludeAll = true)]
+```
+
+## Runtime and hosting integration
+
+The source generator generates `BotRouter.AllowedUpdates` as a static field and implements `IAllowedUpdatesProvider` on the generated `BotRouter`:
+
+```csharp
+namespace PolyBot;
+
+public interface IAllowedUpdatesProvider
+{
+    UpdateType[] AllowedUpdates { get; }
+}
+```
+
+When registering services via `services.AddPolyBotRouter()` or `services.AddPolyBotDefaults()`, `IAllowedUpdatesProvider` is registered as a singleton resolving to `BotRouter`.
+
+### Long polling
+
+When using hosted polling (`AddPolyBotHostedPolling()`) or `PolyBotClient.RunPollingAsync()`, `ReceiverOptions.AllowedUpdates` automatically defaults to `BotRouter.AllowedUpdates` unless you explicitly set your own:
+
+```csharp
+// Uses inferred BotRouter.AllowedUpdates automatically
+services.AddPolyBotHostedPolling();
+
+// Explicit override: takes precedence over compile-time inference
+services.AddPolyBotHostedPolling(options =>
+{
+    options.AllowedUpdates = [UpdateType.Message];
+});
+```
+
+### Webhooks
+
+When configuring hosted webhooks via `AddPolyBotWebhook()`, `PolyBotWebhookHostedService` sets `SetWebhookRequest.AllowedUpdates` to `_options.AllowedUpdates ?? BotRouter.AllowedUpdates`:
+
+```csharp
+services.AddPolyBotWebhook(options =>
+{
+    options.WebhookUrl = "https://example.com/bot";
+    options.WebhookSecretToken = "secret-token";
+    // AllowedUpdates defaults to BotRouter.AllowedUpdates if omitted
+});
+```
+
+### Automated tests
+
+When testing handlers using `PolyBotClient.RunTest()`, `UpdateMocker` automatically sets `PolyBotOptions.AllowedUpdates` from `IAllowedUpdatesProvider.AllowedUpdates`:
+
+```csharp
+PolyBotClient client = new();
+client.Services.AddPolyBotRouter();
+client.Services.AddSingleton<ITelegramBotClient>(new PolyTests());
+
+UpdateMocker mocker = client.RunTest();
+UpdateType[] allowed = mocker.Services.GetRequiredService<PolyBotOptions>().AllowedUpdates!;
+```
+
+## Diagnostics reference
+
+<Accordion title="CUR037 – Raw Update handler falls back to all AllowedUpdates">
+**Severity:** Warning
+
+A handler method accepts a parameter of type `Telegram.Bot.Types.Update`. Because the specific update types cannot be determined statically, PolyBot falls back to requesting all known update types.
+</Accordion>
+
+<Accordion title="CUR038 – Handler update type excluded from AllowedUpdates">
+**Severity:** Warning
+
+A handler method expects an update type that has been excluded using `[assembly: AllowedUpdates(Exclude = [...])]`. The handler will not receive updates from Telegram.
+</Accordion>
+
+<Accordion title="CUR039 – Inferred AllowedUpdates">
+**Severity:** Info
+
+Informational diagnostic emitted during compilation reporting the count and names of update types inferred from declared handlers and conversation await sites.
+</Accordion>

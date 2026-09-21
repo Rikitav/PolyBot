@@ -49,6 +49,7 @@
               "features/callback-patterns",
               "features/inline-awaits",
               "features/rate-limiting",
+              "features/allowed-updates",
               "features/exception-handling"
             ]
           },
