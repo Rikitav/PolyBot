@@ -5,9 +5,9 @@ namespace PolyBot;
 /// <summary>
 /// Sets the webhook on startup (when a <see cref="T:PolyBot.PolyBotOptions"/> is
 /// registered) and optionally deletes it on graceful shutdown. Also owns an internal
-/// bounded update queue: webhook requests enqueue the update and return 200 OK
-/// immediately; a background loop dequeues updates and routes them through the
-/// generated router.
+/// update queue: webhook requests enqueue the update and return 200 OK immediately;
+/// a background loop dequeues updates and routes them through the generated router.
+/// The degree of concurrency is controlled by <see cref="P:PolyBot.PolyBotOptions.WebhookMaxConcurrentUpdates"/>.
 /// </summary>
 public sealed class PolyBotWebhookHostedService : global::Microsoft.Extensions.Hosting.IHostedService
 {
@@ -25,6 +25,8 @@ public sealed class PolyBotWebhookHostedService : global::Microsoft.Extensions.H
         _channel = global::System.Threading.Channels.Channel.CreateUnbounded<global::Telegram.Bot.Types.Update>();
         _stoppingCts = new global::System.Threading.CancellationTokenSource();
     }
+
+    private static int NormalizeMaxConcurrentUpdates(int value) => value <= 0 ? 1 : value;
 
     /// <summary>
     /// Enqueues an update to be processed by the background router loop.
@@ -78,17 +80,53 @@ public sealed class PolyBotWebhookHostedService : global::Microsoft.Extensions.H
 
     private async global::System.Threading.Tasks.Task ProcessQueueAsync(global::System.Threading.CancellationToken cancellationToken)
     {
+        int maxConcurrency = NormalizeMaxConcurrentUpdates(_options.WebhookMaxConcurrentUpdates);
+        if (maxConcurrency == 1)
+        {
+            await foreach (global::Telegram.Bot.Types.Update update in _channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+            {
+                await ProcessUpdateAsync(update, cancellationToken).ConfigureAwait(false);
+            }
+
+            return;
+        }
+
+        using global::System.Threading.SemaphoreSlim semaphore = new global::System.Threading.SemaphoreSlim(maxConcurrency);
+        global::System.Collections.Generic.List<global::System.Threading.Tasks.Task> pending = new global::System.Collections.Generic.List<global::System.Threading.Tasks.Task>();
         await foreach (global::Telegram.Bot.Types.Update update in _channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
         {
-            try
-            {
-                await _updateHandler.HandleUpdateAsync(_botClient, update, cancellationToken).ConfigureAwait(false);
-            }
-            catch
-            {
-                // Swallow handler exceptions to keep the queue processor alive, mirroring
-                // the behavior of the polling loop.
-            }
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            pending.Add(ProcessUpdateWithSemaphoreAsync(update, semaphore, cancellationToken));
+        }
+
+        await global::System.Threading.Tasks.Task.WhenAll(pending).ConfigureAwait(false);
+    }
+
+    private async global::System.Threading.Tasks.Task ProcessUpdateWithSemaphoreAsync(
+        global::Telegram.Bot.Types.Update update,
+        global::System.Threading.SemaphoreSlim semaphore,
+        global::System.Threading.CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ProcessUpdateAsync(update, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    private async global::System.Threading.Tasks.Task ProcessUpdateAsync(global::Telegram.Bot.Types.Update update, global::System.Threading.CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _updateHandler.HandleUpdateAsync(_botClient, update, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Swallow handler exceptions to keep the queue processor alive, mirroring
+            // the behavior of the polling loop.
         }
     }
 }

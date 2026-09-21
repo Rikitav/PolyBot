@@ -1044,6 +1044,13 @@
             Maximum simultaneous HTTPS connections to the webhook, 1-100. Defaults to 40.
             </summary>
         </member>
+        <member name="P:PolyBot.PolyBotOptions.WebhookMaxConcurrentUpdates">
+            <summary>
+            Maximum number of updates processed concurrently by the webhook queue. Defaults to 1
+            (sequential processing). Increase this value to process multiple updates in parallel
+            while still bounding concurrency.
+            </summary>
+        </member>
         <member name="P:PolyBot.PolyBotOptions.DeleteWebhookOnStop">
             <summary>
             When <c>true</c> (the default), <c>DeleteWebhook</c> is called on graceful shutdown.

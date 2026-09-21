@@ -69,6 +69,7 @@ All webhook-specific settings live in `PolyBotOptions`:
 | `WebhookUrl` | `string?` | `null` | **Required.** The absolute HTTPS URL Telegram will POST updates to. Must match the path registered with `MapPolyBotWebhook`. |
 | `WebhookSecretToken` | `string?` | `null` | Secret token passed in the `X-Telegram-Bot-Api-Secret-Token` header by Telegram. |
 | `WebhookMaxConnections` | `int` | `40` | Max simultaneous HTTPS connections Telegram keeps open to this endpoint (1–100). |
+| `WebhookMaxConcurrentUpdates` | `int` | `1` | Max updates processed in parallel by the internal webhook queue. `1` means sequential processing; higher values enable bounded concurrency. |
 | `DeleteWebhookOnStop` | `bool` | `true` | When `true` (the default), `DeleteWebhook` is called during graceful shutdown. |
 | `DropPendingUpdates` | `bool` | `false` | When `true`, pending updates are dropped when `SetWebhook` is called. |
 | `AllowedUpdates` | `UpdateType[]?` | `null` | Update types to receive. `null` receives all. |
@@ -85,6 +86,23 @@ The generated `PolyBotWebhookHostedService` handles the Telegram webhook lifecyc
     On graceful shutdown, if `DeleteWebhookOnStop` is `true` (the default), calls `DeleteWebhook`. This is safe to disable if you want Telegram to keep sending updates to the URL after the process stops (e.g. during a rolling deployment).
   </Step>
 </Steps>
+
+## Concurrent update processing
+
+By default the webhook hosted service processes updates one at a time (`WebhookMaxConcurrentUpdates = 1`). Set this option higher to process multiple updates in parallel while keeping the concurrency bounded:
+
+```csharp
+services.AddPolyBotWebhook(options =>
+{
+    options.WebhookUrl = "https://yourdomain.com/bot";
+    options.WebhookMaxConnections = 40;
+    options.WebhookMaxConcurrentUpdates = 10;
+});
+```
+
+<Warning>
+Concurrency only affects how many updates are routed through `BotRouter` at the same time. Each update still gets its own DI scope, but shared services (including `IStateStorage` and any custom state) must be thread-safe when `WebhookMaxConcurrentUpdates` is greater than `1`.
+</Warning>
 
 ## Request handling
 

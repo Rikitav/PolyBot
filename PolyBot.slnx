@@ -19,6 +19,7 @@
     <Project Path="tests/PolyBot.Tests.AllowedUpdates.Exclude/PolyBot.Tests.AllowedUpdates.Exclude.csproj" />
     <Project Path="tests/PolyBot.Tests.AllowedUpdates.IncludeAll/PolyBot.Tests.AllowedUpdates.IncludeAll.csproj" />
     <Project Path="tests/PolyBot.Tests.AllowedUpdates.RawUpdate/PolyBot.Tests.AllowedUpdates.RawUpdate.csproj" />
+    <Project Path="tests/PolyBot.Tests.WebhookConcurrency/PolyBot.Tests.WebhookConcurrency.csproj" />
     <Project Path="tests/PolyBot.Tests.Fixtures/PolyBot.Tests.Fixtures.csproj" />
     <Project Path="tests/PolyBot.Tests/PolyBot.Tests.csproj" />
   </Folder>

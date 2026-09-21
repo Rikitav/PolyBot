@@ -64,6 +64,13 @@ public sealed class PolyBotOptions
     public int WebhookMaxConnections { get; set; } = 40;
 
     /// <summary>
+    /// Maximum number of updates processed concurrently by the webhook queue. Defaults to 1
+    /// (sequential processing). Increase this value to process multiple updates in parallel
+    /// while still bounding concurrency.
+    /// </summary>
+    public int WebhookMaxConcurrentUpdates { get; set; } = 1;
+
+    /// <summary>
     /// When <c>true</c> (the default), <c>DeleteWebhook</c> is called on graceful shutdown.
     /// </summary>
     public bool DeleteWebhookOnStop { get; set; } = true;
