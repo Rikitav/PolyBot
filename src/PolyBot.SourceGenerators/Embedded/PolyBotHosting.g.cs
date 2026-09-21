@@ -68,6 +68,7 @@ public static class PolyBotHostingExtensions
             configureReceiver(receiverOptions);
         }
 
+        receiverOptions.AllowedUpdates ??= global::PolyBot.BotRouter.AllowedUpdates;
         global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton(services, receiverOptions);
         global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::Microsoft.Extensions.Hosting.IHostedService>(services, static (global::System.IServiceProvider sp) => new global::PolyBot.PolyBotPollingHostedService(global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.ITelegramBotClient>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::PolyBot.PolyBotOptions>(sp) ?? new global::PolyBot.PolyBotOptions(), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.Polling.IUpdateHandler>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::Telegram.Bot.Polling.ReceiverOptions>(sp)));
         return services;

@@ -505,6 +505,7 @@ internal static class HandlerDiscovery
         }
 
         List<ParameterModel> parameters = new();
+        bool acceptsRawUpdate = false;
         foreach (IParameterSymbol parameter in methodSymbol.Parameters)
         {
             ParameterSource source = ParameterSource.Service;
@@ -523,6 +524,7 @@ internal static class HandlerDiscovery
             else if (SymbolEqualityComparer.Default.Equals(parameter.Type, updateClass))
             {
                 source = ParameterSource.Update;
+                acceptsRawUpdate = true;
             }
             else if (payloadType is not null && ((Microsoft.CodeAnalysis.CSharp.CSharpCompilation)compilation).ClassifyConversion(payloadType, parameter.Type).IsImplicit)
             {
@@ -640,6 +642,8 @@ internal static class HandlerDiscovery
             AwaitSites = new EquatableArray<AwaitSiteModel>(awaitSites.ToArray()),
             Pattern = routePattern,
             Throttle = throttle,
+            AcceptsRawUpdate = acceptsRawUpdate,
+            HandlerAttributeLocation = handlerAttributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
         };
 
         if (extraDiagnostic is not null)

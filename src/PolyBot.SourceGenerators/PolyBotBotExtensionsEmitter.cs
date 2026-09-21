@@ -39,6 +39,8 @@ internal static class PolyBotExtensionsEmitter
                     "global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::Telegram.Bot.Polling.IUpdateHandler>(services, static (global::System.IServiceProvider sp) => " + EmitterSyntax.RequiredService("global::PolyBot.BotRouter", "sp") + ")")),
                 SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(
                     "global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::PolyBot.BotFather.IBotFatherSync>(services, static (global::System.IServiceProvider sp) => new global::PolyBot.PolyBotBotFatherSync(" + EmitterSyntax.RequiredService("global::Telegram.Bot.ITelegramBotClient", "sp") + "))")),
+                SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression(
+                    "global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::PolyBot.IAllowedUpdatesProvider>(services, static (global::System.IServiceProvider sp) => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::PolyBot.BotRouter>(sp))")),
                 SyntaxFactory.ReturnStatement(SyntaxFactory.IdentifierName("services"))))
             .WithLeadingTrivia(EmitterSyntax.DocComment(
                 "<summary>",

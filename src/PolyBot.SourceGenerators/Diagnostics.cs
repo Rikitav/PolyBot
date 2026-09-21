@@ -293,4 +293,28 @@ internal static class PolyBotDiagnostics
         category: Category,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor RawUpdateHandlerFallsBackToAllAllowedUpdates = new(
+        id: "CUR037",
+        title: "Raw Update handler falls back to all AllowedUpdates",
+        messageFormat: "Handler '{0}' accepts a raw Update parameter; AllowedUpdates inference falls back to all update types",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor HandlerUpdateTypeExcluded = new(
+        id: "CUR038",
+        title: "Handler update type excluded from AllowedUpdates",
+        messageFormat: "Handler '{0}' handles {1} updates, but {1} is excluded by [assembly: PolyBotAllowedUpdates]; the handler will not receive updates of this type",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor InferredAllowedUpdates = new(
+        id: "CUR039",
+        title: "Inferred AllowedUpdates",
+        messageFormat: "PolyBot inferred {0} AllowedUpdates: [{1}]",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
 }

@@ -492,6 +492,13 @@ internal sealed class HandlerModel : IEquatable<HandlerModel>
 
     public ThrottleModel? Throttle { get; init; }
 
+    public bool AcceptsRawUpdate { get; init; }
+
+    /// <summary>
+    /// Source location of the handler attribute, used for diagnostics only.
+    /// </summary>
+    public Location? HandlerAttributeLocation { get; init; }
+
     public bool Equals(HandlerModel? other)
     {
         return other is not null
@@ -517,6 +524,7 @@ internal sealed class HandlerModel : IEquatable<HandlerModel>
             && ReturnKind == other.ReturnKind
             && ReturnsValueTask == other.ReturnsValueTask
             && AwaitSites.Equals(other.AwaitSites)
+            && AcceptsRawUpdate == other.AcceptsRawUpdate
             && Equals(Pattern, other.Pattern)
             && Equals(Throttle, other.Throttle);
     }
@@ -550,6 +558,7 @@ internal sealed class HandlerModel : IEquatable<HandlerModel>
             hash = (hash * 31) + ReturnKind.GetHashCode();
             hash = (hash * 31) + ReturnsValueTask.GetHashCode();
             hash = (hash * 31) + AwaitSites.GetHashCode();
+            hash = (hash * 31) + AcceptsRawUpdate.GetHashCode();
             hash = (hash * 31) + (Pattern?.GetHashCode() ?? 0);
             hash = (hash * 31) + (Throttle?.GetHashCode() ?? 0);
             return hash;

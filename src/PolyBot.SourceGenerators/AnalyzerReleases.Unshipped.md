@@ -39,3 +39,6 @@ CUR033 | PolyBot | Error | More than one method carries [ExceptionHandler]; a bo
 CUR034 | PolyBot | Error | An [ExceptionHandler] method does not return Task or ValueTask
 CUR035 | PolyBot | Warning | A [Throttled] Limit/PeriodMilliseconds/Scope/Action is invalid or non-constant and is clamped to the default
 CUR036 | PolyBot | Warning | A handler is declared in a library project; only runnable assemblies route handlers
+CUR037 | PolyBot | Warning | A handler accepts a raw Update parameter; AllowedUpdates inference falls back to all update types
+CUR038 | PolyBot | Warning | A handler update type is excluded by [assembly: PolyBotAllowedUpdates]; the handler will not receive those updates
+CUR039 | PolyBot | Info | AllowedUpdates were inferred from declared handlers and await sites

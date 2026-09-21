@@ -83,7 +83,7 @@ public sealed class PolyBotClient : IAsyncDisposable
         {
             Limit = options.PollingLimit,
             Offset = options.PollingOffset,
-            AllowedUpdates = options.AllowedUpdates,
+            AllowedUpdates = options.AllowedUpdates ?? provider.GetService<IAllowedUpdatesProvider>()?.AllowedUpdates,
             DropPendingUpdates = options.DropPendingUpdates,
         };
 
@@ -98,6 +98,8 @@ public sealed class PolyBotClient : IAsyncDisposable
     {
         BuildProvider(requireBotToken: false, forceTestClient: true);
         IServiceProvider provider = _provider!;
+        PolyBotOptions options = provider.GetRequiredService<PolyBotOptions>();
+        options.AllowedUpdates ??= provider.GetService<IAllowedUpdatesProvider>()?.AllowedUpdates;
         IUpdateHandler handler = provider.GetRequiredService<IUpdateHandler>();
         return new UpdateMocker(provider, handler, (PolyTests)_botClient!);
     }

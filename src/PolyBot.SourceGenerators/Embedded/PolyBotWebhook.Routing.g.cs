@@ -50,7 +50,7 @@ public sealed class PolyBotWebhookHostedService : global::Microsoft.Extensions.H
             _options.BotUsername = me.Username;
         }
 
-        await global::Telegram.Bot.TelegramBotClientExtensions.SetWebhook(_botClient, _options.WebhookUrl, null, null, _options.WebhookMaxConnections, _options.AllowedUpdates, _options.DropPendingUpdates, _options.WebhookSecretToken, cancellationToken).ConfigureAwait(false);
+        await global::Telegram.Bot.TelegramBotClientExtensions.SetWebhook(_botClient, _options.WebhookUrl, null, null, _options.WebhookMaxConnections, _options.AllowedUpdates ?? global::PolyBot.BotRouter.AllowedUpdates, _options.DropPendingUpdates, _options.WebhookSecretToken, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task StopAsync(global::System.Threading.CancellationToken cancellationToken)

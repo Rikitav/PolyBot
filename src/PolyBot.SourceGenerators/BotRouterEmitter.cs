@@ -6,15 +6,17 @@ namespace PolyBot.SourceGenerators;
 
 internal static class BotRouterEmitter
 {
-    public static string Generate(IReadOnlyList<HandlerModel> handlers, ExceptionHandlerModel? exceptionHandler)
+    public static string Generate(IReadOnlyList<HandlerModel> handlers, ExceptionHandlerModel? exceptionHandler, AllowedUpdatesResult allowedUpdates)
     {
         bool hasCommands = handlers.Any(h => h.Aliases.Count > 0);
         List<AwaitSiteEntry> awaitSites = CollectAwaitSites(handlers);
 
         ClassDeclarationSyntax routerClass = SyntaxFactory.ClassDeclaration("BotRouter")
             .AddModifiers(SyntaxKind.PublicKeyword, SyntaxKind.PartialKeyword)
-            .AddBaseListTypes(SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName("global::Telegram.Bot.Polling.IUpdateHandler")))
-            .AddMembers(BuildServiceField());
+            .AddBaseListTypes(
+                SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName("global::Telegram.Bot.Polling.IUpdateHandler")),
+                SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName("global::PolyBot.IAllowedUpdatesProvider")))
+            .AddMembers(BuildAllowedUpdatesField(allowedUpdates), BuildAllowedUpdatesProperty(), BuildServiceField());
         if (hasCommands)
         {
             routerClass = routerClass.AddMembers(BuildOptionsField());
@@ -100,6 +102,44 @@ internal static class BotRouterEmitter
                 SyntaxFactory.VariableDeclaration(SyntaxFactory.ParseTypeName("global::System.IServiceProvider"))
                     .AddVariables(SyntaxFactory.VariableDeclarator("_services")))
             .AddModifiers(SyntaxKind.PrivateKeyword, SyntaxKind.ReadOnlyKeyword);
+    }
+
+    private static MemberDeclarationSyntax BuildAllowedUpdatesField(AllowedUpdatesResult allowedUpdates)
+    {
+        string typeName = "global::Telegram.Bot.Types.Enums.UpdateType";
+        string initializer;
+        if (allowedUpdates.IsAllUpdates)
+        {
+            initializer = $"global::System.Array.Empty<{typeName}>()";
+        }
+        else if (allowedUpdates.AllowedUpdateMemberNames.Count == 0)
+        {
+            initializer = $"global::System.Array.Empty<{typeName}>()";
+        }
+        else
+        {
+            string elements = string.Join(", ", allowedUpdates.AllowedUpdateMemberNames.Select(m => $"{typeName}.{m}"));
+            initializer = $"new {typeName}[] {{ {elements} }}";
+        }
+
+        return SyntaxFactory.FieldDeclaration(
+                SyntaxFactory.VariableDeclaration(SyntaxFactory.ParseTypeName($"{typeName}[]"))
+                    .AddVariables(SyntaxFactory.VariableDeclarator("AllowedUpdates")
+                        .WithInitializer(SyntaxFactory.EqualsValueClause(SyntaxFactory.ParseExpression(initializer)))))
+            .AddModifiers(SyntaxKind.PublicKeyword, SyntaxKind.StaticKeyword, SyntaxKind.ReadOnlyKeyword)
+            .WithLeadingTrivia(EmitterSyntax.DocComment(
+                "<summary>",
+                "Exact set of UpdateTypes inferred from declared handler methods at compile-time.",
+                "</summary>"));
+    }
+
+    private static MemberDeclarationSyntax BuildAllowedUpdatesProperty()
+    {
+        return SyntaxFactory.ParseMemberDeclaration(
+            """
+            global::Telegram.Bot.Types.Enums.UpdateType[] global::PolyBot.IAllowedUpdatesProvider.AllowedUpdates => global::PolyBot.BotRouter.AllowedUpdates;
+            """
+        )!;
     }
 
     private static MemberDeclarationSyntax BuildOptionsField()

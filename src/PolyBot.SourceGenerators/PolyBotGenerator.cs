@@ -25,6 +25,7 @@ public sealed class PolyBotGenerator : IIncrementalGenerator
                 EquatableArray<FilterClassModel> filterClasses = new(discoveredFilters.ToArray());
                 return new GenerationInputs
                 {
+                    Compilation = pair.Compilation,
                     FilterAttributeSource = FilterAttributesEmitter.Generate(filterClasses),
                     AwaiterExtensionSource = AwaiterExtensionsEmitter.Generate(pair.Compilation, filterClasses),
                     HostingSource = pair.IsLibrary ? null : HostingEmitter.GenerateHosting(pair.Compilation),
@@ -184,9 +185,15 @@ public sealed class PolyBotGenerator : IIncrementalGenerator
             return;
         }
 
+        AllowedUpdatesResult allowedUpdates = AllowedUpdatesInference.Infer(models, generated.Compilation);
+        foreach (Diagnostic diagnostic in allowedUpdates.Diagnostics)
+        {
+            sourceProductionContext.ReportDiagnostic(diagnostic);
+        }
+
         ReportDuplicateBotFatherCommands(models, sourceProductionContext);
         sourceProductionContext.AddSource("PolyBotBotFatherSync.g.cs", BotFatherSyncEmitter.Generate(models));
-        sourceProductionContext.AddSource("BotRouter.g.cs", BotRouterEmitter.Generate(models, exceptionHandler));
+        sourceProductionContext.AddSource("BotRouter.g.cs", BotRouterEmitter.Generate(models, exceptionHandler, allowedUpdates));
         sourceProductionContext.AddSource("PolyBotExtensions.g.cs", PolyBotExtensionsEmitter.Generate());
     }
 
@@ -220,6 +227,8 @@ public sealed class PolyBotGenerator : IIncrementalGenerator
 
     private sealed class GenerationInputs
     {
+        public required Compilation Compilation { get; init; }
+
         public required string? FilterAttributeSource { get; init; }
 
         public required string? AwaiterExtensionSource { get; init; }
