@@ -10,6 +10,17 @@ Learn Telegrator on [Official documentation site](https://poly-bot.mintlify.site
 
 ---
 
+## Why PolyBot?
+
+* PolyBot has no reflection after generation and no overhead infrastructure.
+* `switch` over `UpdateType` with inlined handling guards.
+* Builti-in throttle gates are `static readonly` with lock-protected ring buffers.
+* Await branches compare against static constant arrays; matching allocates nothing.
+* Filter resolution inside the handler branch, not for non-matching handlers.
+* The routing code is as close to hand-optimized C# as a generator can produce.
+
+---
+
 ## Quick start
 
 ```csharp
@@ -27,6 +38,8 @@ public static async void Main()
     await client.RunPollingAsync();
 }
 ```
+
+---
 
 ## Features
 

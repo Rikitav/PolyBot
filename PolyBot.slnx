@@ -8,6 +8,7 @@
     <Project Path="samples/CommandBot/CommandBot.csproj" />
     <Project Path="samples/ConversationBot/ConversationBot.csproj" />
     <Project Path="samples/EchoBot/EchoBot.csproj" />
+    <Project Path="samples/PaginationBot/PaginationBot.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/PolyBot.InternalsGenerators/PolyBot.InternalsGenerators.csproj" />
