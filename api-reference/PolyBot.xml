@@ -2022,6 +2022,31 @@
         <member name="P:PolyBot.State.UpdateContextAccessor.Update">
             <inheritdoc />
         </member>
+        <member name="T:PolyBot.UpdateHandlingException">
+            <summary>
+            Represents an exception that occured while handling an <see cref="P:PolyBot.UpdateHandlingException.Update"/>
+            </summary>
+        </member>
+        <member name="P:PolyBot.UpdateHandlingException.Update">
+            <summary>
+            The <see cref="T:Telegram.Bot.Types.Update"/> that was being handled when the exception occured
+            </summary>
+        </member>
+        <member name="M:PolyBot.UpdateHandlingException.#ctor(System.String,Telegram.Bot.Types.Update)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.UpdateHandlingException"/> class.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+            <param name="update">The <see cref="P:PolyBot.UpdateHandlingException.Update"/> that was being handled when the exception occured.</param>
+        </member>
+        <member name="M:PolyBot.UpdateHandlingException.#ctor(System.String,Telegram.Bot.Types.Update,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.UpdateHandlingException"/> class.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+            <param name="update">The <see cref="P:PolyBot.UpdateHandlingException.Update"/> that was being handled when the exception occured.</param>
+            <param name="innerException">The exception that is the cause of the current exception.</param>
+        </member>
         <member name="T:PolyBot.UpdateMocker">
             <summary>
             Test-harness controller returned by <see cref="M:PolyBot.PolyBotClient.RunTest(System.Threading.CancellationToken)"/>: pushes synthetic

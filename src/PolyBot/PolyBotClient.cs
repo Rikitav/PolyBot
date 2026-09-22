@@ -2,8 +2,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PolyBot.BotFather;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace PolyBot;
@@ -17,6 +20,7 @@ public sealed class PolyBotClient : IAsyncDisposable
 {
     private readonly PolyBotOptions? _curatorOptions;
     private ServiceProvider? _provider;
+    private TelegramBotClientOptions? _telegramOptions;
     private ITelegramBotClient? _botClient;
 
     /// <summary>
@@ -65,6 +69,7 @@ public sealed class PolyBotClient : IAsyncDisposable
     {
         BuildProvider(requireBotToken: true, forceTestClient: false);
         IServiceProvider provider = _provider!;
+        TelegramBotClientOptions botOptions = _telegramOptions!;
 
         IBotFatherSync? botFatherSync = provider.GetService<IBotFatherSync>();
         if (botFatherSync is not null)
@@ -73,7 +78,8 @@ public sealed class PolyBotClient : IAsyncDisposable
         }
 
         PolyBotOptions options = provider.GetRequiredService<PolyBotOptions>();
-        Telegram.Bot.Types.User me = await TelegramBotClientExtensions.GetMe(_botClient!, cancellationToken).ConfigureAwait(false);
+        User me = await TelegramBotClientExtensions.GetMe(_botClient!, cancellationToken).ConfigureAwait(false);
+
         if (!string.IsNullOrEmpty(me.Username))
         {
             options.BotUsername = me.Username;
@@ -88,7 +94,10 @@ public sealed class PolyBotClient : IAsyncDisposable
         };
 
         IUpdateHandler handler = provider.GetRequiredService<IUpdateHandler>();
-        await TelegramBotClientExtensions.ReceiveAsync(_botClient!, handler, receiverOptions, cancellationToken).ConfigureAwait(false);
+        HttpClient httpClient = provider.GetRequiredService<HttpClient>();
+
+        await ReceiveUpdatesOptimizedAsync(httpClient, botOptions.BaseRequestUrl, _botClient!, handler, receiverOptions, cancellationToken).ConfigureAwait(false);
+        //await TelegramBotClientExtensions.ReceiveAsync(_botClient!, handler, receiverOptions, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -98,8 +107,10 @@ public sealed class PolyBotClient : IAsyncDisposable
     {
         BuildProvider(requireBotToken: false, forceTestClient: true);
         IServiceProvider provider = _provider!;
+
         PolyBotOptions options = provider.GetRequiredService<PolyBotOptions>();
         options.AllowedUpdates ??= provider.GetService<IAllowedUpdatesProvider>()?.AllowedUpdates;
+
         IUpdateHandler handler = provider.GetRequiredService<IUpdateHandler>();
         return new UpdateMocker(provider, handler, (PolyTests)_botClient!);
     }
@@ -112,6 +123,157 @@ public sealed class PolyBotClient : IAsyncDisposable
             await _provider.DisposeAsync().ConfigureAwait(false);
             _provider = null;
         }
+    }
+
+    private static async Task ReceiveUpdatesOptimizedAsync(
+        HttpClient httpClient,
+        string baseRequestUrl,
+        ITelegramBotClient botClient,
+        IUpdateHandler updateHandler,
+        ReceiverOptions receiverOptions,
+        CancellationToken cancellationToken = default)
+    {
+        int limit = receiverOptions.Limit ?? 100;
+        int offset = receiverOptions.Offset ?? 0;
+        int timeoutSeconds = (int)botClient.Timeout.TotalSeconds;
+        string endpointPrefix = $"{baseRequestUrl}/getUpdates";
+
+        if (receiverOptions.DropPendingUpdates)
+        {
+            offset = await DropPendingUpdatesAsync(httpClient, baseRequestUrl, cancellationToken).ConfigureAwait(false);
+        }
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            // Build the URL using stack-allocated buffer or direct query parameters
+            string requestUri = $"{endpointPrefix}?offset={offset}&limit={limit}&timeout={timeoutSeconds}";
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+
+            try
+            {
+                // ResponseHeadersRead avoids buffering the entire HTTP body into memory
+                using HttpResponseMessage response = await httpClient
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    // Fallback error parsing if rate limited or invalid
+                    await HandleNonSuccessResponse(response, updateHandler, botClient, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    continue;
+                }
+
+                // Stream and process updates one by one without allocating an Update[] array
+                using Stream stream = await response.Content
+                    .ReadAsStreamAsync()
+                    .ConfigureAwait(false);
+
+                await foreach (Update? update in DeserializeUpdatesStreamAsync(stream, cancellationToken).ConfigureAwait(false))
+                {
+                    if (update is null)
+                        continue;
+
+                    try
+                    {
+                        offset = update.Id + 1;
+                        await updateHandler
+                            .HandleUpdateAsync(botClient, update, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        await updateHandler
+                            .HandleErrorAsync(botClient, new UpdateHandlingException(ex.Message, update, ex), HandleErrorSource.HandleUpdateError, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception exception)
+            {
+                await updateHandler
+                    .HandleErrorAsync(botClient, exception, HandleErrorSource.PollingError, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static async IAsyncEnumerable<Update> DeserializeUpdatesStreamAsync(Stream utf8JsonStream, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // Telegram API envelopes response in: {"ok":true,"result":[ ... ]}
+        // Utf8JsonStreamReader traverses into "result" without creating JsonDocument DOM objects
+        using var jsonDoc = await JsonDocument
+            .ParseAsync(utf8JsonStream, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        JsonElement root = jsonDoc.RootElement;
+        if (root.TryGetProperty("result", out JsonElement resultElement) && resultElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement item in resultElement.EnumerateArray())
+            {
+                // Deserialize each individual element directly using Telegram.Bot serializer options
+                Update? update = item.Deserialize<Update>(JsonBotAPI.Options);
+                if (update is not null)
+                    yield return update;
+            }
+        }
+    }
+
+    private static async Task<int> DropPendingUpdatesAsync(HttpClient httpClient, string baseRequestUrl, CancellationToken cancellationToken)
+    {
+        try
+        {
+            string url = $"{baseRequestUrl}/getUpdates?offset=-1&limit=1&timeout=0";
+            using HttpResponseMessage response = await httpClient
+                .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+
+            using Stream stream = await response.Content
+                .ReadAsStreamAsync()
+                .ConfigureAwait(false);
+
+            using JsonDocument doc = await JsonDocument
+                .ParseAsync(stream, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            if (doc.RootElement.TryGetProperty("result", out JsonElement result) && result.GetArrayLength() > 0)
+            {
+                int lastUpdateIndex = result.GetArrayLength() - 1;
+                JsonElement lastUpdate = result[lastUpdateIndex];
+                JsonElement lastUpdateId = lastUpdate.GetProperty("update_id");
+                return lastUpdateId.GetInt32() + 1;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // ignore
+        }
+
+        return 0;
+    }
+
+    private static async Task HandleNonSuccessResponse(HttpResponseMessage response, IUpdateHandler handler, ITelegramBotClient client, CancellationToken ct)
+    {
+        if ((int)response.StatusCode == 429)
+        {
+            // Delay on 429 backoff
+            await Task.Delay(1000, ct).ConfigureAwait(false);
+            return;
+        }
+
+        HttpRequestException ex = new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.ReasonPhrase}).");
+        await handler
+            .HandleErrorAsync(client, ex, HandleErrorSource.PollingError, ct)
+            .ConfigureAwait(false);
     }
 
     private void BuildProvider(bool requireBotToken, bool forceTestClient)
@@ -142,8 +304,11 @@ public sealed class PolyBotClient : IAsyncDisposable
         }
         else
         {
-            TelegramBotClientOptions telegramOptions = new TelegramBotClientOptions(options.BotToken, options.BaseUrl, options.UseTestEnvironment);
-            Services.AddSingleton<ITelegramBotClient>(_ => new TelegramBotClient(telegramOptions));
+            _telegramOptions = new TelegramBotClientOptions(options.BotToken, options.BaseUrl, options.UseTestEnvironment);
+            Services
+                .AddHttpClient("tgbot-client")
+                .AddTypedClient<ITelegramBotClient>((HttpClient httpClient) => new TelegramBotClient(_telegramOptions, httpClient))
+                .RemoveAllLoggers();
         }
 
         _provider = Services.BuildServiceProvider();
