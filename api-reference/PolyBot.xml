@@ -1131,6 +1131,522 @@
         <member name="M:PolyBot.PolyTests.DownloadFile(Telegram.Bot.Types.TGFile,System.IO.Stream,System.Threading.CancellationToken)">
             <inheritdoc />
         </member>
+        <member name="T:PolyBot.RichMessages.RichBlockFactory">
+            <summary>
+            Low-level factory for building individual rich message blocks (<see cref="T:Telegram.Bot.Types.InputRichBlock"/> and related
+            container/cell types). The block type discriminator is set automatically by each Telegram.Bot type's
+            constructor, so callers only fill in the data fields.
+            
+            </summary>
+            <remarks>
+            For the ergonomic fluent API prefer <see cref="T:PolyBot.RichMessages.RichMessageBuilder"/>.
+            </remarks>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Paragraph(Telegram.Bot.Types.RichText)">
+            <summary>
+            Creates a paragraph block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Heading(Telegram.Bot.Types.RichText,System.Int32)">
+            <summary>
+            Creates a section heading. <paramref name="size"/> is the heading level (1-based).
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Footer(Telegram.Bot.Types.RichText)">
+            <summary>
+            Creates a footer block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Thinking(Telegram.Bot.Types.RichText)">
+            <summary>
+            Creates a thinking-process block (for AI-style reasoning output).
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Preformatted(Telegram.Bot.Types.RichText,System.String)">
+            <summary>
+            Creates a preformatted (code) block with an optional language.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Math(System.String)">
+            <summary>
+            Creates a block-level mathematical expression.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Divider">
+            <summary>
+            Creates a horizontal divider block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Anchor(System.String)">
+            <summary>
+            Creates an anchor target block that other blocks/links can reference.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.ListItem(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlock},System.Boolean,System.Boolean,System.Nullable{System.Int32})">
+            <summary>
+            Creates a list item from its child <paramref name="blocks"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.List(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlockListItem})">
+            <summary>
+            Creates a list block from its <paramref name="items"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.BlockQuote(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlock},Telegram.Bot.Types.RichText)">
+            <summary>
+            Creates a block quotation from raw child <paramref name="blocks"/>, with optional <paramref name="credit"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.BlockQuote(Telegram.Bot.Types.RichText,Telegram.Bot.Types.RichText)">
+            <summary>
+            Creates a block quotation wrapping a single <paramref name="text"/> paragraph.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.PullQuote(Telegram.Bot.Types.RichText,Telegram.Bot.Types.RichText)">
+            <summary>
+            Creates a pull quotation.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Details(Telegram.Bot.Types.RichText,System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlock},System.Boolean)">
+            <summary>
+            Creates a collapsible details block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Collage(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlock},Telegram.Bot.Types.RichBlockCaption)">
+            <summary>
+            Creates a collage of media blocks.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Slideshow(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlock},Telegram.Bot.Types.RichBlockCaption)">
+            <summary>
+            Creates a slideshow of media blocks.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Map(Telegram.Bot.Types.Location,System.Int32,System.Int32,System.Int32,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>
+            Creates a map block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Table(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{Telegram.Bot.Types.RichBlockTableCell}},System.Boolean,System.Boolean,Telegram.Bot.Types.RichText)">
+            <summary>
+            Creates a table block from a two-dimensional sequence of <see cref="T:Telegram.Bot.Types.RichBlockTableCell"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Cell(Telegram.Bot.Types.RichText,System.Boolean,System.Nullable{System.Int32},System.Nullable{System.Int32},Telegram.Bot.Types.Enums.RichBlockTableCellAlign,Telegram.Bot.Types.Enums.RichBlockTableCellValign)">
+            <summary>
+            Creates a table cell.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Photo(Telegram.Bot.Types.InputMediaPhoto,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>
+            Creates a photo block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Video(Telegram.Bot.Types.InputMediaVideo,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>
+            Creates a video block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Animation(Telegram.Bot.Types.InputMediaAnimation,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>
+            Creates an animation (GIF) block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Audio(Telegram.Bot.Types.InputMediaAudio,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>
+            Creates an audio block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.VoiceNote(Telegram.Bot.Types.InputMediaVoiceNote,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>
+            Creates a voice-note block.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Caption(Telegram.Bot.Types.RichText,Telegram.Bot.Types.RichText)">
+            <summary>
+            Creates a caption (text + optional credit) shared by media/collage/slideshow/map blocks.
+            </summary>
+        </member>
+        <member name="T:PolyBot.RichMessages.RichMessageExtensions">
+            <summary>
+            Provides extensions for <see cref="T:Telegram.Bot.Types.RichMessage"/>
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageExtensions.Builder">
+            <inheritdoc cref="M:PolyBot.RichMessages.RichMessageExtensions.&lt;G&gt;$A67FBE03DA5AEC4DA3053E975D022932.Builder"/>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageExtensions.&lt;G&gt;$A67FBE03DA5AEC4DA3053E975D022932.Builder">
+            <summary>
+            Obtains <see cref="T:PolyBot.RichMessages.RichMessageBuilder"/>
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:PolyBot.RichMessages.InputRichMessageExtensions">
+            <summary>
+            Provides extensions for <see cref="T:Telegram.Bot.Types.InputRichMessage"/>
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.InputRichMessageExtensions.Builder">
+            <inheritdoc cref="M:PolyBot.RichMessages.InputRichMessageExtensions.&lt;G&gt;$CDC850958CEE1D992BB744CFDBFC8EA4.Builder"/>
+        </member>
+        <member name="M:PolyBot.RichMessages.InputRichMessageExtensions.&lt;G&gt;$CDC850958CEE1D992BB744CFDBFC8EA4.Builder">
+            <summary>
+            Obtains <see cref="T:PolyBot.RichMessages.RichMessageBuilder"/>
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:PolyBot.RichMessages.RichMessageBuilder">
+            <summary>
+            Fluent builder that accumulates rich message blocks and produces an <see cref="T:Telegram.Bot.Types.InputRichMessage"/>
+            ready to be sent via <c>SendRichMessage</c>. String overloads wrap the text in a paragraph/heading/etc.
+            automatically; <see cref="T:System.Action`1"/> overloads let you build inline formatting inline.
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Paragraph(System.String)">
+            <summary>Appends a paragraph built from inline text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Paragraph(Telegram.Bot.Types.RichText)">
+            <summary>Appends a paragraph built from a pre-built <see cref="T:Telegram.Bot.Types.RichText"/> node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Paragraph(System.Action{PolyBot.RichMessages.RichTextBuilder})">
+            <summary>Appends a paragraph, configuring its inline content with a <see cref="T:PolyBot.RichMessages.RichTextBuilder"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Heading(System.String,System.Int32)">
+            <summary>Appends a heading built from inline text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Heading(Telegram.Bot.Types.RichText,System.Int32)">
+            <summary>Appends a heading built from a pre-built <see cref="T:Telegram.Bot.Types.RichText"/> node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Heading(System.Action{PolyBot.RichMessages.RichTextBuilder},System.Int32)">
+            <summary>Appends a heading, configuring its inline content with a <see cref="T:PolyBot.RichMessages.RichTextBuilder"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Footer(System.String)">
+            <summary>Appends a footer built from inline text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Footer(Telegram.Bot.Types.RichText)">
+            <summary>Appends a footer built from a pre-built <see cref="T:Telegram.Bot.Types.RichText"/> node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Footer(System.Action{PolyBot.RichMessages.RichTextBuilder})">
+            <summary>Appends a footer, configuring its inline content with a <see cref="T:PolyBot.RichMessages.RichTextBuilder"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Divider">
+            <summary>Appends a divider.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Math(System.String)">
+            <summary>Appends a block-level mathematical expression.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Thinking(System.String)">
+            <summary>Appends a thinking-process block built from inline text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Thinking(System.Action{PolyBot.RichMessages.RichTextBuilder})">
+            <summary>Appends a thinking-process block, configuring its inline content with a <see cref="T:PolyBot.RichMessages.RichTextBuilder"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Preformatted(System.String,System.String)">
+            <summary>Appends a preformatted (code) block built from inline text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Preformatted(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Appends a preformatted (code) block built from a pre-built <see cref="T:Telegram.Bot.Types.RichText"/> node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.CodeBlock(System.String,System.String)">
+            <summary>Alias for <see cref="M:PolyBot.RichMessages.RichMessageBuilder.Preformatted(System.String,System.String)"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Anchor(System.String)">
+            <summary>Appends an anchor target that links/blocks can reference.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.List(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlockListItem})">
+            <summary>Appends a list from pre-built list items.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.List(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>Appends a list of paragraphs, one per provided text line.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.BlockQuote(System.String,System.String)">
+            <summary>Appends a block quotation built from inline text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.BlockQuote(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlock},Telegram.Bot.Types.RichText)">
+            <summary>Appends a block quotation built from raw child blocks.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.PullQuote(System.String,System.String)">
+            <summary>Appends a pull quotation built from inline text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.PullQuote(Telegram.Bot.Types.RichText,Telegram.Bot.Types.RichText)">
+            <summary>Appends a pull quotation built from a pre-built <see cref="T:Telegram.Bot.Types.RichText"/> node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Details(System.String,System.Collections.Generic.IEnumerable{System.String},System.Boolean)">
+            <summary>Appends a collapsible details block whose body is one paragraph per line.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Details(Telegram.Bot.Types.RichText,System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlock},System.Boolean)">
+            <summary>Appends a collapsible details block from raw child blocks.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Collage(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlock},Telegram.Bot.Types.RichBlockCaption)">
+            <summary>Appends a collage of media blocks.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Slideshow(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.InputRichBlock},Telegram.Bot.Types.RichBlockCaption)">
+            <summary>Appends a slideshow of media blocks.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Map(Telegram.Bot.Types.Location,System.Int32,System.Int32,System.Int32,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>Appends a map block.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Table(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{Telegram.Bot.Types.RichBlockTableCell}},System.Boolean,System.Boolean,Telegram.Bot.Types.RichText)">
+            <summary>Appends a table block.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Table(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{System.String}},System.Boolean,System.Boolean,System.Boolean)">
+            <summary>Appends a table built from a rectangular grid of plain-text cells.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Photo(Telegram.Bot.Types.InputMediaPhoto,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>Appends a photo block.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Video(Telegram.Bot.Types.InputMediaVideo,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>Appends a video block.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Animation(Telegram.Bot.Types.InputMediaAnimation,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>Appends an animation block.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Audio(Telegram.Bot.Types.InputMediaAudio,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>Appends an audio block.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.VoiceNote(Telegram.Bot.Types.InputMediaVoiceNote,Telegram.Bot.Types.RichBlockCaption)">
+            <summary>Appends a voice-note block.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Block(Telegram.Bot.Types.InputRichBlock)">
+            <summary>Appends a pre-built block.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Media(System.String,Telegram.Bot.Types.IInputRichMedia)">
+            <summary>Attaches embedded media (referenced by id from <see cref="P:Telegram.Bot.Types.InputRichMessage.Blocks"/>).</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Media(Telegram.Bot.Types.InputRichMessageMedia)">
+            <summary>Attaches a pre-built embedded media entry.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.WithHtml(System.String)">
+            <summary>Sets an HTML representation of the message (alternative to <see cref="P:Telegram.Bot.Types.InputRichMessage.Blocks"/>).</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.WithMarkdown(System.String)">
+            <summary>Sets a Markdown representation of the message (alternative to <see cref="P:Telegram.Bot.Types.InputRichMessage.Blocks"/>).</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Rtl">
+            <summary>Marks the message as right-to-left.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.SkipEntityDetection">
+            <summary>Skip Telegram's entity detection for the message.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Build">
+            <summary>Builds the configured <see cref="T:Telegram.Bot.Types.InputRichMessage"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.op_Implicit(PolyBot.RichMessages.RichMessageBuilder)~Telegram.Bot.Types.InputRichMessage">
+            <summary>Builds the accumulated nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>.</summary>
+        </member>
+        <member name="T:PolyBot.RichMessages.RichTextBuilder">
+            <summary>
+            Fluent builder that accumulates <see cref="T:Telegram.Bot.Types.RichText"/> inline nodes and produces a single
+            <see cref="T:Telegram.Bot.Types.RichText"/> tree (a <see cref="T:Telegram.Bot.Types.RichTextArray"/> when more than one node is added).
+            String overloads wrap the text in a plain node automatically; <see cref="T:Telegram.Bot.Types.RichText"/> overloads
+            allow nesting (e.g. bold inside a URL).
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Plain(System.String)">
+            <summary>Appends plain text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Bold(System.String)">
+            <summary>Appends bold text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Bold(Telegram.Bot.Types.RichText)">
+            <summary>Appends bold formatting around an existing node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Italic(System.String)">
+            <summary>Appends italic text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Italic(Telegram.Bot.Types.RichText)">
+            <summary>Appends italic formatting around an existing node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Underline(System.String)">
+            <summary>Appends underlined text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Underline(Telegram.Bot.Types.RichText)">
+            <summary>Appends underline formatting around an existing node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Strikethrough(System.String)">
+            <summary>Appends strikethrough text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Strikethrough(Telegram.Bot.Types.RichText)">
+            <summary>Appends strikethrough formatting around an existing node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Spoiler(System.String)">
+            <summary>Appends spoiler text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Spoiler(Telegram.Bot.Types.RichText)">
+            <summary>Appends spoiler formatting around an existing node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Marked(System.String)">
+            <summary>Appends marked (highlighted) text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Marked(Telegram.Bot.Types.RichText)">
+            <summary>Appends marked formatting around an existing node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Code(System.String)">
+            <summary>Appends inline <c>code</c> text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Code(Telegram.Bot.Types.RichText)">
+            <summary>Appends inline code formatting around an existing node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Subscript(System.String)">
+            <summary>Appends subscript text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Superscript(System.String)">
+            <summary>Appends superscript text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Url(System.String,System.String)">
+            <summary>Appends a URL link with the given visible <paramref name="text"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Mention(System.String,System.String)">
+            <summary>Appends an @username mention.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.TextMention(System.String,Telegram.Bot.Types.User)">
+            <summary>Appends a text mention of a specific user.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.CustomEmoji(System.String,System.String)">
+            <summary>Appends a custom emoji with fallback text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.BotCommand(System.String,System.String)">
+            <summary>Appends a bot command reference.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Hashtag(System.String,System.String)">
+            <summary>Appends a #hashtag.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Cashtag(System.String,System.String)">
+            <summary>Appends a $cashtag.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Email(System.String,System.String)">
+            <summary>Appends an e-mail address.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.PhoneNumber(System.String,System.String)">
+            <summary>Appends a phone number.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.BankCard(System.String,System.String)">
+            <summary>Appends a bank card number.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.DateTime(System.String,System.DateTime,System.String)">
+            <summary>Appends a date/time rendered from a Unix timestamp.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Math(System.String)">
+            <summary>Appends a standalone mathematical expression.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Anchor(System.String)">
+            <summary>Appends an anchor target.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.AnchorLink(System.String,System.String)">
+            <summary>Appends a link to an anchor defined elsewhere.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Reference(System.String,System.String)">
+            <summary>Appends a named reference.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.ReferenceLink(System.String,System.String)">
+            <summary>Appends a link to a named reference.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Add(Telegram.Bot.Types.RichText)">
+            <summary>Appends a pre-built node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.AddRange(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.RichText})">
+            <summary>Appends several pre-built nodes.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Build">
+            <summary>Builds the accumulated nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.op_Implicit(PolyBot.RichMessages.RichTextBuilder)~Telegram.Bot.Types.RichText">
+            <summary>Builds the accumulated nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>.</summary>
+        </member>
+        <member name="T:PolyBot.RichMessages.RichTextFactory">
+            <summary>
+            Low-level factory for building individual <see cref="T:Telegram.Bot.Types.RichText"/> nodes used inside rich message blocks.
+            Most wrapping nodes (bold, italic, ...) take an existing <see cref="T:Telegram.Bot.Types.RichText"/> as their child; use
+            <see cref="M:PolyBot.RichMessages.RichTextFactory.Plain(System.String)"/> to create the leaf text and <see cref="M:PolyBot.RichMessages.RichTextFactory.Concat(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.RichText})"/> to compose several nodes.
+            </summary>
+            <remarks>
+            For an ergonomic, string-driven fluent API prefer <see cref="T:PolyBot.RichMessages.RichTextBuilder"/>.
+            </remarks>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Plain(System.String)">
+            <summary>Creates a plain (unformatted) text node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.CustomEmoji(System.String,System.String)">
+            <summary>Creates a custom-emoji node rendered with the given fallback text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Math(System.String)">
+            <summary>Creates a standalone mathematical expression node.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Anchor(System.String)">
+            <summary>Creates an anchor target that other nodes can link to via <see cref="M:PolyBot.RichMessages.RichTextFactory.AnchorLink(Telegram.Bot.Types.RichText,System.String)"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Bold(Telegram.Bot.Types.RichText)">
+            <summary>Wraps <paramref name="child"/> in bold formatting.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Italic(Telegram.Bot.Types.RichText)">
+            <summary>Wraps <paramref name="child"/> in italic formatting.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Underline(Telegram.Bot.Types.RichText)">
+            <summary>Wraps <paramref name="child"/> in underline formatting.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Strikethrough(Telegram.Bot.Types.RichText)">
+            <summary>Wraps <paramref name="child"/> in strikethrough formatting.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Spoiler(Telegram.Bot.Types.RichText)">
+            <summary>Wraps <paramref name="child"/> in a spoiler.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Marked(Telegram.Bot.Types.RichText)">
+            <summary>Wraps <paramref name="child"/> in marked (highlighted) formatting.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Code(Telegram.Bot.Types.RichText)">
+            <summary>Wraps <paramref name="child"/> in inline code formatting.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Subscript(Telegram.Bot.Types.RichText)">
+            <summary>Wraps <paramref name="child"/> as subscript.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Superscript(Telegram.Bot.Types.RichText)">
+            <summary>Wraps <paramref name="child"/> as superscript.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Url(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as a clickable URL.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Mention(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as an @username mention.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.TextMention(Telegram.Bot.Types.RichText,Telegram.Bot.Types.User)">
+            <summary>Wraps <paramref name="child"/> as a text mention of a specific <paramref name="user"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.BotCommand(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as a bot command reference.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Hashtag(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as a #hashtag.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Cashtag(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as a $cashtag.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Email(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as an e-mail address.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.PhoneNumber(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as a phone number.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.BankCard(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as a bank card number.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.DateTime(Telegram.Bot.Types.RichText,System.DateTime,System.String)">
+            <summary>Wraps <paramref name="child"/> as a date/time rendered from a Unix timestamp.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.AnchorLink(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as a link to an <see cref="M:PolyBot.RichMessages.RichTextFactory.Anchor(System.String)"/> defined elsewhere.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Reference(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as a named reference.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.ReferenceLink(Telegram.Bot.Types.RichText,System.String)">
+            <summary>Wraps <paramref name="child"/> as a link to a named <see cref="M:PolyBot.RichMessages.RichTextFactory.Reference(Telegram.Bot.Types.RichText,System.String)"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Concat(Telegram.Bot.Types.RichText[])">
+            <summary>Composes several nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>. A single node is returned as-is.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Concat(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.RichText})">
+            <summary>Composes several nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>.</summary>
+        </member>
         <member name="T:PolyBot.Routing.CallbackPatternMatcher">
             <summary>
             Zero-allocation segment matcher for <c>CallbackQuery.Data</c> route templates. The

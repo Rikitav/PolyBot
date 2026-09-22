@@ -5,7 +5,7 @@ namespace PolyBot.RichMessages;
 /// <summary>
 /// Low-level factory for building individual <see cref="RichText"/> nodes used inside rich message blocks.
 /// Most wrapping nodes (bold, italic, ...) take an existing <see cref="RichText"/> as their child; use
-/// <see cref="Plain"/> to create the leaf text and <see cref="Concat"/> to compose several nodes.
+/// <see cref="Plain"/> to create the leaf text and <see cref="Concat(IEnumerable{RichText})"/> to compose several nodes.
 /// </summary>
 /// <remarks>
 /// For an ergonomic, string-driven fluent API prefer <see cref="RichTextBuilder"/>.

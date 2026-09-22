@@ -2,23 +2,39 @@ using Telegram.Bot.Types;
 
 namespace PolyBot.RichMessages;
 
+#if NET10_0_OR_GREATER
+/// <summary>
+/// Provides extensions for <see cref="RichMessage"/>
+/// </summary>
 public static class RichMessageExtensions
 {
     extension(RichMessage)
     {
+        /// <summary>
+        /// Obtains <see cref="RichMessageBuilder"/>
+        /// </summary>
+        /// <returns></returns>
         public static RichMessageBuilder Builder()
             => new RichMessageBuilder();
     }
 }
 
+/// <summary>
+/// Provides extensions for <see cref="InputRichMessage"/>
+/// </summary>
 public static class InputRichMessageExtensions
 {
     extension(InputRichMessage)
     {
+        /// <summary>
+        /// Obtains <see cref="RichMessageBuilder"/>
+        /// </summary>
+        /// <returns></returns>
         public static RichMessageBuilder Builder()
             => new RichMessageBuilder();
     }
 }
+#endif
 
 /// <summary>
 /// Fluent builder that accumulates rich message blocks and produces an <see cref="InputRichMessage"/>
@@ -185,14 +201,14 @@ public sealed class RichMessageBuilder
         return this;
     }
 
-    /// <summary>Sets an HTML representation of the message (alternative to <see cref="Blocks"/>).</summary>
+    /// <summary>Sets an HTML representation of the message (alternative to <see cref="InputRichMessage.Blocks"/>).</summary>
     public RichMessageBuilder WithHtml(string html)
     {
         _html = html;
         return this;
     }
 
-    /// <summary>Sets a Markdown representation of the message (alternative to <see cref="Blocks"/>).</summary>
+    /// <summary>Sets a Markdown representation of the message (alternative to <see cref="InputRichMessage.Blocks"/>).</summary>
     public RichMessageBuilder WithMarkdown(string markdown)
     {
         _markdown = markdown;
