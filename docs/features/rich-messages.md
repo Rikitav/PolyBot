@@ -41,9 +41,6 @@ RichMessageBuilder builder = new RichMessageBuilder()
     .Paragraph("Simple plain-text paragraph")
     .Paragraph(b => b.Plain("Formatted ").Italic("paragraph"))
     
-    // AI reasoning/thinking output
-    .Thinking("Evaluating user query against context...")
-    
     // Preformatted code blocks
     .Preformatted("git commit -m 'feat: add rich messages'", language: "bash")
     // or using the alias
@@ -210,6 +207,31 @@ InputRichBlock block = RichBlockFactory.BlockQuote(
 InputRichMessage message = new RichMessageBuilder()
     .Block(block)
     .Build();
+```
+
+### Special considerations for `Thinking` blocks
+
+The `Thinking` block represents a collapsible AI thought process placeholder, mapping to the custom `<tg-thinking>` tag.
+
+An `InputRichBlockThinking` block cannot be sent inside standard `SendRichTextMessage` requests. Calling `SendRichTextMessage` with a thinking block will throw an API exception:
+
+```text
+Telegram.Bot.Exceptions.ApiRequestException: Bad Request: RICH_MESSAGE_BLOCK_UNSUPPORTED
+```
+
+Thinking blocks are restricted by Telegram exclusively to `SendRichMessageDraft` calls and will never appear on received message payloads.
+
+When configuring thinking blocks, you can pair them with Telegram's official [AI Actions custom emoji](https://t.me/addemoji/AIActions?utm_source=gemini) to indicate progress states:
+
+```csharp
+InputRichMessage draft = new RichMessageBuilder()
+    .Thinking(t => t
+        .CustomEmoji(customEmojiId: "5368324170671202286", alternativeText: "🤔")
+        .Plain(" Analyzing repository dependencies...")
+    )
+    .Paragraph("Here is what I found so far.")
+    .Build();
+
 ```
 
 ## Message configurations
