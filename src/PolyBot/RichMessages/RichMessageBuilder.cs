@@ -1,4 +1,5 @@
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace PolyBot.RichMessages;
 
@@ -180,6 +181,9 @@ public sealed class RichMessageBuilder
     /// <summary>Appends a voice-note block.</summary>
     public RichMessageBuilder VoiceNote(InputMediaVoiceNote voiceNote, RichBlockCaption? caption = null) => Block(RichBlockFactory.VoiceNote(voiceNote, caption));
 
+    /// <summary>Appends a buttons block.</summary>
+    public RichMessageBuilder Buttons(IEnumerable<RichMessageButton> buttons, RichBlockTableCellAlign? align = null) => Block(RichBlockFactory.Buttons(buttons, align));
+
     /// <summary>Appends a pre-built block.</summary>
     public RichMessageBuilder Block(InputRichBlock block)
     {
@@ -234,8 +238,8 @@ public sealed class RichMessageBuilder
     {
         InputRichMessage message = new()
         {
-            Blocks = _blocks,
-            Media = _media,
+            Blocks = _blocks.Any() ? _blocks : null,
+            Media = _media.Any() ? _media : null,
             IsRtl = _isRtl,
             SkipEntityDetection = _skipEntityDetection
         };
@@ -255,7 +259,6 @@ public sealed class RichMessageBuilder
         configure(builder);
         return builder.Build();
     }
-
 
     /// <summary>Builds the accumulated nodes into a single <see cref="RichText"/>.</summary>
     public static implicit operator InputRichMessage(RichMessageBuilder builder) => builder.Build();

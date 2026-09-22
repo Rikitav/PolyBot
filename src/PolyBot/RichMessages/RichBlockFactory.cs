@@ -182,4 +182,9 @@ public static class RichBlockFactory
 	/// </summary>
     public static RichBlockCaption Caption(RichText text, RichText? credit = null)
         => new RichBlockCaption { Text = text, Credit = credit };
+
+    // ---------- Button helpers ----------
+
+    public static InputRichBlock Buttons(IEnumerable<RichMessageButton> buttons, RichBlockTableCellAlign? align = null)
+        => new InputRichBlockButtons() { Buttons = buttons, Align = align };
 }

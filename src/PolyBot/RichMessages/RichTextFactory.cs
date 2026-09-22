@@ -1,4 +1,5 @@
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace PolyBot.RichMessages;
 
@@ -103,6 +104,60 @@ public static class RichTextFactory
     /// <summary>Wraps <paramref name="child"/> as a link to a named <see cref="Reference"/>.</summary>
     public static RichText ReferenceLink(RichText child, string referenceName)
         => new RichTextReferenceLink { Text = child, ReferenceName = referenceName };
+
+    public static RichText Button(
+        RichText text,
+        RichMessageButtonStyle? style = null,
+        string? url = null,
+        string? callbackData = null,
+        WebAppInfo? webApp = null,
+        LoginUrl? loginUrl = null,
+        string? switchInlineQuery = null,
+        string? switchInlineQueryCurrentChat = null,
+        SwitchInlineQueryChosenChat? switchInlineQueryChosenChat = null,
+        CopyTextButton? copyText = null,
+        bool? disabled = null
+    ) => new RichTextButton()
+    {
+        Button = new RichMessageButton()
+        {
+            Text = text,
+            Style = style,
+            Url = url,
+            CallbackData = callbackData,
+            WebApp = webApp,
+            LoginUrl = loginUrl,
+            SwitchInlineQuery = switchInlineQuery,
+            SwitchInlineQueryCurrentChat = switchInlineQueryCurrentChat,
+            SwitchInlineQueryChosenChat = switchInlineQueryChosenChat,
+            CopyText = copyText,
+            Disabled = (disabled ?? false) ? new DisabledButton() : null
+        }
+    };
+
+    public static RichText CallbackButton(string text, string data, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Button(text, callbackData: data, style: style, disabled: disabled);
+
+    public static RichText CopyTextButton(string text, string copyText, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Button(text, copyText: copyText, style: style, disabled: disabled);
+
+    public static RichText UrlButton(string text, Uri url, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Button(text, url: url.ToString(), style: style, disabled: disabled);
+
+    public static RichText UrlButton(string text, string url, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Button(text, url: url, style: style, disabled: disabled);
+
+    public static RichText WebAppButton(string text, WebAppInfo webApp, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Button(text, webApp: webApp, style: style, disabled: disabled);
+
+    public static RichText SwitchInlineQueryButton(string text, string switchInlineQuery, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Button(text, switchInlineQuery: switchInlineQuery, style: style, disabled: disabled);
+
+    public static RichText SwitchCurrentChatButton(string text, string switchInlineQueryCurrentChat, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Button(text, switchInlineQueryCurrentChat: switchInlineQueryCurrentChat, style: style, disabled: disabled);
+
+    public static RichText SwitchChosenChatButton(string text, SwitchInlineQueryChosenChat switchInlineQueryChosenChat, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Button(text, switchInlineQueryChosenChat: switchInlineQueryChosenChat, style: style, disabled: disabled);
 
     /// <summary>Composes several nodes into a single <see cref="RichText"/>. A single node is returned as-is.</summary>
     public static RichText Concat(params RichText[] nodes) => nodes.Length switch

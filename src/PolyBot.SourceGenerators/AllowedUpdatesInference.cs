@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using System.Globalization;
 
 namespace PolyBot.SourceGenerators;
 

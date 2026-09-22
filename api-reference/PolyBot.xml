@@ -1407,6 +1407,9 @@
         <member name="M:PolyBot.RichMessages.RichMessageBuilder.VoiceNote(Telegram.Bot.Types.InputMediaVoiceNote,Telegram.Bot.Types.RichBlockCaption)">
             <summary>Appends a voice-note block.</summary>
         </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.Buttons(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.RichMessageButton},System.Nullable{Telegram.Bot.Types.Enums.RichBlockTableCellAlign})">
+            <summary>Appends a buttons block.</summary>
+        </member>
         <member name="M:PolyBot.RichMessages.RichMessageBuilder.Block(Telegram.Bot.Types.InputRichBlock)">
             <summary>Appends a pre-built block.</summary>
         </member>
@@ -1540,6 +1543,9 @@
         </member>
         <member name="M:PolyBot.RichMessages.RichTextBuilder.ReferenceLink(System.String,System.String)">
             <summary>Appends a link to a named reference.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Button(Telegram.Bot.Types.RichText,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.String,System.String,Telegram.Bot.Types.WebAppInfo,Telegram.Bot.Types.LoginUrl,System.String,System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat,Telegram.Bot.Types.CopyTextButton,System.Nullable{System.Boolean})">
+            <summary>Appends strikethrough text.</summary>
         </member>
         <member name="M:PolyBot.RichMessages.RichTextBuilder.Add(Telegram.Bot.Types.RichText)">
             <summary>Appends a pre-built node.</summary>

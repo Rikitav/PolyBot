@@ -1,4 +1,5 @@
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace PolyBot.RichMessages;
 
@@ -119,6 +120,57 @@ public sealed class RichTextBuilder
     /// <summary>Appends a link to a named reference.</summary>
     public RichTextBuilder ReferenceLink(string text, string referenceName)
         => Add(RichTextFactory.ReferenceLink(RichTextFactory.Plain(text), referenceName));
+
+    /// <summary>Appends strikethrough text.</summary>
+    public RichTextBuilder Button(
+        RichText text,
+        RichMessageButtonStyle? style = null,
+        string? url = null,
+        string? callbackData = null,
+        WebAppInfo? webApp = null,
+        LoginUrl? loginUrl = null,
+        string? switchInlineQuery = null,
+        string? switchInlineQueryCurrentChat = null,
+        SwitchInlineQueryChosenChat? switchInlineQueryChosenChat = null,
+        CopyTextButton? copyText = null,
+        bool? disabled = null
+    ) => Add(RichTextFactory.Button(
+        text,
+        style,
+        url,
+        callbackData,
+        webApp,
+        loginUrl,
+        switchInlineQuery,
+        switchInlineQueryCurrentChat,
+        switchInlineQueryChosenChat,
+        copyText,
+        disabled
+    ));
+
+    public RichTextBuilder CallbackButton(string text, string data, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(text, callbackData: data, style: style, disabled: disabled));
+
+    public RichTextBuilder CopyTextButton(string text, string copyText, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(text, copyText: copyText, style: style, disabled: disabled));
+
+    public RichTextBuilder UrlButton(string text, Uri url, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(text, url: url.ToString(), style: style, disabled: disabled));
+
+    public RichTextBuilder UrlButton(string text, string url, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(text, url: url, style: style, disabled: disabled));
+
+    public RichTextBuilder WebAppButton(string text, WebAppInfo webApp, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(text, webApp: webApp, style: style, disabled: disabled));
+
+    public RichTextBuilder SwitchInlineQueryButton(string text, string switchInlineQuery, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(text, switchInlineQuery: switchInlineQuery, style: style, disabled: disabled));
+
+    public RichTextBuilder SwitchCurrentChatButton(string text, string switchInlineQueryCurrentChat, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(text, switchInlineQueryCurrentChat: switchInlineQueryCurrentChat, style: style, disabled: disabled));
+
+    public RichTextBuilder SwitchChosenChatButton(string text, SwitchInlineQueryChosenChat switchInlineQueryChosenChat, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(text, switchInlineQueryChosenChat: switchInlineQueryChosenChat, style: style, disabled: disabled));
 
     /// <summary>Appends a pre-built node.</summary>
     public RichTextBuilder Add(RichText node)

@@ -348,7 +348,7 @@ internal static class BotRouterEmitter
             List<AwaitSiteEntry> caseSites = awaitSites
                 .Where(s => s.Site.Members.Items.Any(m => m.MemberName == memberName))
                 .ToList();
-            
+
             sections.Add(BuildSwitchSection(memberName, caseHandlers, caseSites, caseIndex, throttleFields, throttleFieldNames));
             caseIndex++;
         }
