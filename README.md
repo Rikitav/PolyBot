@@ -6,7 +6,7 @@ PolyBot is a generative, DI-friendly routing framework for [Telegram.Bot](https:
 
 ## Learn and Docs
 
-Learn Telegrator on [Official documentation site](https://poly-bot.mintlify.site).
+Learn PolybBot on [Official documentation site](https://poly-bot.mintlify.site).
 
 ---
 
@@ -58,6 +58,22 @@ Parameters resolve automatically: `ITelegramBotClient`, `CancellationToken`, `Up
 ### Filters
 
 `[XxxFilter]` attributes gate handlers with custom `IUpdateFilter` implementations. All filters must pass in attribute order. Generated bases such as `MessageFilter` let filters work directly with the extracted payload.
+
+```csharp
+public class PremiumOnlyFilter : MessageFilter
+{
+    protected override bool CanPass(Message message)
+        => message.From?.IsPremium is true;
+}
+```
+
+### Rich messages
+
+```csharp
+InputRichMessage rich = new RichMessageBuilder()
+    .Paragraph(b => b.Plain("Hello, ").Bold("World!"))
+    .Build();
+```
 
 ### Keyboards
 
