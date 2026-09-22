@@ -50,6 +50,7 @@
               "features/inline-awaits",
               "features/rate-limiting",
               "features/allowed-updates",
+              "features/rich-messages",
               "features/exception-handling"
             ]
           },
