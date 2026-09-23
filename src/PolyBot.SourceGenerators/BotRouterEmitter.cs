@@ -181,8 +181,24 @@ internal static class BotRouterEmitter
 
     private static MethodDeclarationSyntax BuildHandleUpdateMethod(IReadOnlyList<HandlerModel> handlers, List<AwaitSiteEntry> awaitSites, List<MemberDeclarationSyntax> throttleFields, HashSet<string> throttleFieldNames)
     {
+        List<SwitchSectionSyntax> switchSections = BuildSwitchSections(handlers, awaitSites, throttleFields, throttleFieldNames);
         SwitchStatementSyntax switchStatement = SyntaxFactory.SwitchStatement(SyntaxFactory.ParseExpression("update.Type"))
-            .WithSections(SyntaxFactory.List(BuildSwitchSections(handlers, awaitSites, throttleFields, throttleFieldNames)));
+            .WithSections(SyntaxFactory.List(switchSections));
+
+        // Universal raw [UpdateHandler]s (no Types) run outside the switch: non-negative
+        // priority before it (global pre-filters), negative priority after it (fallbacks).
+        // Higher priority values run earlier within each group.
+        List<HandlerModel> preSwitchHandlers = handlers
+            .Where(h => h.IsRawUpdateHandler && h.UpdateTypeMemberNames.Count == 0 && h.Priority >= 0)
+            .OrderByDescending(h => h.Priority)
+            .ToList();
+        List<HandlerModel> postSwitchHandlers = handlers
+            .Where(h => h.IsRawUpdateHandler && h.UpdateTypeMemberNames.Count == 0 && h.Priority < 0)
+            .OrderByDescending(h => h.Priority)
+            .ToList();
+
+        List<StatementSyntax> preSwitchStatements = BuildUniversalHandlerStatements(preSwitchHandlers, switchSections.Count, throttleFields, throttleFieldNames);
+        List<StatementSyntax> postSwitchStatements = BuildUniversalHandlerStatements(postSwitchHandlers, switchSections.Count + preSwitchHandlers.Count, throttleFields, throttleFieldNames);
 
         bool usesStateContext = handlers.Any(UsesStateContext);
         bool usesAwaiter = handlers.Any(h => h.AwaitSites.Count > 0);
@@ -214,8 +230,13 @@ internal static class BotRouterEmitter
                     EmitterSyntax.RequiredService("global::PolyBot.Awaits.IUpdateAwaiter")));
             }
 
+            List<StatementSyntax> tryBlockStatements = new();
+            tryBlockStatements.AddRange(preSwitchStatements);
+            tryBlockStatements.Add(switchStatement);
+            tryBlockStatements.AddRange(postSwitchStatements);
+
             bodyStatements.Add(SyntaxFactory.TryStatement(
-                block: SyntaxFactory.Block(switchStatement),
+                block: SyntaxFactory.Block(tryBlockStatements),
                 catches: default,
                 @finally: SyntaxFactory.FinallyClause(SyntaxFactory.Block(
                     SyntaxFactory.IfStatement(
@@ -225,7 +246,9 @@ internal static class BotRouterEmitter
         }
         else
         {
+            bodyStatements.AddRange(preSwitchStatements);
             bodyStatements.Add(switchStatement);
+            bodyStatements.AddRange(postSwitchStatements);
         }
 
         return SyntaxFactory.MethodDeclaration(
@@ -345,7 +368,7 @@ internal static class BotRouterEmitter
         foreach (string memberName in EnumerateCaseMemberNames(handlers, awaitSites))
         {
             List<HandlerModel> caseHandlers = handlers
-                .Where(h => h.UpdateTypeMemberName == memberName)
+                .Where(h => h.UpdateTypeMemberNames.Items.Contains(memberName))
                 .OrderByDescending(h => h.Priority)
                 .ToList();
 
@@ -387,7 +410,10 @@ internal static class BotRouterEmitter
         HashSet<string> members = new(StringComparer.Ordinal);
         foreach (HandlerModel handler in handlers)
         {
-            members.Add(handler.UpdateTypeMemberName);
+            foreach (string memberName in handler.UpdateTypeMemberNames.Items)
+            {
+                members.Add(memberName);
+            }
         }
 
         foreach ((AwaitSiteModel site, _) in awaitSites)
@@ -463,6 +489,33 @@ internal static class BotRouterEmitter
                 NeverFallsThrough(ifStatement.Statement) && NeverFallsThrough(ifStatement.Else.Statement),
             _ => false,
         };
+    }
+
+    /// <summary>
+    /// Universal raw <c>[UpdateHandler]</c> statements, each wrapped in its own scope block so
+    /// per-handler locals (results, filters, DI instances) never collide. <paramref name="firstCaseIndex"/>
+    /// offsets the generated local suffixes past the switch-case indexes.
+    /// </summary>
+    private static List<StatementSyntax> BuildUniversalHandlerStatements(
+        IReadOnlyList<HandlerModel> universalHandlers,
+        int firstCaseIndex,
+        List<MemberDeclarationSyntax> throttleFields,
+        HashSet<string> throttleFieldNames)
+    {
+        List<StatementSyntax> statements = new();
+        for (int i = 0; i < universalHandlers.Count; i++)
+        {
+            statements.Add(SyntaxFactory.Block(BuildHandlerStatements(
+                universalHandlers[i],
+                payloadVar: "update",
+                caseIndex: firstCaseIndex + i,
+                handlerIndex: 0,
+                casePairs: Array.Empty<StateCasePair>(),
+                throttleFields,
+                throttleFieldNames)));
+        }
+
+        return statements;
     }
 
     private static List<StatementSyntax> BuildAwaitSiteBranch(AwaitSiteModel site, int siteIndex, string propertyName, int caseIndex)
@@ -559,21 +612,26 @@ internal static class BotRouterEmitter
     private static List<StatementSyntax> BuildCaseHandlerStatements(List<HandlerModel> caseHandlers, int caseIndex, List<MemberDeclarationSyntax> throttleFields, HashSet<string> throttleFieldNames)
     {
         string payloadVar = $"__curator_payload_{caseIndex}";
-        string propertyName = caseHandlers[0].UpdatePropertyName;
 
-        List<StatementSyntax> handlerStatements = new()
+        // The case-level payload local is typed from the first handler that actually uses a
+        // typed payload; raw [UpdateHandler]s receive the update itself instead.
+        HandlerModel? payloadSource = caseHandlers.FirstOrDefault(h => !h.IsRawUpdateHandler);
+
+        List<StatementSyntax> handlerStatements = new();
+        if (payloadSource is not null)
         {
-            SyntaxFactory.LocalDeclarationStatement(
-                SyntaxFactory.VariableDeclaration(SyntaxFactory.ParseTypeName(caseHandlers[0].PayloadTypeFqn))
-                    .AddVariables(SyntaxFactory.VariableDeclarator(payloadVar)
-                        .WithInitializer(SyntaxFactory.EqualsValueClause(
-                            SyntaxFactory.PostfixUnaryExpression(
-                                kind: SyntaxKind.SuppressNullableWarningExpression,
-                                operand: SyntaxFactory.MemberAccessExpression(
-                                    kind: SyntaxKind.SimpleMemberAccessExpression,
-                                    expression: SyntaxFactory.IdentifierName("update"),
-                                    name: SyntaxFactory.IdentifierName(propertyName))))))),
-        };
+            handlerStatements.Add(
+                SyntaxFactory.LocalDeclarationStatement(
+                    SyntaxFactory.VariableDeclaration(SyntaxFactory.ParseTypeName(payloadSource.PayloadTypeFqn))
+                        .AddVariables(SyntaxFactory.VariableDeclarator(payloadVar)
+                            .WithInitializer(SyntaxFactory.EqualsValueClause(
+                                SyntaxFactory.PostfixUnaryExpression(
+                                    kind: SyntaxKind.SuppressNullableWarningExpression,
+                                    operand: SyntaxFactory.MemberAccessExpression(
+                                        kind: SyntaxKind.SimpleMemberAccessExpression,
+                                        expression: SyntaxFactory.IdentifierName("update"),
+                                        name: SyntaxFactory.IdentifierName(payloadSource.UpdatePropertyName))))))));
+        }
 
         List<StateCasePair> casePairs = new();
         foreach (HandlerModel caseHandler in caseHandlers)
@@ -596,7 +654,8 @@ internal static class BotRouterEmitter
 
         for (int i = 0; i < caseHandlers.Count; i++)
         {
-            handlerStatements.AddRange(BuildHandlerStatements(caseHandlers[i], payloadVar, caseIndex, i, casePairs, throttleFields, throttleFieldNames));
+            string handlerPayloadVar = caseHandlers[i].IsRawUpdateHandler ? "update" : payloadVar;
+            handlerStatements.AddRange(BuildHandlerStatements(caseHandlers[i], handlerPayloadVar, caseIndex, i, casePairs, throttleFields, throttleFieldNames));
         }
 
         return handlerStatements;

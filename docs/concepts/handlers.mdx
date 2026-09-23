@@ -128,6 +128,45 @@ public static async Task<Result> EchoHandler(Message msg, ITelegramBotClient bot
 }
 ```
 
+## Raw update handlers (`[UpdateHandler]`)
+
+`[UpdateHandler]` marks a handler that receives the raw `Telegram.Bot.Types.Update` instead of a typed payload — the method must declare an `Update` parameter (other parameters are resolved as usual). Use it for catch-all / fallback handlers (logging, telemetry, audit trails), cross-update-type filtering, or update types that have no specialized helper attribute yet.
+
+```csharp
+// Universal audit/metrics pre-handler: runs before every specialized handler.
+// Priority >= 0 places it before the update-type switch; higher values run earlier.
+[UpdateHandler(Priority = 100)]
+public static Task<Result> GlobalAuditLog(Update update, ILogger<BotRouter> logger)
+{
+    logger.LogInformation("Received update {Id} of type {Type}", update.Id, update.Type);
+    return Task.FromResult(Result.Continue); // Yields to specialized handlers
+}
+
+// Fallback catch-all for any unhandled update.
+// Negative priority places it after the update-type switch.
+[UpdateHandler(Priority = -100)]
+public static Task<Result> FallbackCatchAll(Update update)
+{
+    return Task.FromResult(Result.StopRouting);
+}
+```
+
+A universal handler (no `Types`) runs **outside** the `switch (update.Type)`: with `Priority >= 0` it runs before the switch, with negative `Priority` it runs after it as a fallback for updates no case handled. `Result.StopRouting` from any of them halts the remaining pipeline, including specialized handlers.
+
+Declare `Types` to restrict the handler to explicit update types. It is then emitted into each matching `case` branch and sorted among the specialized handlers by `Priority` (higher first):
+
+```csharp
+// Runs in both the UpdateType.ChatMember and UpdateType.MyChatMember branches.
+[UpdateHandler(Types = [UpdateType.ChatMember, UpdateType.MyChatMember])]
+public static async Task<Result> HandleMembership(Update update, IMembershipService membership, CancellationToken ct)
+{
+    // Process membership changes
+    return Result.StopRouting;
+}
+```
+
+AllowedUpdates inference follows the declaration: explicit `Types` contribute exactly those update types, while a universal handler requests **all** update types (CUR042 warns about this). Guards that need a typed payload — `[Command]`, `[Pattern]`, state conditions — are not supported on `[UpdateHandler]` (CUR043); combine it with filter attributes or `Result` returns instead.
+
 ## Static vs instance handlers
 
 Handlers may be static or instance methods. The generator treats them differently:

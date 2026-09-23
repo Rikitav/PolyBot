@@ -449,6 +449,19 @@ internal sealed class HandlerModel : IEquatable<HandlerModel>
 
     public required string UpdateTypeMemberName { get; init; }
 
+    /// <summary>
+    /// All target switch-case member names. Contains a single entry for specialized
+    /// handlers, several for a typed raw <c>[UpdateHandler]</c>, and is empty for a
+    /// universal (untyped) raw <c>[UpdateHandler]</c>.
+    /// </summary>
+    public required EquatableArray<string> UpdateTypeMemberNames { get; init; }
+
+    /// <summary>
+    /// Whether the handler was declared with <c>[UpdateHandler]</c> and operates on the
+    /// raw <c>Telegram.Bot.Types.Update</c> instead of a typed payload.
+    /// </summary>
+    public bool IsRawUpdateHandler { get; init; }
+
     public required string UpdatePropertyName { get; init; }
 
     public required string PayloadTypeFqn { get; init; }
@@ -506,6 +519,8 @@ internal sealed class HandlerModel : IEquatable<HandlerModel>
             && MethodName == other.MethodName
             && IsStatic == other.IsStatic
             && UpdateTypeMemberName == other.UpdateTypeMemberName
+            && UpdateTypeMemberNames.Equals(other.UpdateTypeMemberNames)
+            && IsRawUpdateHandler == other.IsRawUpdateHandler
             && UpdatePropertyName == other.UpdatePropertyName
             && PayloadTypeFqn == other.PayloadTypeFqn
             && Priority == other.Priority
@@ -540,6 +555,8 @@ internal sealed class HandlerModel : IEquatable<HandlerModel>
             hash = (hash * 31) + MethodName.GetHashCode();
             hash = (hash * 31) + IsStatic.GetHashCode();
             hash = (hash * 31) + UpdateTypeMemberName.GetHashCode();
+            hash = (hash * 31) + UpdateTypeMemberNames.GetHashCode();
+            hash = (hash * 31) + IsRawUpdateHandler.GetHashCode();
             hash = (hash * 31) + UpdatePropertyName.GetHashCode();
             hash = (hash * 31) + PayloadTypeFqn.GetHashCode();
             hash = (hash * 31) + Priority.GetHashCode();

@@ -27,12 +27,29 @@ internal static class AllowedUpdatesInference
         List<string> memberNames = new();
         bool rawUpdateHandler = false;
         string? firstRawUpdateHandlerName = null;
+        bool universalUpdateHandler = false;
+        string? firstUniversalUpdateHandlerName = null;
+        Location? firstUniversalUpdateHandlerLocation = null;
 
         foreach (HandlerModel handler in handlers)
         {
-            memberNames.Add(handler.UpdateTypeMemberName);
+            foreach (string memberName in handler.UpdateTypeMemberNames.Items)
+            {
+                memberNames.Add(memberName);
+            }
 
-            if (handler.AcceptsRawUpdate)
+            if (handler.IsRawUpdateHandler)
+            {
+                // A universal [UpdateHandler] (no Types) matches every update type; a typed
+                // one contributes exactly its declared types (see memberNames above).
+                if (handler.UpdateTypeMemberNames.Count == 0)
+                {
+                    universalUpdateHandler = true;
+                    firstUniversalUpdateHandlerName ??= handler.MethodName;
+                    firstUniversalUpdateHandlerLocation ??= handler.HandlerAttributeLocation;
+                }
+            }
+            else if (handler.AcceptsRawUpdate)
             {
                 rawUpdateHandler = true;
                 firstRawUpdateHandlerName ??= handler.MethodName;
@@ -56,6 +73,22 @@ internal static class AllowedUpdatesInference
             if (!string.Equals(name, "Unknown", StringComparison.Ordinal))
             {
                 inferred.Add(name);
+            }
+        }
+
+        if (universalUpdateHandler)
+        {
+            foreach (string name in GetAllUpdateTypeMemberNames(compilation))
+            {
+                inferred.Add(name);
+            }
+
+            if (firstUniversalUpdateHandlerName is not null)
+            {
+                diagnostics.Add(Diagnostic.Create(
+                    PolyBotDiagnostics.UniversalUpdateHandlerFallsBackToAllAllowedUpdates,
+                    firstUniversalUpdateHandlerLocation ?? Location.None,
+                    firstUniversalUpdateHandlerName));
             }
         }
 
@@ -97,13 +130,16 @@ internal static class AllowedUpdatesInference
         {
             foreach (HandlerModel handler in handlers)
             {
-                if (excluded.Contains(handler.UpdateTypeMemberName))
+                foreach (string memberName in handler.UpdateTypeMemberNames.Items)
                 {
-                    diagnostics.Add(Diagnostic.Create(
-                        PolyBotDiagnostics.HandlerUpdateTypeExcluded,
-                        handler.HandlerAttributeLocation ?? Location.None,
-                        handler.MethodName,
-                        handler.UpdateTypeMemberName));
+                    if (excluded.Contains(memberName))
+                    {
+                        diagnostics.Add(Diagnostic.Create(
+                            PolyBotDiagnostics.HandlerUpdateTypeExcluded,
+                            handler.HandlerAttributeLocation ?? Location.None,
+                            handler.MethodName,
+                            memberName));
+                    }
                 }
             }
 

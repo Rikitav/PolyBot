@@ -42,3 +42,7 @@ CUR036 | PolyBot | Warning | A handler is declared in a library project; only ru
 CUR037 | PolyBot | Warning | A handler accepts a raw Update parameter; AllowedUpdates inference falls back to all update types
 CUR038 | PolyBot | Warning | A handler update type is excluded by [assembly: PolyBotAllowedUpdates]; the handler will not receive those updates
 CUR039 | PolyBot | Info | AllowedUpdates were inferred from declared handlers and await sites
+CUR040 | PolyBot | Error | An [UpdateHandler] method does not declare a Telegram.Bot.Types.Update parameter
+CUR041 | PolyBot | Error | A method combines [UpdateHandler] with another handler attribute
+CUR042 | PolyBot | Warning | A universal [UpdateHandler] matches all update types; AllowedUpdates inference falls back to all update types
+CUR043 | PolyBot | Error | An [UpdateHandler] declares a typed-payload guard ([Command], [Pattern], or state conditions)

@@ -40,6 +40,7 @@ internal static class HandlerDiscovery
         INamedTypeSymbol? nullableType = compilation.GetTypeByMetadataName("System.Nullable`1");
         INamedTypeSymbol? keyAttribute = compilation.GetTypeByMetadataName("PolyBot.Attributes.KeyAttribute");
         INamedTypeSymbol? descriptorAttribute = compilation.GetTypeByMetadataName("PolyBot.Attributes.UpdateHandlerDescriptorAttribute");
+        INamedTypeSymbol? updateHandlerAttribute = compilation.GetTypeByMetadataName("PolyBot.Attributes.UpdateHandlerAttribute");
         INamedTypeSymbol? updateTypeEnum = compilation.GetTypeByMetadataName("Telegram.Bot.Types.Enums.UpdateType");
         INamedTypeSymbol? updateClass = compilation.GetTypeByMetadataName("Telegram.Bot.Types.Update");
         INamedTypeSymbol? botClientType = compilation.GetTypeByMetadataName("Telegram.Bot.ITelegramBotClient");
@@ -57,6 +58,7 @@ internal static class HandlerDiscovery
 
         AttributeData? handlerAttributeData = null;
         string? handlerAttributeClassName = null;
+        int handlerAttributeCount = 0;
         foreach (AttributeData attributeData in methodSymbol.GetAttributes())
         {
             INamedTypeSymbol? attributeClass = attributeData.AttributeClass;
@@ -67,9 +69,9 @@ internal static class HandlerDiscovery
 
             if (IsHandlerAttribute(attributeClass, handlerBase, updateTypeEnum))
             {
-                handlerAttributeData = attributeData;
-                handlerAttributeClassName = attributeClass.Name;
-                break;
+                handlerAttributeCount++;
+                handlerAttributeData ??= attributeData;
+                handlerAttributeClassName ??= attributeClass.Name;
             }
         }
 
@@ -78,14 +80,52 @@ internal static class HandlerDiscovery
             return HandlerItem.Skip;
         }
 
-        string updateTypeMemberName;
-        string updatePropertyName;
-        if (!TryResolveUpdateType(handlerAttributeData, descriptorAttribute, updateTypeEnum, updateClass, handlerAttributeClassName, out updateTypeMemberName, out updatePropertyName))
+        bool isRawUpdateHandler = updateHandlerAttribute is not null &&
+            handlerAttributeData.AttributeClass is { } matchedHandlerAttribute &&
+            SymbolEqualityComparer.Default.Equals(matchedHandlerAttribute, updateHandlerAttribute);
+
+        Location? handlerAttributeLocation = handlerAttributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation();
+        if (isRawUpdateHandler && handlerAttributeCount > 1)
         {
-            return HandlerItem.Skip;
+            Diagnostic conflictDiagnostic = Diagnostic.Create(
+                PolyBotDiagnostics.MultipleHandlerAttributes,
+                handlerAttributeLocation ?? methodSymbol.Locations.FirstOrDefault(),
+                methodSymbol.Name);
+            return HandlerItem.ForModel(null, new List<Diagnostic> { conflictDiagnostic });
         }
 
-        ITypeSymbol? payloadType = FindUpdateProperty(updateClass, updatePropertyName)?.Type;
+        string updateTypeMemberName;
+        string updatePropertyName;
+        List<string> updateTypeMemberNames;
+        if (isRawUpdateHandler)
+        {
+            // [UpdateHandler] is always a bound symbol (hand-written in the PolyBot assembly),
+            // so Types is read from the bound attribute data; empty means a universal catch-all.
+            updateTypeMemberNames = ReadUpdateHandlerTypes(handlerAttributeData, updateTypeEnum);
+            if (updateTypeMemberNames.Count == 0)
+            {
+                updateTypeMemberName = string.Empty;
+                updatePropertyName = string.Empty;
+            }
+            else
+            {
+                updateTypeMemberName = updateTypeMemberNames[0];
+                updatePropertyName = UpdateShape.FindUpdatePropertyName(updateClass, updateTypeMemberName);
+            }
+        }
+        else
+        {
+            if (!TryResolveUpdateType(handlerAttributeData, descriptorAttribute, updateTypeEnum, updateClass, handlerAttributeClassName, out updateTypeMemberName, out updatePropertyName))
+            {
+                return HandlerItem.Skip;
+            }
+
+            updateTypeMemberNames = new List<string> { updateTypeMemberName };
+        }
+
+        ITypeSymbol? payloadType = isRawUpdateHandler
+            ? updateClass
+            : FindUpdateProperty(updateClass, updatePropertyName)?.Type;
 
         HandlerReturnKind? returnKind = ClassifyReturnType(methodSymbol.ReturnType, taskType, taskOfTType, valueTaskType, valueTaskNonGenericType, handlerBase.ContainingAssembly);
         List<Diagnostic> diagnostics = new();
@@ -570,6 +610,15 @@ internal static class HandlerDiscovery
             });
         }
 
+        if (isRawUpdateHandler && !parameters.Any(p => p.Source == ParameterSource.Update))
+        {
+            Diagnostic diagnostic = Diagnostic.Create(
+                PolyBotDiagnostics.UpdateHandlerRequiresUpdateParameter,
+                handlerAttributeLocation ?? methodSymbol.Locations.FirstOrDefault(),
+                methodSymbol.Name);
+            return HandlerItem.ForModel(null, new List<Diagnostic> { diagnostic });
+        }
+
         // Inline-await extraction: await chains rooted at an IUpdateAwaiter parameter that
         // call WaitForAsync/WaitForXxxAsync become implicit branches; custom wrapper
         // methods are intentionally not followed (CUR013 warns about them).
@@ -616,12 +665,23 @@ internal static class HandlerDiscovery
             }
         }
 
+        if (isRawUpdateHandler && (commandData is not null || routePattern is not null || stateConditions.Count > 0))
+        {
+            Diagnostic diagnostic = Diagnostic.Create(
+                PolyBotDiagnostics.UnsupportedUpdateHandlerGuard,
+                handlerAttributeLocation ?? methodSymbol.Locations.FirstOrDefault(),
+                methodSymbol.Name);
+            return HandlerItem.ForModel(null, new List<Diagnostic> { diagnostic });
+        }
+
         HandlerModel model = new()
         {
             ContainingTypeFqn = methodSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             MethodName = methodSymbol.Name,
             IsStatic = methodSymbol.IsStatic,
             UpdateTypeMemberName = updateTypeMemberName,
+            UpdateTypeMemberNames = new EquatableArray<string>(updateTypeMemberNames.ToArray()),
+            IsRawUpdateHandler = isRawUpdateHandler,
             UpdatePropertyName = updatePropertyName,
             PayloadTypeFqn = payloadType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "object",
             Priority = priority,
@@ -643,7 +703,7 @@ internal static class HandlerDiscovery
             Pattern = routePattern,
             Throttle = throttle,
             AcceptsRawUpdate = acceptsRawUpdate,
-            HandlerAttributeLocation = handlerAttributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
+            HandlerAttributeLocation = handlerAttributeLocation,
         };
 
         if (extraDiagnostic is not null)
@@ -2053,6 +2113,40 @@ internal static class HandlerDiscovery
     private static IPropertySymbol? FindUpdateProperty(INamedTypeSymbol updateClass, string propertyName)
     {
         return updateClass.GetMembers(propertyName).OfType<IPropertySymbol>().FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Reads the <c>Types</c> named argument of a bound <c>[UpdateHandler]</c> attribute into
+    /// update-type member names (declaration order, deduplicated). An empty result means the
+    /// handler is a universal catch-all.
+    /// </summary>
+    private static List<string> ReadUpdateHandlerTypes(AttributeData handlerAttributeData, INamedTypeSymbol updateTypeEnum)
+    {
+        List<string> memberNames = new();
+        foreach (KeyValuePair<string, TypedConstant> namedArgument in handlerAttributeData.NamedArguments)
+        {
+            if (!string.Equals(namedArgument.Key, "Types", StringComparison.Ordinal) ||
+                namedArgument.Value.Kind != TypedConstantKind.Array)
+            {
+                continue;
+            }
+
+            foreach (TypedConstant item in namedArgument.Value.Values)
+            {
+                if (item.Value is null)
+                {
+                    continue;
+                }
+
+                string? memberName = EnumValueToMemberName(updateTypeEnum, item.Value);
+                if (memberName is not null && !memberNames.Contains(memberName))
+                {
+                    memberNames.Add(memberName);
+                }
+            }
+        }
+
+        return memberNames;
     }
 
     private static IFieldSymbol? FindEnumMember(INamedTypeSymbol updateTypeEnum, string name)

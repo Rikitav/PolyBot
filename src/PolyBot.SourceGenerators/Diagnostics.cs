@@ -317,4 +317,36 @@ internal static class PolyBotDiagnostics
         category: Category,
         defaultSeverity: DiagnosticSeverity.Info,
         isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor UpdateHandlerRequiresUpdateParameter = new(
+        id: "CUR040",
+        title: "[UpdateHandler] requires an Update parameter",
+        messageFormat: "[UpdateHandler] method '{0}' must declare a parameter of type Telegram.Bot.Types.Update; the raw update cannot be resolved from its signature",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor MultipleHandlerAttributes = new(
+        id: "CUR041",
+        title: "Multiple handler attributes on one method",
+        messageFormat: "Method '{0}' combines [UpdateHandler] with another handler attribute; declare only one handler attribute per method",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor UniversalUpdateHandlerFallsBackToAllAllowedUpdates = new(
+        id: "CUR042",
+        title: "Universal [UpdateHandler] falls back to all AllowedUpdates",
+        messageFormat: "[UpdateHandler] '{0}' matches all update types because no Types are declared; AllowedUpdates inference falls back to all update types",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor UnsupportedUpdateHandlerGuard = new(
+        id: "CUR043",
+        title: "Typed-payload guard on [UpdateHandler]",
+        messageFormat: "[UpdateHandler] '{0}' declares a typed-payload guard ([Command], [Pattern], or state conditions) that requires a specific update payload; remove it or use a specialized handler attribute",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }

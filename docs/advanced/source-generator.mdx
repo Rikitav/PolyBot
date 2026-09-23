@@ -58,8 +58,8 @@ Referenced assemblies are **not scanned up front**. Instead, when a handler attr
 
 Runs as a syntax-first incremental pipeline: the predicate selects any method with at least one attribute list, and the transform step performs the full semantic analysis per method. For each candidate method it:
 
-1. **Locates the handler attribute** — looks for an attribute that inherits `HandlerAttribute` (or, for error-type symbols on the first pass, matches the stem against `UpdateType` enum member names).
-2. **Resolves the update type** — reads `UpdateHandlerDescriptorAttribute` on the handler attribute class first; falls back to the naming convention (`MessageHandlerAttribute` → `UpdateType.Message`).
+1. **Locates the handler attribute** — looks for an attribute that inherits `HandlerAttribute` (or, for error-type symbols on the first pass, matches the stem against `UpdateType` enum member names). Stacking a second handler attribute (e.g. `[UpdateHandler]` + `[MessageHandler]`) on one method is rejected with `CUR041`.
+2. **Resolves the update type** — reads `UpdateHandlerDescriptorAttribute` on the handler attribute class first; falls back to the naming convention (`MessageHandlerAttribute` → `UpdateType.Message`). `[UpdateHandler]` is special-cased: it resolves to the raw `Telegram.Bot.Types.Update`, reads its `Types` array into a (possibly empty = universal) member list, and is validated separately (`CUR040` when no `Update` parameter exists, `CUR043` on `[Command]`/`[Pattern]`/state guards).
 3. **Classifies the return type** — `Task<Result>`, `ValueTask<Result>` → `HandlerReturnKind.Result`; `Task`/`ValueTask` → `HandlerReturnKind.Plain`; anything else → `CUR001`.
 4. **Processes `[Command]` and BotFather metadata** — reads `Aliases`, `Prefix`, `Description`, `Scope`, `LanguageCode`, `IsHidden`. Validates alias format (`CUR020`), checks description length (`CUR022`).
 5. **Processes `[Arg]`, `[Rest]`, `[Parse]`** — validates types and ordering, builds `ArgModel` and `TailConsumerModel` lists.
