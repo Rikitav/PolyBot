@@ -12,7 +12,7 @@ namespace PolyBot.Attributes;
 public class HandlerAttribute : Attribute
 {
     /// <summary>
-    /// Routing priority; lower values run earlier. Defaults to <c>0</c>.
+    /// Routing priority; higher values run earlier. Defaults to <c>0</c>.
     /// </summary>
     public int Priority { get; set; } = 0;
 }

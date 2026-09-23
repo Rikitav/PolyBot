@@ -17,6 +17,7 @@ internal static class BotRouterEmitter
                 SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName("global::Telegram.Bot.Polling.IUpdateHandler")),
                 SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName("global::PolyBot.IAllowedUpdatesProvider")))
             .AddMembers(BuildAllowedUpdatesField(allowedUpdates), BuildAllowedUpdatesProperty(), BuildServiceField());
+        
         if (hasCommands)
         {
             routerClass = routerClass.AddMembers(BuildOptionsField());
@@ -28,12 +29,14 @@ internal static class BotRouterEmitter
             routerClass = routerClass.AddMembers(siteFields.ToArray());
         }
 
-        List<MemberDeclarationSyntax> throttleFields = new();
+        List<MemberDeclarationSyntax> throttleFields = [];
         HashSet<string> throttleFieldNames = new(StringComparer.Ordinal);
+        
         routerClass = routerClass
             .AddMembers(BuildConstructor(hasCommands))
             .AddMembers(BuildHandleUpdateMethod(handlers, awaitSites, throttleFields, throttleFieldNames))
             .AddMembers(BuildHandleErrorMethod(exceptionHandler));
+
         if (throttleFields.Count > 0)
         {
             routerClass = routerClass.AddMembers(throttleFields.ToArray());
@@ -191,6 +194,7 @@ internal static class BotRouterEmitter
                 "global::PolyBot.State.IUpdateContextAccessor",
                 "__curator_ctx",
                 EmitterSyntax.RequiredService("global::PolyBot.State.IUpdateContextAccessor")));
+
             bodyStatements.Add(SyntaxFactory.ExpressionStatement(SyntaxFactory.ParseExpression("__curator_ctx.Update = update")));
             if (handlers.Any(h => h.StateConditions.Count > 0))
             {
@@ -432,12 +436,33 @@ internal static class BotRouterEmitter
             statements.AddRange(BuildCaseHandlerStatements(caseHandlers, caseIndex, throttleFields, throttleFieldNames));
         }
 
-        statements.Add(SyntaxFactory.BreakStatement());
+        // An unguarded handler body (plain/filter-only handler with no other handlers in
+        // the case) ends in return;, so the trailing break would be unreachable (CS0162).
+        if (statements.Count == 0 || !NeverFallsThrough(statements[^1]))
+        {
+            statements.Add(SyntaxFactory.BreakStatement());
+        }
 
         return SyntaxFactory.SwitchSection()
             .AddLabels(SyntaxFactory.CaseSwitchLabel(
                 SyntaxFactory.ParseExpression($"global::Telegram.Bot.Types.Enums.UpdateType.{updateTypeMemberName}")))
             .AddStatements(SyntaxFactory.Block(statements));
+    }
+
+    /// <summary>
+    /// Whether control can fall through past this statement (per C# end-point reachability):
+    /// a trailing <c>return</c>, or a block/if-else whose every branch ends without falling through.
+    /// </summary>
+    private static bool NeverFallsThrough(StatementSyntax statement)
+    {
+        return statement switch
+        {
+            ReturnStatementSyntax => true,
+            BlockSyntax block => block.Statements.Count > 0 && NeverFallsThrough(block.Statements[^1]),
+            IfStatementSyntax { Else: not null } ifStatement =>
+                NeverFallsThrough(ifStatement.Statement) && NeverFallsThrough(ifStatement.Else.Statement),
+            _ => false,
+        };
     }
 
     private static List<StatementSyntax> BuildAwaitSiteBranch(AwaitSiteModel site, int siteIndex, string propertyName, int caseIndex)
