@@ -105,6 +105,14 @@ public static class RichTextFactory
     public static RichText ReferenceLink(RichText child, string referenceName)
         => new RichTextReferenceLink { Text = child, ReferenceName = referenceName };
 
+    /// <summary>
+    /// Creates an inline button node from a pre-built label <paramref name="text"/> and exactly one action
+    /// (<paramref name="url"/>, <paramref name="callbackData"/>, <paramref name="webApp"/>, <paramref name="loginUrl"/>,
+    /// <paramref name="switchInlineQuery"/>, <paramref name="switchInlineQueryCurrentChat"/>,
+    /// <paramref name="switchInlineQueryChosenChat"/>, or <paramref name="copyText"/>).
+    /// </summary>
+    /// <remarks>Button text may contain only plain text, custom emoji and date/time entities; use
+    /// <see cref="RichButtonTextBuilder"/> to compose conforming labels.</remarks>
     public static RichText Button(
         RichText text,
         RichMessageButtonStyle? style = null,
@@ -135,27 +143,35 @@ public static class RichTextFactory
         }
     };
 
+    /// <summary>Creates an inline callback button with a plain-text label <paramref name="text"/> carrying <paramref name="data"/>.</summary>
     public static RichText CallbackButton(string text, string data, RichMessageButtonStyle? style = null, bool disabled = false)
         => Button(text, callbackData: data, style: style, disabled: disabled);
 
+    /// <summary>Creates an inline button with label <paramref name="text"/> that copies <paramref name="copyText"/> to the clipboard when pressed.</summary>
     public static RichText CopyTextButton(string text, string copyText, RichMessageButtonStyle? style = null, bool disabled = false)
         => Button(text, copyText: copyText, style: style, disabled: disabled);
 
+    /// <summary>Creates an inline URL button with label <paramref name="text"/> that opens <paramref name="url"/>.</summary>
     public static RichText UrlButton(string text, Uri url, RichMessageButtonStyle? style = null, bool disabled = false)
         => Button(text, url: url.ToString(), style: style, disabled: disabled);
 
+    /// <summary>Creates an inline URL button with label <paramref name="text"/> that opens <paramref name="url"/>.</summary>
     public static RichText UrlButton(string text, string url, RichMessageButtonStyle? style = null, bool disabled = false)
         => Button(text, url: url, style: style, disabled: disabled);
 
+    /// <summary>Creates an inline button with label <paramref name="text"/> that opens the Web App described by <paramref name="webApp"/>.</summary>
     public static RichText WebAppButton(string text, WebAppInfo webApp, RichMessageButtonStyle? style = null, bool disabled = false)
         => Button(text, webApp: webApp, style: style, disabled: disabled);
 
+    /// <summary>Creates an inline button with label <paramref name="text"/> that inserts the bot's username and <paramref name="switchInlineQuery"/> into the chat's input field.</summary>
     public static RichText SwitchInlineQueryButton(string text, string switchInlineQuery, RichMessageButtonStyle? style = null, bool disabled = false)
         => Button(text, switchInlineQuery: switchInlineQuery, style: style, disabled: disabled);
 
+    /// <summary>Creates an inline button with label <paramref name="text"/> that inserts the bot's username and <paramref name="switchInlineQueryCurrentChat"/> into the current chat's input field.</summary>
     public static RichText SwitchCurrentChatButton(string text, string switchInlineQueryCurrentChat, RichMessageButtonStyle? style = null, bool disabled = false)
         => Button(text, switchInlineQueryCurrentChat: switchInlineQueryCurrentChat, style: style, disabled: disabled);
 
+    /// <summary>Creates an inline button with label <paramref name="text"/> that prompts the user to select a chat and inserts the bot's username and the chosen inline query.</summary>
     public static RichText SwitchChosenChatButton(string text, SwitchInlineQueryChosenChat switchInlineQueryChosenChat, RichMessageButtonStyle? style = null, bool disabled = false)
         => Button(text, switchInlineQueryChosenChat: switchInlineQueryChosenChat, style: style, disabled: disabled);
 

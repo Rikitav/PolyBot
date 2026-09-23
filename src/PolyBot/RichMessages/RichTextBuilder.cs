@@ -148,27 +148,35 @@ public sealed class RichTextBuilder
         disabled
     ));
 
+    /// <summary>Appends a callback button with a plain-text label <paramref name="text"/> carrying <paramref name="data"/>.</summary>
     public RichTextBuilder CallbackButton(string text, string data, RichMessageButtonStyle? style = null, bool disabled = false)
         => Add(RichTextFactory.Button(text, callbackData: data, style: style, disabled: disabled));
 
+    /// <summary>Appends a button with label <paramref name="text"/> that copies <paramref name="copyText"/> to the clipboard when pressed.</summary>
     public RichTextBuilder CopyTextButton(string text, string copyText, RichMessageButtonStyle? style = null, bool disabled = false)
         => Add(RichTextFactory.Button(text, copyText: copyText, style: style, disabled: disabled));
 
+    /// <summary>Appends a URL button with label <paramref name="text"/> that opens <paramref name="url"/>.</summary>
     public RichTextBuilder UrlButton(string text, Uri url, RichMessageButtonStyle? style = null, bool disabled = false)
         => Add(RichTextFactory.Button(text, url: url.ToString(), style: style, disabled: disabled));
 
+    /// <summary>Appends a URL button with label <paramref name="text"/> that opens <paramref name="url"/>.</summary>
     public RichTextBuilder UrlButton(string text, string url, RichMessageButtonStyle? style = null, bool disabled = false)
         => Add(RichTextFactory.Button(text, url: url, style: style, disabled: disabled));
 
+    /// <summary>Appends a button with label <paramref name="text"/> that opens the Web App described by <paramref name="webApp"/>.</summary>
     public RichTextBuilder WebAppButton(string text, WebAppInfo webApp, RichMessageButtonStyle? style = null, bool disabled = false)
         => Add(RichTextFactory.Button(text, webApp: webApp, style: style, disabled: disabled));
 
+    /// <summary>Appends a button with label <paramref name="text"/> that inserts the bot's username and <paramref name="switchInlineQuery"/> into the chat's input field.</summary>
     public RichTextBuilder SwitchInlineQueryButton(string text, string switchInlineQuery, RichMessageButtonStyle? style = null, bool disabled = false)
         => Add(RichTextFactory.Button(text, switchInlineQuery: switchInlineQuery, style: style, disabled: disabled));
 
+    /// <summary>Appends a button with label <paramref name="text"/> that inserts the bot's username and <paramref name="switchInlineQueryCurrentChat"/> into the current chat's input field.</summary>
     public RichTextBuilder SwitchCurrentChatButton(string text, string switchInlineQueryCurrentChat, RichMessageButtonStyle? style = null, bool disabled = false)
         => Add(RichTextFactory.Button(text, switchInlineQueryCurrentChat: switchInlineQueryCurrentChat, style: style, disabled: disabled));
 
+    /// <summary>Appends a button with label <paramref name="text"/> that prompts the user to select a chat and inserts the bot's username and the chosen inline query.</summary>
     public RichTextBuilder SwitchChosenChatButton(string text, SwitchInlineQueryChosenChat switchInlineQueryChosenChat, RichMessageButtonStyle? style = null, bool disabled = false)
         => Add(RichTextFactory.Button(text, switchInlineQueryChosenChat: switchInlineQueryChosenChat, style: style, disabled: disabled));
 

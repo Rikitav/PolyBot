@@ -185,6 +185,7 @@ public static class RichBlockFactory
 
     // ---------- Button helpers ----------
 
+    /// <summary>Creates a block containing a row of buttons (<paramref name="buttons"/>) shown in one row, optionally aligned via <paramref name="align"/>.</summary>
     public static InputRichBlock Buttons(IEnumerable<RichMessageButton> buttons, RichBlockTableCellAlign? align = null)
         => new InputRichBlockButtons() { Buttons = buttons, Align = align };
 }

@@ -1298,6 +1298,9 @@
             Creates a caption (text + optional credit) shared by media/collage/slideshow/map blocks.
             </summary>
         </member>
+        <member name="M:PolyBot.RichMessages.RichBlockFactory.Buttons(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.RichMessageButton},System.Nullable{Telegram.Bot.Types.Enums.RichBlockTableCellAlign})">
+            <summary>Creates a block containing a row of buttons (<paramref name="buttons"/>) shown in one row, optionally aligned via <paramref name="align"/>.</summary>
+        </member>
         <member name="T:PolyBot.RichMessages.RichButtonTextBuilder">
             <summary>
             Fluent builder for the rich text inside a <see cref="T:Telegram.Bot.Types.RichMessageButton"/> (inline or block-level).
@@ -1324,34 +1327,6 @@
         </member>
         <member name="M:PolyBot.RichMessages.RichButtonTextBuilder.op_Implicit(PolyBot.RichMessages.RichButtonTextBuilder)~Telegram.Bot.Types.RichText">
             <summary>Builds the accumulated nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>.</summary>
-        </member>
-        <member name="T:PolyBot.RichMessages.RichMessageExtensions">
-            <summary>
-            Provides extensions for <see cref="T:Telegram.Bot.Types.RichMessage"/>
-            </summary>
-        </member>
-        <member name="M:PolyBot.RichMessages.RichMessageExtensions.Builder">
-            <inheritdoc cref="M:PolyBot.RichMessages.RichMessageExtensions.&lt;G&gt;$A67FBE03DA5AEC4DA3053E975D022932.Builder"/>
-        </member>
-        <member name="M:PolyBot.RichMessages.RichMessageExtensions.&lt;G&gt;$A67FBE03DA5AEC4DA3053E975D022932.Builder">
-            <summary>
-            Obtains <see cref="T:PolyBot.RichMessages.RichMessageBuilder"/>
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="T:PolyBot.RichMessages.InputRichMessageExtensions">
-            <summary>
-            Provides extensions for <see cref="T:Telegram.Bot.Types.InputRichMessage"/>
-            </summary>
-        </member>
-        <member name="M:PolyBot.RichMessages.InputRichMessageExtensions.Builder">
-            <inheritdoc cref="M:PolyBot.RichMessages.InputRichMessageExtensions.&lt;G&gt;$CDC850958CEE1D992BB744CFDBFC8EA4.Builder"/>
-        </member>
-        <member name="M:PolyBot.RichMessages.InputRichMessageExtensions.&lt;G&gt;$CDC850958CEE1D992BB744CFDBFC8EA4.Builder">
-            <summary>
-            Obtains <see cref="T:PolyBot.RichMessages.RichMessageBuilder"/>
-            </summary>
-            <returns></returns>
         </member>
         <member name="T:PolyBot.RichMessages.RichMessageBuilder">
             <summary>
@@ -1605,6 +1580,30 @@
         <member name="M:PolyBot.RichMessages.RichTextBuilder.Button(Telegram.Bot.Types.RichText,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.String,System.String,Telegram.Bot.Types.WebAppInfo,Telegram.Bot.Types.LoginUrl,System.String,System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat,Telegram.Bot.Types.CopyTextButton,System.Nullable{System.Boolean})">
             <summary>Appends strikethrough text.</summary>
         </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.CallbackButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a callback button with a plain-text label <paramref name="text"/> carrying <paramref name="data"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.CopyTextButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a button with label <paramref name="text"/> that copies <paramref name="copyText"/> to the clipboard when pressed.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.UrlButton(System.String,System.Uri,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a URL button with label <paramref name="text"/> that opens <paramref name="url"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.UrlButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a URL button with label <paramref name="text"/> that opens <paramref name="url"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.WebAppButton(System.String,Telegram.Bot.Types.WebAppInfo,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a button with label <paramref name="text"/> that opens the Web App described by <paramref name="webApp"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.SwitchInlineQueryButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a button with label <paramref name="text"/> that inserts the bot's username and <paramref name="switchInlineQuery"/> into the chat's input field.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.SwitchCurrentChatButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a button with label <paramref name="text"/> that inserts the bot's username and <paramref name="switchInlineQueryCurrentChat"/> into the current chat's input field.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.SwitchChosenChatButton(System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a button with label <paramref name="text"/> that prompts the user to select a chat and inserts the bot's username and the chosen inline query.</summary>
+        </member>
         <member name="M:PolyBot.RichMessages.RichTextBuilder.Button(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.String,System.String,Telegram.Bot.Types.WebAppInfo,Telegram.Bot.Types.LoginUrl,System.String,System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat,Telegram.Bot.Types.CopyTextButton,System.Nullable{System.Boolean})">
             <summary>
             Appends a button whose label text is built from the restricted button-text subset
@@ -1734,6 +1733,40 @@
         </member>
         <member name="M:PolyBot.RichMessages.RichTextFactory.ReferenceLink(Telegram.Bot.Types.RichText,System.String)">
             <summary>Wraps <paramref name="child"/> as a link to a named <see cref="M:PolyBot.RichMessages.RichTextFactory.Reference(Telegram.Bot.Types.RichText,System.String)"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.Button(Telegram.Bot.Types.RichText,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.String,System.String,Telegram.Bot.Types.WebAppInfo,Telegram.Bot.Types.LoginUrl,System.String,System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat,Telegram.Bot.Types.CopyTextButton,System.Nullable{System.Boolean})">
+            <summary>
+            Creates an inline button node from a pre-built label <paramref name="text"/> and exactly one action
+            (<paramref name="url"/>, <paramref name="callbackData"/>, <paramref name="webApp"/>, <paramref name="loginUrl"/>,
+            <paramref name="switchInlineQuery"/>, <paramref name="switchInlineQueryCurrentChat"/>,
+            <paramref name="switchInlineQueryChosenChat"/>, or <paramref name="copyText"/>).
+            </summary>
+            <remarks>Button text may contain only plain text, custom emoji and date/time entities; use
+            <see cref="T:PolyBot.RichMessages.RichButtonTextBuilder"/> to compose conforming labels.</remarks>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.CallbackButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Creates an inline callback button with a plain-text label <paramref name="text"/> carrying <paramref name="data"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.CopyTextButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Creates an inline button with label <paramref name="text"/> that copies <paramref name="copyText"/> to the clipboard when pressed.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.UrlButton(System.String,System.Uri,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Creates an inline URL button with label <paramref name="text"/> that opens <paramref name="url"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.UrlButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Creates an inline URL button with label <paramref name="text"/> that opens <paramref name="url"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.WebAppButton(System.String,Telegram.Bot.Types.WebAppInfo,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Creates an inline button with label <paramref name="text"/> that opens the Web App described by <paramref name="webApp"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.SwitchInlineQueryButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Creates an inline button with label <paramref name="text"/> that inserts the bot's username and <paramref name="switchInlineQuery"/> into the chat's input field.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.SwitchCurrentChatButton(System.String,System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Creates an inline button with label <paramref name="text"/> that inserts the bot's username and <paramref name="switchInlineQueryCurrentChat"/> into the current chat's input field.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextFactory.SwitchChosenChatButton(System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Creates an inline button with label <paramref name="text"/> that prompts the user to select a chat and inserts the bot's username and the chosen inline query.</summary>
         </member>
         <member name="M:PolyBot.RichMessages.RichTextFactory.Concat(Telegram.Bot.Types.RichText[])">
             <summary>Composes several nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>. A single node is returned as-is.</summary>
@@ -2650,6 +2683,509 @@
         <member name="T:Microsoft.CodeAnalysis.EmbeddedAttribute">
             <summary>
             A special attribute recognized by Roslyn, that marks a type as "embedded", meaning it won't ever be visible from other assemblies.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.CollectionBuilderAttribute.#ctor(System.Type,System.String)">
+            <summary>
+            Initialize the attribute to refer to the <paramref name="methodName"/> method on the <paramref name="builderType"/> type.
+            </summary>
+            <param name="builderType">The type of the builder to use to construct the collection.</param>
+            <param name="methodName">The name of the method on the builder to use to construct the collection.</param>
+            <remarks>
+            <paramref name="methodName"/> must refer to a static method that accepts a single parameter of
+            type <see cref="T:System.ReadOnlySpan`1"/> and returns an instance of the collection being built containing
+            a copy of the data from that span.  In future releases of .NET, additional patterns may be supported.
+            </remarks>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.CollectionBuilderAttribute.BuilderType">
+            <summary>
+            Gets the type of the builder to use to construct the collection.
+            </summary>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.CollectionBuilderAttribute.MethodName">
+            <summary>
+            Gets the name of the method on the builder to use to construct the collection.
+            </summary>
+            <remarks>
+            This should match the metadata name of the target method.
+            For example, this might be ".ctor" if targeting the type's constructor.
+            </remarks>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.ModuleInitializerAttribute">
+             <summary>
+             Used to indicate to the compiler that a method should be called
+             in its containing module's initializer.
+             </summary>
+             <remarks>
+             When one or more valid methods
+             with this attribute are found in a compilation, the compiler will
+             emit a module initializer which calls each of the attributed methods.
+            
+             Certain requirements are imposed on any method targeted with this attribute:
+             - The method must be `static`.
+             - The method must be an ordinary member method, as opposed to a property accessor, constructor, local function, etc.
+             - The method must be parameterless.
+             - The method must return `void`.
+             - The method must not be generic or be contained in a generic type.
+             - The method's effective accessibility must be `internal` or `public`.
+            
+             The specification for module initializers in the .NET runtime can be found here:
+             https://github.com/dotnet/runtime/blob/main/docs/design/specs/Ecma-335-Augments.md#module-initializer
+             </remarks>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute">
+            <summary>
+            Indicates that compiler support for a particular feature is required for the location where this attribute is applied.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute.#ctor(System.String)">
+            <summary>
+            Creates a new instance of the <see cref="T:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute"/> type.
+            </summary>
+            <param name="featureName">The name of the feature to indicate.</param>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute.FeatureName">
+            <summary>
+            The name of the compiler feature.
+            </summary>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute.IsOptional">
+            <summary>
+            If true, the compiler can choose to allow access to the location where this attribute is applied if it does not understand <see cref="P:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute.FeatureName"/>.
+            </summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute.RefStructs">
+            <summary>
+            The <see cref="P:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute.FeatureName"/> used for the ref structs C# feature.
+            </summary>
+        </member>
+        <member name="F:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute.RequiredMembers">
+            <summary>
+            The <see cref="P:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute.FeatureName"/> used for the required members C# feature.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.ParamCollectionAttribute">
+            <summary>
+            Indicates that a method will allow a variable number of arguments in its invocation.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.SkipLocalsInitAttribute">
+            <summary>
+            Used to indicate to the compiler that the <c>.locals init</c> flag should not be set in method headers.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.ExtensionMarkerAttribute">
+            <summary>
+            This attribute is used to mark extension members and associate them with a specific marker type (which provides detailed information about an extension block and its receiver parameter).
+            This attribute should not be used by developers in source code.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ExtensionMarkerAttribute.#ctor(System.String)">
+            <summary>Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.ExtensionMarkerAttribute"/> class.</summary>
+            <param name="name">The name of the marker type this extension member is associated with.</param>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.ExtensionMarkerAttribute.Name">
+            <summary>The name of the marker type this extension member is associated with.</summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute">
+            <summary>
+            An attribute that allows parameters to receive the expression of other parameters.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute"/> class.
+            </summary>
+            <param name="parameterName">The condition parameter value.</param>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute.ParameterName">
+            <summary>
+            Gets the parameter name the expression is retrieved from.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute">
+            <summary>
+            Specifies the priority of a member in overload resolution. When unspecified, the default priority is 0.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute"/> class.
+            </summary>
+            <param name="priority">The priority of the attributed member. Higher numbers are prioritized, lower numbers are deprioritized. 0 is the default if no attribute is present.</param>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute.Priority">
+            <summary>
+            The priority of the member.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.CompilerLoweringPreserveAttribute">
+            <summary>
+            When applied to an attribute class, instructs the compiler to flow applications of that attribute,
+            from source code down to compiler-generated symbols. This can help IL-based analysis tools.
+            </summary>
+            <remarks>
+            One example where this attribute applies is in C# primary constructor parameters. If an attribute
+            marked with <see cref="T:System.Runtime.CompilerServices.CompilerLoweringPreserveAttribute"/> gets applied to a primary constructor
+            parameter, the attribute will also be applied to any compiler-generated fields storing that parameter.
+            </remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.CompilerLoweringPreserveAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.CompilerLoweringPreserveAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.RequiredMemberAttribute">
+            <summary>
+            Specifies that a type has required members or that a member is required.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.IsExternalInit">
+            <summary>
+            Reserved to be used by the compiler for tracking metadata.
+            This class should not be used by developers in source code.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute">
+            <summary>
+            Indicates which arguments to a method involving an interpolated string handler should be passed to that handler.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute"/> class.
+            </summary>
+            <param name="argument">The name of the argument that should be passed to the handler.</param>
+            <remarks><see langword="null"/> may be used as the name of the receiver in an instance method.</remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute.#ctor(System.String[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute"/> class.
+            </summary>
+            <param name="arguments">The names of the arguments that should be passed to the handler.</param>
+            <remarks><see langword="null"/> may be used as the name of the receiver in an instance method.</remarks>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute.Arguments">
+            <summary>
+            Gets the names of the arguments that should be passed to the handler.
+            </summary>
+            <remarks><see langword="null"/> may be used as the name of the receiver in an instance method.</remarks>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.RequiresLocationAttribute">
+            <summary>
+            Reserved for use by a compiler for tracking metadata.
+            This attribute should not be used by developers in source code.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.InterpolatedStringHandlerAttribute">
+            <summary>
+            Indicates the attributed type is to be used as an interpolated string handler.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.Versioning.RequiresPreviewFeaturesAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.Versioning.RequiresPreviewFeaturesAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.Versioning.RequiresPreviewFeaturesAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.Versioning.RequiresPreviewFeaturesAttribute"/> class with the specified message.
+            </summary>
+            <param name="message">An optional message associated with this attribute instance.</param>
+        </member>
+        <member name="P:System.Runtime.Versioning.RequiresPreviewFeaturesAttribute.Message">
+            <summary>
+            Returns the optional message associated with this attribute instance.
+            </summary>
+        </member>
+        <member name="P:System.Runtime.Versioning.RequiresPreviewFeaturesAttribute.Url">
+            <summary>
+            Returns the optional URL associated with this attribute instance.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullAttribute">
+            <summary>
+            Specifies that an output may be null even if the corresponding type disallows it.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.UnscopedRefAttribute">
+            <summary>
+            Used to indicate a byref escapes and is not scoped.
+            </summary>
+            <remarks>
+            <para>
+            There are several cases where the C# compiler treats a <see langword="ref"/> as implicitly
+            <see langword="scoped"/> - where the compiler does not allow the <see langword="ref"/> to escape the method.
+            </para>
+            <para>
+            For example:
+            <list type="number">
+                <item><see langword="this"/> for <see langword="struct"/> instance methods.</item>
+                <item><see langword="ref"/> parameters that refer to <see langword="ref"/> <see langword="struct"/> types.</item>
+                <item><see langword="out"/> parameters.</item>
+            </list>
+            </para>
+            <para>
+            This attribute is used in those instances where the <see langword="ref"/> should be allowed to escape.
+            </para>
+            <para>
+            Applying this attribute, in any form, has impact on consumers of the applicable API. It is necessary for
+            API authors to understand the lifetime implications of applying this attribute and how it may impact their users.
+            </para>
+            </remarks>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute">
+            <summary>
+            Specifies that the method will not return if the associated Boolean parameter is passed the specified value.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.#ctor(System.Boolean)">
+            <summary>
+            Initializes the attribute with the specified parameter value.
+            </summary>
+            <param name="parameterValue">
+            The condition parameter value. Code after the method will be considered unreachable
+            by diagnostics if the argument to the associated parameter matches this value.
+            </param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.ParameterValue">
+            <summary>
+            Gets the condition parameter value.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute">
+            <summary>
+            Applied to a method that will never return under any circumstance.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute">
+            <summary>
+            Specifies the syntax used in a string.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.#ctor(System.String)">
+            <summary>
+            Initializes the <see cref="T:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute"/> with the identifier of the syntax used.
+            </summary>
+            <param name="syntax">The syntax identifier.</param>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.#ctor(System.String,System.Object[])">
+            <summary>Initializes the <see cref="T:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute"/> with the identifier of the syntax used.</summary>
+            <param name="syntax">The syntax identifier.</param>
+            <param name="arguments">Optional arguments associated with the specific syntax employed.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.Syntax">
+            <summary>Gets the identifier of the syntax used.</summary>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.Arguments">
+            <summary>Optional arguments associated with the specific syntax employed.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.CompositeFormat">
+            <summary>The syntax identifier for strings containing composite formats for string formatting.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.DateOnlyFormat">
+            <summary>The syntax identifier for strings containing date format specifiers.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.DateTimeFormat">
+            <summary>The syntax identifier for strings containing date and time format specifiers.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.EnumFormat">
+            <summary>The syntax identifier for strings containing <see cref="T:System.Enum"/> format specifiers.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.GuidFormat">
+            <summary>The syntax identifier for strings containing <see cref="T:System.Guid"/> format specifiers.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.Json">
+            <summary>The syntax identifier for strings containing JavaScript Object Notation (JSON).</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.NumericFormat">
+            <summary>The syntax identifier for strings containing numeric format specifiers.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.Regex">
+            <summary>The syntax identifier for strings containing regular expressions.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.TimeOnlyFormat">
+            <summary>The syntax identifier for strings containing time format specifiers.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.TimeSpanFormat">
+            <summary>The syntax identifier for strings containing <see cref="T:System.TimeSpan"/> format specifiers.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.Uri">
+            <summary>The syntax identifier for strings containing URIs.</summary>
+        </member>
+        <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.Xml">
+            <summary>The syntax identifier for strings containing XML.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute">
+            <summary>
+            Specifies that the method or property will ensure that the listed field and property
+            members have not-null values when returning with the specified return value condition.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.#ctor(System.Boolean,System.String)">
+            <summary>
+            Initializes the attribute with the specified return value condition and a field or property member.
+            </summary>
+            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter will not be null.</param>
+            <param name="member">The field or property member that is promised to be not-null.</param>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.#ctor(System.Boolean,System.String[])">
+            <summary>
+            Initializes the attribute with the specified return value condition and list of field and property members.
+            </summary>
+            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter will not be null.</param>
+            <param name="members">The list of field and property members that are promised to be not-null.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.ReturnValue">
+            <summary>
+            Gets the return value condition.
+            </summary>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.Members">
+            <summary>
+            Gets field or property member names.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.ExperimentalAttribute">
+            <summary>
+            Indicates that an API is experimental and it may change in the future.
+            </summary>
+            <remarks>
+            This attribute allows call sites to be flagged with a diagnostic that indicates that an experimental
+            feature is used. Authors can use this attribute to ship preview features in their assemblies.
+            </remarks>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Diagnostics.CodeAnalysis.ExperimentalAttribute"/> class,
+            specifying the ID that the compiler will use when reporting a use of the API the attribute applies to.
+            </summary>
+            <param name="diagnosticId">The ID that the compiler will use when reporting a use of the API the attribute applies to.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.DiagnosticId">
+            <summary>
+            Gets the ID that the compiler will use when reporting a use of the API the attribute applies to.
+            </summary>
+            <value>The unique diagnostic ID.</value>
+            <remarks>
+            The diagnostic ID is shown in build output for warnings and errors.
+            <para>This property represents the unique ID that can be used to suppress the warnings or errors, if needed.</para>
+            </remarks>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.ExperimentalAttribute.UrlFormat">
+            <summary>
+            Gets or sets the URL for corresponding documentation.
+            The API accepts a format string instead of an actual URL, creating a generic URL that includes the diagnostic ID.
+            </summary>
+            <value>The format string that represents a URL to corresponding documentation.</value>
+            <remarks>An example format string is <c>https://contoso.com/obsoletion-warnings/{0}</c>.</remarks>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.ConstantExpectedAttribute">
+            <summary>
+            Indicates that the specified method parameter expects a constant.
+            </summary>
+            <remarks>
+            This can be used to inform tooling that a constant should be used as an argument for the annotated parameter.
+            </remarks>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.ConstantExpectedAttribute.Min">
+            <summary>
+            Indicates the minimum bound of the expected constant, inclusive.
+            </summary>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.ConstantExpectedAttribute.Max">
+            <summary>
+            Indicates the maximum bound of the expected constant, inclusive.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute">
+            <summary>
+            Specifies that this constructor sets all required members for the current type,
+            and callers do not need to set any required members themselves.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute">
+            <summary>
+            Specifies that the output will be non-null if the named parameter is non-null.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.#ctor(System.String)">
+            <summary>
+            Initializes the attribute with the associated parameter name.
+            </summary>
+            <param name="parameterName">The associated parameter name. The output will be non-null if the argument to the parameter specified is non-null.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.ParameterName">
+            <summary>
+            Gets the associated parameter name.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute">
+            <summary>
+            Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue"/>, the parameter will not be null even if the corresponding type allows it.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>
+            Initializes the attribute with the specified return value condition.
+            </summary>
+            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter will not be null.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MemberNotNullAttribute">
+            <summary>
+            Specifies that the method or property will ensure that the listed field and property members have not-null values.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullAttribute.#ctor(System.String)">
+            <summary>
+            Initializes the attribute with a field or property member.
+            </summary>
+            <param name="member">The field or property member that is promised to be not-null.</param>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullAttribute.#ctor(System.String[])">
+            <summary>
+            Initializes the attribute with the list of field and property members.
+            </summary>
+            <param name="members">The list of field and property members that are promised to be not-null.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullAttribute.Members">
+            <summary>
+            Gets field or property member names.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.AllowNullAttribute">
+            <summary>
+            Specifies that null is allowed as an input even if the corresponding type disallows it.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DisallowNullAttribute">
+            <summary>
+            Specifies that null is disallowed as an input even if the corresponding type allows it.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute">
+            <summary>
+            Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue"/>, the parameter may be null even if the corresponding type disallows it.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>
+            Initializes the attribute with the specified return value condition.
+            </summary>
+            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter may be null.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue">
+            <summary>
+            Gets the return value condition.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullAttribute">
+            <summary>
+            Specifies that an output will not be null even if the corresponding type allows it.
+            Specifies that an input argument was not null when the call returns.
             </summary>
         </member>
     </members>
