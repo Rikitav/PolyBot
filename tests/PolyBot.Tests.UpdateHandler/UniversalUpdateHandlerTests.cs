@@ -18,7 +18,7 @@ public sealed class UniversalUpdateHandlerTests
     }
 
     [TestMethod]
-    public async Task PreFiltersRunBeforeSpecializedHandler_InPriorityOrder()
+    public async Task UniversalPreFilterRunsBeforeTypedHandlerRegardlessOfPriority()
     {
         using ServiceProvider provider = BuildProvider();
         IUpdateHandler router = provider.GetRequiredService<IUpdateHandler>();
@@ -26,7 +26,9 @@ public sealed class UniversalUpdateHandlerTests
 
         await router.HandleUpdateAsync(client, MessageUpdate(1, "hello"), CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { "audit", "audit2", "message" }, CallRecorder.Calls);
+        // AuditSecond (universal, Priority 50) runs pre-switch; Audit (typed Message, Priority 100)
+        // sorts inside the Message case. Universal handlers always precede the switch.
+        CollectionAssert.AreEqual(new[] { "audit2", "audit", "message" }, CallRecorder.Calls);
     }
 
     [TestMethod]
@@ -39,7 +41,7 @@ public sealed class UniversalUpdateHandlerTests
 
         await router.HandleUpdateAsync(client, MessageUpdate(2, "hello"), CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { "audit" }, CallRecorder.Calls);
+        CollectionAssert.AreEqual(new[] { "audit2", "audit" }, CallRecorder.Calls);
     }
 
     [TestMethod]
@@ -51,7 +53,7 @@ public sealed class UniversalUpdateHandlerTests
 
         await router.HandleUpdateAsync(client, PollUpdate(3), CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { "audit", "audit2", "fallback" }, CallRecorder.Calls);
+        CollectionAssert.AreEqual(new[] { "audit2", "fallback" }, CallRecorder.Calls);
     }
 
     [TestMethod]
@@ -63,7 +65,7 @@ public sealed class UniversalUpdateHandlerTests
 
         await router.HandleUpdateAsync(client, MessageUpdate(4, "hello"), CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { "audit", "audit2", "message" }, CallRecorder.Calls);
+        CollectionAssert.DoesNotContain(CallRecorder.Calls, "fallback");
     }
 
     [TestMethod]

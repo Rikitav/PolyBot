@@ -1298,6 +1298,33 @@
             Creates a caption (text + optional credit) shared by media/collage/slideshow/map blocks.
             </summary>
         </member>
+        <member name="T:PolyBot.RichMessages.RichButtonTextBuilder">
+            <summary>
+            Fluent builder for the rich text inside a <see cref="T:Telegram.Bot.Types.RichMessageButton"/> (inline or block-level).
+            The Bot API restricts button text to a subset of rich text entities: only plain text,
+            <see cref="T:Telegram.Bot.Types.RichTextCustomEmoji"/> and <see cref="T:Telegram.Bot.Types.RichTextDateTime"/> are allowed. This builder
+            exposes exactly that subset, so non-conforming nodes cannot be composed in the first place.
+            </summary>
+            <remarks>
+            For unrestricted rich text use <see cref="T:PolyBot.RichMessages.RichTextBuilder"/>; pass the result anywhere a
+            <see cref="T:Telegram.Bot.Types.RichText"/> is accepted (the conversion is implicit).
+            </remarks>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichButtonTextBuilder.Plain(System.String)">
+            <summary>Appends plain text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichButtonTextBuilder.CustomEmoji(System.String,System.String)">
+            <summary>Appends a custom emoji with the given fallback text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichButtonTextBuilder.DateTime(System.String,System.DateTime,System.String)">
+            <summary>Appends a date/time rendered from a Unix timestamp.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichButtonTextBuilder.Build">
+            <summary>Builds the accumulated nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichButtonTextBuilder.op_Implicit(PolyBot.RichMessages.RichButtonTextBuilder)~Telegram.Bot.Types.RichText">
+            <summary>Builds the accumulated nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>.</summary>
+        </member>
         <member name="T:PolyBot.RichMessages.RichMessageExtensions">
             <summary>
             Provides extensions for <see cref="T:Telegram.Bot.Types.RichMessage"/>
@@ -1577,6 +1604,36 @@
         </member>
         <member name="M:PolyBot.RichMessages.RichTextBuilder.Button(Telegram.Bot.Types.RichText,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.String,System.String,Telegram.Bot.Types.WebAppInfo,Telegram.Bot.Types.LoginUrl,System.String,System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat,Telegram.Bot.Types.CopyTextButton,System.Nullable{System.Boolean})">
             <summary>Appends strikethrough text.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.Button(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.String,System.String,Telegram.Bot.Types.WebAppInfo,Telegram.Bot.Types.LoginUrl,System.String,System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat,Telegram.Bot.Types.CopyTextButton,System.Nullable{System.Boolean})">
+            <summary>
+            Appends a button whose label text is built from the restricted button-text subset
+            (plain text, custom emoji, date/time — the only entities Bot API allows inside button text).
+            </summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.CallbackButton(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a callback button whose label text is built from the restricted button-text subset.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.CopyTextButton(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a copy-text button whose label text is built from the restricted button-text subset.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.UrlButton(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},System.Uri,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a URL button whose label text is built from the restricted button-text subset.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.UrlButton(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a URL button whose label text is built from the restricted button-text subset.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.WebAppButton(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},Telegram.Bot.Types.WebAppInfo,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a Web App button whose label text is built from the restricted button-text subset.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.SwitchInlineQueryButton(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a switch-inline-query button whose label text is built from the restricted button-text subset.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.SwitchCurrentChatButton(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},System.String,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a switch-current-chat button whose label text is built from the restricted button-text subset.</summary>
+        </member>
+        <member name="M:PolyBot.RichMessages.RichTextBuilder.SwitchChosenChatButton(System.Action{PolyBot.RichMessages.RichButtonTextBuilder},Telegram.Bot.Types.SwitchInlineQueryChosenChat,System.Nullable{Telegram.Bot.Types.Enums.RichMessageButtonStyle},System.Boolean)">
+            <summary>Appends a switch-chosen-chat button whose label text is built from the restricted button-text subset.</summary>
         </member>
         <member name="M:PolyBot.RichMessages.RichTextBuilder.Add(Telegram.Bot.Types.RichText)">
             <summary>Appends a pre-built node.</summary>

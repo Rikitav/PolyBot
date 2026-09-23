@@ -172,6 +172,74 @@ public sealed class RichTextBuilder
     public RichTextBuilder SwitchChosenChatButton(string text, SwitchInlineQueryChosenChat switchInlineQueryChosenChat, RichMessageButtonStyle? style = null, bool disabled = false)
         => Add(RichTextFactory.Button(text, switchInlineQueryChosenChat: switchInlineQueryChosenChat, style: style, disabled: disabled));
 
+    /// <summary>
+    /// Appends a button whose label text is built from the restricted button-text subset
+    /// (plain text, custom emoji, date/time — the only entities Bot API allows inside button text).
+    /// </summary>
+    public RichTextBuilder Button(
+        Action<RichButtonTextBuilder> configure,
+        RichMessageButtonStyle? style = null,
+        string? url = null,
+        string? callbackData = null,
+        WebAppInfo? webApp = null,
+        LoginUrl? loginUrl = null,
+        string? switchInlineQuery = null,
+        string? switchInlineQueryCurrentChat = null,
+        SwitchInlineQueryChosenChat? switchInlineQueryChosenChat = null,
+        CopyTextButton? copyText = null,
+        bool? disabled = null
+    ) => Button(
+        BuildButtonText(configure),
+        style,
+        url,
+        callbackData,
+        webApp,
+        loginUrl,
+        switchInlineQuery,
+        switchInlineQueryCurrentChat,
+        switchInlineQueryChosenChat,
+        copyText,
+        disabled);
+
+    /// <summary>Appends a callback button whose label text is built from the restricted button-text subset.</summary>
+    public RichTextBuilder CallbackButton(Action<RichButtonTextBuilder> configure, string data, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(BuildButtonText(configure), callbackData: data, style: style, disabled: disabled));
+
+    /// <summary>Appends a copy-text button whose label text is built from the restricted button-text subset.</summary>
+    public RichTextBuilder CopyTextButton(Action<RichButtonTextBuilder> configure, string copyText, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(BuildButtonText(configure), copyText: copyText, style: style, disabled: disabled));
+
+    /// <summary>Appends a URL button whose label text is built from the restricted button-text subset.</summary>
+    public RichTextBuilder UrlButton(Action<RichButtonTextBuilder> configure, Uri url, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(BuildButtonText(configure), url: url is null ? null : url.ToString(), style: style, disabled: disabled));
+
+    /// <summary>Appends a URL button whose label text is built from the restricted button-text subset.</summary>
+    public RichTextBuilder UrlButton(Action<RichButtonTextBuilder> configure, string url, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(BuildButtonText(configure), url: url, style: style, disabled: disabled));
+
+    /// <summary>Appends a Web App button whose label text is built from the restricted button-text subset.</summary>
+    public RichTextBuilder WebAppButton(Action<RichButtonTextBuilder> configure, WebAppInfo webApp, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(BuildButtonText(configure), webApp: webApp, style: style, disabled: disabled));
+
+    /// <summary>Appends a switch-inline-query button whose label text is built from the restricted button-text subset.</summary>
+    public RichTextBuilder SwitchInlineQueryButton(Action<RichButtonTextBuilder> configure, string switchInlineQuery, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(BuildButtonText(configure), switchInlineQuery: switchInlineQuery, style: style, disabled: disabled));
+
+    /// <summary>Appends a switch-current-chat button whose label text is built from the restricted button-text subset.</summary>
+    public RichTextBuilder SwitchCurrentChatButton(Action<RichButtonTextBuilder> configure, string switchInlineQueryCurrentChat, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(BuildButtonText(configure), switchInlineQueryCurrentChat: switchInlineQueryCurrentChat, style: style, disabled: disabled));
+
+    /// <summary>Appends a switch-chosen-chat button whose label text is built from the restricted button-text subset.</summary>
+    public RichTextBuilder SwitchChosenChatButton(Action<RichButtonTextBuilder> configure, SwitchInlineQueryChosenChat switchInlineQueryChosenChat, RichMessageButtonStyle? style = null, bool disabled = false)
+        => Add(RichTextFactory.Button(BuildButtonText(configure), switchInlineQueryChosenChat: switchInlineQueryChosenChat, style: style, disabled: disabled));
+
+    private static RichText BuildButtonText(Action<RichButtonTextBuilder> configure)
+    {
+        RichButtonTextBuilder builder = new();
+        configure(builder);
+        return builder.Build();
+    }
+
     /// <summary>Appends a pre-built node.</summary>
     public RichTextBuilder Add(RichText node)
     {
