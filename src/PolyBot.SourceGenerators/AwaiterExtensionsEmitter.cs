@@ -31,20 +31,20 @@ internal static class AwaiterExtensionsEmitter
         {
             if (filter.DtoBaseName is not null && baseNameToDto.TryGetValue(filter.DtoBaseName, out string? dtoFqn))
             {
-                methods.Add(BuildWithFilterMethod(filter, dtoFqn, generic: false));
+                methods.AddRange(BuildWithFilterMethods(filter, dtoFqn, generic: false));
             }
             else
             {
                 // Implements IUpdateFilter directly (no generated DTO base): generic form.
-                methods.Add(BuildWithFilterMethod(filter, dtoFqn: null, generic: true));
+                methods.AddRange(BuildWithFilterMethods(filter, dtoFqn: null, generic: true));
             }
         }
 
         ClassDeclarationSyntax extensionsClass = SyntaxFactory.ClassDeclaration("PolyBotAwaiterExtensions")
+            .AddModifiers(SyntaxKind.PublicKeyword, SyntaxKind.StaticKeyword, SyntaxKind.PartialKeyword)
+            .AddMembers(methods.ToArray())
             .WithLeadingTrivia(EmitterSyntax.DocComment(
-                "<summary>Generated <c>With*</c> filter compositions for conversational awaits, one per discovered concrete filter.</summary>"))
-            .AddModifiers(SyntaxKind.PublicKeyword, SyntaxKind.StaticKeyword)
-            .AddMembers(methods.ToArray());
+                "<summary>Generated <c>With*</c> filter compositions for conversational awaits, one per discovered concrete filter.</summary>"));
 
         return EmitterSyntax.RenderPolyBotFile("PolyBot.Attributes", extensionsClass);
     }
@@ -65,11 +65,36 @@ internal static class AwaiterExtensionsEmitter
         return map;
     }
 
-    private static MethodDeclarationSyntax BuildWithFilterMethod(FilterClassModel filter, string? dtoFqn, bool generic)
+    private static List<MethodDeclarationSyntax> BuildWithFilterMethods(FilterClassModel filter, string? dtoFqn, bool generic)
+    {
+        List<MethodDeclarationSyntax> methods = new();
+        if (filter.HasParameterlessUsage)
+        {
+            methods.Add(BuildWithFilterMethod(filter, dtoFqn, generic, parameters: null));
+        }
+
+        foreach (FilterCtorModel ctor in filter.Ctors.Items)
+        {
+            if (ctor.Params.Count == 0)
+            {
+                continue; // Equivalent to the parameterless form.
+            }
+
+            methods.Add(BuildWithFilterMethod(filter, dtoFqn, generic, ctor.Params.Items));
+        }
+
+        return methods;
+    }
+
+    private static MethodDeclarationSyntax BuildWithFilterMethod(FilterClassModel filter, string? dtoFqn, bool generic, IReadOnlyList<FilterParamModel>? parameters)
     {
         string builderType = generic
             ? "global::PolyBot.Awaits.UpdateAwaiterBuilder<TUpdate>"
             : $"global::PolyBot.Awaits.UpdateAwaiterBuilder<{dtoFqn}>";
+
+        string construction = parameters is null
+            ? $"builder.WithFilter<{filter.TypeFqn}>()"
+            : $"builder.WithFilter(new {filter.TypeFqn}({string.Join(", ", parameters.Select(static p => p.Name))}))";
 
         MethodDeclarationSyntax method = SyntaxFactory.MethodDeclaration(
                 returnType: SyntaxFactory.ParseTypeName(builderType),
@@ -80,12 +105,30 @@ internal static class AwaiterExtensionsEmitter
                     .AddModifiers(SyntaxKind.ThisKeyword)
                     .WithType(SyntaxFactory.ParseTypeName(builderType)))
             .WithExpressionBody(SyntaxFactory.ArrowExpressionClause(
-                SyntaxFactory.ParseExpression($"builder.WithFilter<{filter.TypeFqn}>()")))
+                SyntaxFactory.ParseExpression(construction)))
             .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))
             .WithLeadingTrivia(EmitterSyntax.DocComment(
                 "<summary>",
-                $"AND-composes the <c>{filter.ShortName}</c> filter into the await.",
+                parameters is null
+                    ? $"AND-composes the <c>{filter.ShortName}</c> filter into the await."
+                    : $"AND-composes the <c>{filter.ShortName}</c> filter into the await, constructing it with the given arguments.",
                 "</summary>"));
+
+        if (parameters is not null)
+        {
+            foreach (FilterParamModel parameter in parameters)
+            {
+                ParameterSyntax parameterSyntax = SyntaxFactory.Parameter(SyntaxFactory.Identifier(parameter.Name))
+                    .WithType(SyntaxFactory.ParseTypeName(parameter.TypeFqn));
+                if (parameter.IsOptional)
+                {
+                    parameterSyntax = parameterSyntax.WithDefault(
+                        SyntaxFactory.EqualsValueClause(SyntaxFactory.ParseExpression(parameter.DefaultLiteral ?? "null")));
+                }
+
+                method = method.AddParameterListParameters(parameterSyntax);
+            }
+        }
 
         if (generic)
         {

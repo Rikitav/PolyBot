@@ -114,9 +114,11 @@ public sealed class NonEmptyTextFilterAttribute : Attribute { }
 
 All generated filter attributes go into the `PolyBot.Attributes` namespace and use `AllowMultiple = true`.
 
+When the filter has public constructors with attribute-legal parameters (primitives, `string`, enums, `Type`, arrays), the wrapper mirrors them: one attribute constructor per mirrored signature, plus a settable property per parameter so optional parameters can also be set by name. `PolyBot.csproj` itself runs the generator as an analyzer, so the built-in `PolyBot.Filters` ship with their wrappers in the library assembly.
+
 ### `AwaiterExtensionsEmitter`
 
-Generates `PolyBotAwaiterExtensions.g.cs` (namespace `PolyBot.Attributes`) with one `With{FilterName}(this UpdateAwaiterBuilder<TDto>)` extension per discovered concrete filter. The `With*` method is typed to the filter's DTO base (`MessageFilter` → `UpdateAwaiterBuilder<Message>`) when possible, or generic (`UpdateAwaiterBuilder<TUpdate>`) otherwise.
+Generates `PolyBotAwaiterExtensions.g.cs` (namespace `PolyBot.Attributes`) with one `With{FilterName}(this UpdateAwaiterBuilder<TDto>)` extension per discovered concrete filter. The `With*` method is typed to the filter's DTO base (`MessageFilter` → `UpdateAwaiterBuilder<Message>`) when possible, or generic (`UpdateAwaiterBuilder<TUpdate>`) otherwise. Filters with attribute-legal constructor parameters additionally get one `With*` overload per mirrored constructor, constructing the filter with the supplied arguments (`builder.WithFilter(new TFilter(args))`).
 
 <Note>
 The `WaitFor{UpdateType}Async(this IUpdateAwaiter, TimeSpan?)` entry-point extensions are **not** emitted by `PolyBotGenerator`. They are emitted by the companion `PolyBot.InternalsGenerators` project directly into the `PolyBot` library assembly (also into namespace `PolyBot.Attributes`, class `PolyBotAwaiterExtensions`). Both generators emit into the same class name, which is a `partial` class split across two generated files.

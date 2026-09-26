@@ -406,6 +406,45 @@ public sealed partial class TestHandlers
         return Result.Handled();
     }
 
+    // Migrated PolyBot.Filters: parameterized attribute (positional args).
+    [MessageHandler(Priority = -7)]
+    [TextEqualsFilter("filtertrigger")]
+    public static async Task<Result> OnFilterTrigger(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "filter-trigger", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    // Migrated PolyBot.Filters: parameterized attribute with a named optional argument.
+    [MessageHandler(Priority = -7)]
+    [TextStartsWithFilter("pre", Comparison = StringComparison.Ordinal)]
+    public static async Task<Result> OnOrdinalPrefix(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "ordinal-prefix", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    // Migrated PolyBot.Filters: parameterless attribute.
+    [MessageHandler(Priority = -7)]
+    [FromBotFilter]
+    public static async Task<Result> OnFromBot(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "from-bot", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    // Migrated PolyBot.Filters: With* await extension with constructor arguments.
+    [MessageHandler(Priority = -7)]
+    [Command(Aliases = ["filterawait"], IsHidden = true)]
+    public static async Task<Result> OnFilterAwait(Message msg, IUpdateAwaiter awaiter, ITelegramBotClient bot, CancellationToken ct)
+    {
+        Message? next = await awaiter.WaitForMessageAsync()
+            .WithTextEqualsFilter("awaittrigger")
+            .ByUserId(ct);
+        await bot.SendMessage(msg.Chat.Id, $"filter-await:{next?.Text}", cancellationToken: ct);
+        return Result.Handled();
+    }
+
     [ExceptionHandler]
     public static async Task OnError(Exception exception, HandleErrorSource source, ITelegramBotClient bot, CancellationToken ct)
     {

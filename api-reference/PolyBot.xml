@@ -501,6 +501,7 @@
             <summary>
             One <c>WaitFor*</c> method per Telegram.Bot update type.
             </summary>
+            <summary>Generated <c>With*</c> filter compositions for conversational awaits, one per discovered concrete filter.</summary>
         </member>
         <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForMessageAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
             <summary>
@@ -635,6 +636,1151 @@
         <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WaitForStoppedMessageGenerationAsync(PolyBot.Awaits.IUpdateAwaiter,System.Nullable{System.TimeSpan})">
             <summary>
             Starts a conversational await for the update type <c>StoppedMessageGeneration</c>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithCallbackDataFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.CallbackQuery},System.String)">
+            <summary>
+            AND-composes the <c>CallbackDataFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithCallbackDataContainsFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.CallbackQuery},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>CallbackDataContainsFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithCallbackDataStartsWithFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.CallbackQuery},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>CallbackDataStartsWithFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithCallbackDataEndsWithFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.CallbackQuery},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>CallbackDataEndsWithFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithCallbackInlineIdFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.CallbackQuery},System.String)">
+            <summary>
+            AND-composes the <c>CallbackInlineIdFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithCallbackRegexFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.CallbackQuery},System.String,System.Text.RegularExpressions.RegexOptions)">
+            <summary>
+            AND-composes the <c>CallbackRegexFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithChatJoinRequestInviteLinkFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.ChatJoinRequest},System.String)">
+            <summary>
+            AND-composes the <c>ChatJoinRequestInviteLinkFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithChosenInlineResultIdFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.ChosenInlineResult},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>ChosenInlineResultIdFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithChosenInlineResultQueryFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.ChosenInlineResult},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>ChosenInlineResultQueryFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithEnvironmentVariableFilter``1(PolyBot.Awaits.UpdateAwaiterBuilder{``0},System.String)">
+            <summary>
+            AND-composes the <c>EnvironmentVariableFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithEnvironmentVariableFilter``1(PolyBot.Awaits.UpdateAwaiterBuilder{``0},System.String,System.String)">
+            <summary>
+            AND-composes the <c>EnvironmentVariableFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithEnvironmentVariableFilter``1(PolyBot.Awaits.UpdateAwaiterBuilder{``0},System.String,System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>EnvironmentVariableFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithEnvironmentVariableFilter``1(PolyBot.Awaits.UpdateAwaiterBuilder{``0},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>EnvironmentVariableFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithInlineQueryTextFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.InlineQuery},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>InlineQueryTextFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithInlineQueryContainsFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.InlineQuery},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>InlineQueryContainsFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithInlineQueryStartsWithFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.InlineQuery},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>InlineQueryStartsWithFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithInlineQueryEndsWithFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.InlineQuery},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>InlineQueryEndsWithFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithInlineQueryRegexFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.InlineQuery},System.String,System.Text.RegularExpressions.RegexOptions)">
+            <summary>
+            AND-composes the <c>InlineQueryRegexFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMentionedFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>MentionedFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMentionedFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String)">
+            <summary>
+            AND-composes the <c>MentionedFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithChatIsForumFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>ChatIsForumFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMessageChatIdFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.Int64)">
+            <summary>
+            AND-composes the <c>MessageChatIdFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithChatTypeFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},Telegram.Bot.Types.Enums.ChatType)">
+            <summary>
+            AND-composes the <c>ChatTypeFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithChatTitleFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>ChatTitleFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithChatUsernameFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>ChatUsernameFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithChatNameFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>ChatNameFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMessageTypeFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},Telegram.Bot.Types.Enums.MessageType)">
+            <summary>
+            AND-composes the <c>MessageTypeFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithIsAutomaticForwardMessageFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>IsAutomaticForwardMessageFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithIsFromOfflineMessageFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>IsFromOfflineMessageFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithIsServiceMessageFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>IsServiceMessageFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithIsCommunityChatAddedMessageFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>IsCommunityChatAddedMessageFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithIsCommunityChatRemovedMessageFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>IsCommunityChatRemovedMessageFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithIsTopicMessageFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>IsTopicMessageFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithDiceThrowedFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.Int32)">
+            <summary>
+            AND-composes the <c>DiceThrowedFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithDiceThrowedFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},PolyBot.Filters.DiceType,System.Int32)">
+            <summary>
+            AND-composes the <c>DiceThrowedFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMessageRegexFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.Text.RegularExpressions.RegexOptions)">
+            <summary>
+            AND-composes the <c>MessageRegexFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMessageHasEntityFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},Telegram.Bot.Types.Enums.MessageEntityType)">
+            <summary>
+            AND-composes the <c>MessageHasEntityFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMessageHasEntityFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},Telegram.Bot.Types.Enums.MessageEntityType,System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>MessageHasEntityFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMessageHasReplyFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>MessageHasReplyFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMessageHasReplyFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.Int32)">
+            <summary>
+            AND-composes the <c>MessageHasReplyFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithMeRepliedFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>MeRepliedFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithFromUsernameFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>FromUsernameFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithFromUserFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>FromUserFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithFromUserIdFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.Int64)">
+            <summary>
+            AND-composes the <c>FromUserIdFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithFromBotFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>FromBotFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithFromPremiumUserFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>FromPremiumUserFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithTextStartsWithFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>TextStartsWithFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithTextEndsWithFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>TextEndsWithFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithTextContainsFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>TextContainsFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithTextEqualsFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.StringComparison)">
+            <summary>
+            AND-composes the <c>TextEqualsFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithTextNotNullOrEmptyFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message})">
+            <summary>
+            AND-composes the <c>TextNotNullOrEmptyFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithTextContainsWordFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Message},System.String,System.StringComparison,System.Int32)">
+            <summary>
+            AND-composes the <c>TextContainsWordFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithPollTypeFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Poll},Telegram.Bot.Types.Enums.PollType)">
+            <summary>
+            AND-composes the <c>PollTypeFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithPollIsClosedFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Poll})">
+            <summary>
+            AND-composes the <c>PollIsClosedFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithPollIsClosedFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Poll},System.Boolean)">
+            <summary>
+            AND-composes the <c>PollIsClosedFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithPollIsAnonymousFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Poll})">
+            <summary>
+            AND-composes the <c>PollIsAnonymousFilter</c> filter into the await.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PolyBotAwaiterExtensions.WithPollIsAnonymousFilter(PolyBot.Awaits.UpdateAwaiterBuilder{Telegram.Bot.Types.Poll},System.Boolean)">
+            <summary>
+            AND-composes the <c>PollIsAnonymousFilter</c> filter into the await, constructing it with the given arguments.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CallbackDataFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>CallbackDataFilter</c> filter (see <c>global::PolyBot.Filters.CallbackDataFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.CallbackDataFilterAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.CallbackDataFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackDataFilterAttribute.Data">
+            <summary>
+            Gets or sets the <c>data</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CallbackDataContainsFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>CallbackDataContainsFilter</c> filter (see <c>global::PolyBot.Filters.CallbackDataContainsFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.CallbackDataContainsFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.CallbackDataContainsFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackDataContainsFilterAttribute.Value">
+            <summary>
+            Gets or sets the <c>value</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackDataContainsFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CallbackDataStartsWithFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>CallbackDataStartsWithFilter</c> filter (see <c>global::PolyBot.Filters.CallbackDataStartsWithFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.CallbackDataStartsWithFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.CallbackDataStartsWithFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackDataStartsWithFilterAttribute.Value">
+            <summary>
+            Gets or sets the <c>value</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackDataStartsWithFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CallbackDataEndsWithFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>CallbackDataEndsWithFilter</c> filter (see <c>global::PolyBot.Filters.CallbackDataEndsWithFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.CallbackDataEndsWithFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.CallbackDataEndsWithFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackDataEndsWithFilterAttribute.Value">
+            <summary>
+            Gets or sets the <c>value</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackDataEndsWithFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CallbackInlineIdFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>CallbackInlineIdFilter</c> filter (see <c>global::PolyBot.Filters.CallbackInlineIdFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.CallbackInlineIdFilterAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.CallbackInlineIdFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackInlineIdFilterAttribute.InlineMessageId">
+            <summary>
+            Gets or sets the <c>inlineMessageId</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.CallbackRegexFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>CallbackRegexFilter</c> filter (see <c>global::PolyBot.Filters.CallbackRegexFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.CallbackRegexFilterAttribute.#ctor(System.String,System.Text.RegularExpressions.RegexOptions)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.CallbackRegexFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackRegexFilterAttribute.Pattern">
+            <summary>
+            Gets or sets the <c>pattern</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.CallbackRegexFilterAttribute.RegexOptions">
+            <summary>
+            Gets or sets the <c>regexOptions</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChatJoinRequestInviteLinkFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>ChatJoinRequestInviteLinkFilter</c> filter (see <c>global::PolyBot.Filters.ChatJoinRequestInviteLinkFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ChatJoinRequestInviteLinkFilterAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.ChatJoinRequestInviteLinkFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChatJoinRequestInviteLinkFilterAttribute.InviteLink">
+            <summary>
+            Gets or sets the <c>inviteLink</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChosenInlineResultIdFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>ChosenInlineResultIdFilter</c> filter (see <c>global::PolyBot.Filters.ChosenInlineResultIdFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ChosenInlineResultIdFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.ChosenInlineResultIdFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChosenInlineResultIdFilterAttribute.ResultId">
+            <summary>
+            Gets or sets the <c>resultId</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChosenInlineResultIdFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChosenInlineResultQueryFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>ChosenInlineResultQueryFilter</c> filter (see <c>global::PolyBot.Filters.ChosenInlineResultQueryFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ChosenInlineResultQueryFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.ChosenInlineResultQueryFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChosenInlineResultQueryFilterAttribute.Query">
+            <summary>
+            Gets or sets the <c>query</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChosenInlineResultQueryFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.EnvironmentVariableFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>EnvironmentVariableFilter</c> filter (see <c>global::PolyBot.Filters.EnvironmentVariableFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.EnvironmentVariableFilterAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.EnvironmentVariableFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.EnvironmentVariableFilterAttribute.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.EnvironmentVariableFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.EnvironmentVariableFilterAttribute.#ctor(System.String,System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.EnvironmentVariableFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.EnvironmentVariableFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.EnvironmentVariableFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.EnvironmentVariableFilterAttribute.Variable">
+            <summary>
+            Gets or sets the <c>variable</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.EnvironmentVariableFilterAttribute.Value">
+            <summary>
+            Gets or sets the <c>value</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.EnvironmentVariableFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.InlineQueryTextFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>InlineQueryTextFilter</c> filter (see <c>global::PolyBot.Filters.InlineQueryTextFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.InlineQueryTextFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.InlineQueryTextFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryTextFilterAttribute.Text">
+            <summary>
+            Gets or sets the <c>text</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryTextFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.InlineQueryContainsFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>InlineQueryContainsFilter</c> filter (see <c>global::PolyBot.Filters.InlineQueryContainsFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.InlineQueryContainsFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.InlineQueryContainsFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryContainsFilterAttribute.Text">
+            <summary>
+            Gets or sets the <c>text</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryContainsFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.InlineQueryStartsWithFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>InlineQueryStartsWithFilter</c> filter (see <c>global::PolyBot.Filters.InlineQueryStartsWithFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.InlineQueryStartsWithFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.InlineQueryStartsWithFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryStartsWithFilterAttribute.Text">
+            <summary>
+            Gets or sets the <c>text</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryStartsWithFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.InlineQueryEndsWithFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>InlineQueryEndsWithFilter</c> filter (see <c>global::PolyBot.Filters.InlineQueryEndsWithFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.InlineQueryEndsWithFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.InlineQueryEndsWithFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryEndsWithFilterAttribute.Text">
+            <summary>
+            Gets or sets the <c>text</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryEndsWithFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.InlineQueryRegexFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>InlineQueryRegexFilter</c> filter (see <c>global::PolyBot.Filters.InlineQueryRegexFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.InlineQueryRegexFilterAttribute.#ctor(System.String,System.Text.RegularExpressions.RegexOptions)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.InlineQueryRegexFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryRegexFilterAttribute.Pattern">
+            <summary>
+            Gets or sets the <c>pattern</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.InlineQueryRegexFilterAttribute.RegexOptions">
+            <summary>
+            Gets or sets the <c>regexOptions</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MentionedFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>MentionedFilter</c> filter (see <c>global::PolyBot.Filters.MentionedFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MentionedFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MentionedFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MentionedFilterAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MentionedFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.MentionedFilterAttribute.Mention">
+            <summary>
+            Gets or sets the <c>mention</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChatIsForumFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>ChatIsForumFilter</c> filter (see <c>global::PolyBot.Filters.ChatIsForumFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ChatIsForumFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.ChatIsForumFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MessageChatIdFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>MessageChatIdFilter</c> filter (see <c>global::PolyBot.Filters.MessageChatIdFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MessageChatIdFilterAttribute.#ctor(System.Int64)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MessageChatIdFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.MessageChatIdFilterAttribute.Id">
+            <summary>
+            Gets or sets the <c>id</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChatTypeFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>ChatTypeFilter</c> filter (see <c>global::PolyBot.Filters.ChatTypeFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ChatTypeFilterAttribute.#ctor(Telegram.Bot.Types.Enums.ChatType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.ChatTypeFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChatTypeFilterAttribute.Type">
+            <summary>
+            Gets or sets the <c>type</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChatTitleFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>ChatTitleFilter</c> filter (see <c>global::PolyBot.Filters.ChatTitleFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ChatTitleFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.ChatTitleFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChatTitleFilterAttribute.Title">
+            <summary>
+            Gets or sets the <c>title</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChatTitleFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChatUsernameFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>ChatUsernameFilter</c> filter (see <c>global::PolyBot.Filters.ChatUsernameFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ChatUsernameFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.ChatUsernameFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChatUsernameFilterAttribute.Username">
+            <summary>
+            Gets or sets the <c>username</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChatUsernameFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.ChatNameFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>ChatNameFilter</c> filter (see <c>global::PolyBot.Filters.ChatNameFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.ChatNameFilterAttribute.#ctor(System.String,System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.ChatNameFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChatNameFilterAttribute.FirstName">
+            <summary>
+            Gets or sets the <c>firstName</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChatNameFilterAttribute.LastName">
+            <summary>
+            Gets or sets the <c>lastName</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.ChatNameFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MessageTypeFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>MessageTypeFilter</c> filter (see <c>global::PolyBot.Filters.MessageTypeFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MessageTypeFilterAttribute.#ctor(Telegram.Bot.Types.Enums.MessageType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MessageTypeFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.MessageTypeFilterAttribute.Type">
+            <summary>
+            Gets or sets the <c>type</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.IsAutomaticForwardMessageFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>IsAutomaticForwardMessageFilter</c> filter (see <c>global::PolyBot.Filters.IsAutomaticForwardMessageFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.IsAutomaticForwardMessageFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.IsAutomaticForwardMessageFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.IsFromOfflineMessageFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>IsFromOfflineMessageFilter</c> filter (see <c>global::PolyBot.Filters.IsFromOfflineMessageFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.IsFromOfflineMessageFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.IsFromOfflineMessageFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.IsServiceMessageFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>IsServiceMessageFilter</c> filter (see <c>global::PolyBot.Filters.IsServiceMessageFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.IsServiceMessageFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.IsServiceMessageFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.IsCommunityChatAddedMessageFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>IsCommunityChatAddedMessageFilter</c> filter (see <c>global::PolyBot.Filters.IsCommunityChatAddedMessageFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.IsCommunityChatAddedMessageFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.IsCommunityChatAddedMessageFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.IsCommunityChatRemovedMessageFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>IsCommunityChatRemovedMessageFilter</c> filter (see <c>global::PolyBot.Filters.IsCommunityChatRemovedMessageFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.IsCommunityChatRemovedMessageFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.IsCommunityChatRemovedMessageFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.IsTopicMessageFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>IsTopicMessageFilter</c> filter (see <c>global::PolyBot.Filters.IsTopicMessageFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.IsTopicMessageFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.IsTopicMessageFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.DiceThrowedFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>DiceThrowedFilter</c> filter (see <c>global::PolyBot.Filters.DiceThrowedFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.DiceThrowedFilterAttribute.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.DiceThrowedFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.DiceThrowedFilterAttribute.#ctor(PolyBot.Filters.DiceType,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.DiceThrowedFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.DiceThrowedFilterAttribute.Value">
+            <summary>
+            Gets or sets the <c>value</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.DiceThrowedFilterAttribute.DiceType">
+            <summary>
+            Gets or sets the <c>diceType</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MessageRegexFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>MessageRegexFilter</c> filter (see <c>global::PolyBot.Filters.MessageRegexFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MessageRegexFilterAttribute.#ctor(System.String,System.Text.RegularExpressions.RegexOptions)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MessageRegexFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.MessageRegexFilterAttribute.Pattern">
+            <summary>
+            Gets or sets the <c>pattern</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.MessageRegexFilterAttribute.RegexOptions">
+            <summary>
+            Gets or sets the <c>regexOptions</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MessageHasEntityFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>MessageHasEntityFilter</c> filter (see <c>global::PolyBot.Filters.MessageHasEntityFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MessageHasEntityFilterAttribute.#ctor(Telegram.Bot.Types.Enums.MessageEntityType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MessageHasEntityFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MessageHasEntityFilterAttribute.#ctor(Telegram.Bot.Types.Enums.MessageEntityType,System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MessageHasEntityFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.MessageHasEntityFilterAttribute.Type">
+            <summary>
+            Gets or sets the <c>type</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.MessageHasEntityFilterAttribute.Content">
+            <summary>
+            Gets or sets the <c>content</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.MessageHasEntityFilterAttribute.StringComparison">
+            <summary>
+            Gets or sets the <c>stringComparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MessageHasReplyFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>MessageHasReplyFilter</c> filter (see <c>global::PolyBot.Filters.MessageHasReplyFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MessageHasReplyFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MessageHasReplyFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MessageHasReplyFilterAttribute.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MessageHasReplyFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.MessageHasReplyFilterAttribute.ReplyDepth">
+            <summary>
+            Gets or sets the <c>replyDepth</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.MeRepliedFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>MeRepliedFilter</c> filter (see <c>global::PolyBot.Filters.MeRepliedFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.MeRepliedFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.MeRepliedFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.FromUsernameFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>FromUsernameFilter</c> filter (see <c>global::PolyBot.Filters.FromUsernameFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.FromUsernameFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.FromUsernameFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.FromUsernameFilterAttribute.Username">
+            <summary>
+            Gets or sets the <c>username</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.FromUsernameFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.FromUserFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>FromUserFilter</c> filter (see <c>global::PolyBot.Filters.FromUserFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.FromUserFilterAttribute.#ctor(System.String,System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.FromUserFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.FromUserFilterAttribute.FirstName">
+            <summary>
+            Gets or sets the <c>firstName</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.FromUserFilterAttribute.LastName">
+            <summary>
+            Gets or sets the <c>lastName</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.FromUserFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.FromUserIdFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>FromUserIdFilter</c> filter (see <c>global::PolyBot.Filters.FromUserIdFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.FromUserIdFilterAttribute.#ctor(System.Int64)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.FromUserIdFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.FromUserIdFilterAttribute.UserId">
+            <summary>
+            Gets or sets the <c>userId</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.FromBotFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>FromBotFilter</c> filter (see <c>global::PolyBot.Filters.FromBotFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.FromBotFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.FromBotFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.FromPremiumUserFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>FromPremiumUserFilter</c> filter (see <c>global::PolyBot.Filters.FromPremiumUserFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.FromPremiumUserFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.FromPremiumUserFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.TextStartsWithFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>TextStartsWithFilter</c> filter (see <c>global::PolyBot.Filters.TextStartsWithFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.TextStartsWithFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.TextStartsWithFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextStartsWithFilterAttribute.Content">
+            <summary>
+            Gets or sets the <c>content</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextStartsWithFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.TextEndsWithFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>TextEndsWithFilter</c> filter (see <c>global::PolyBot.Filters.TextEndsWithFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.TextEndsWithFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.TextEndsWithFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextEndsWithFilterAttribute.Content">
+            <summary>
+            Gets or sets the <c>content</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextEndsWithFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.TextContainsFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>TextContainsFilter</c> filter (see <c>global::PolyBot.Filters.TextContainsFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.TextContainsFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.TextContainsFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextContainsFilterAttribute.Content">
+            <summary>
+            Gets or sets the <c>content</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextContainsFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.TextEqualsFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>TextEqualsFilter</c> filter (see <c>global::PolyBot.Filters.TextEqualsFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.TextEqualsFilterAttribute.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.TextEqualsFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextEqualsFilterAttribute.Content">
+            <summary>
+            Gets or sets the <c>content</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextEqualsFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.TextNotNullOrEmptyFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>TextNotNullOrEmptyFilter</c> filter (see <c>global::PolyBot.Filters.TextNotNullOrEmptyFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.TextNotNullOrEmptyFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.TextNotNullOrEmptyFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.TextContainsWordFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>TextContainsWordFilter</c> filter (see <c>global::PolyBot.Filters.TextContainsWordFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.TextContainsWordFilterAttribute.#ctor(System.String,System.StringComparison,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.TextContainsWordFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextContainsWordFilterAttribute.Word">
+            <summary>
+            Gets or sets the <c>word</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextContainsWordFilterAttribute.Comparison">
+            <summary>
+            Gets or sets the <c>comparison</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.TextContainsWordFilterAttribute.StartIndex">
+            <summary>
+            Gets or sets the <c>startIndex</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.PollTypeFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>PollTypeFilter</c> filter (see <c>global::PolyBot.Filters.PollTypeFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PollTypeFilterAttribute.#ctor(Telegram.Bot.Types.Enums.PollType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.PollTypeFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.PollTypeFilterAttribute.PollType">
+            <summary>
+            Gets or sets the <c>pollType</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.PollIsClosedFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>PollIsClosedFilter</c> filter (see <c>global::PolyBot.Filters.PollIsClosedFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PollIsClosedFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.PollIsClosedFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PollIsClosedFilterAttribute.#ctor(System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.PollIsClosedFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.PollIsClosedFilterAttribute.IsClosed">
+            <summary>
+            Gets or sets the <c>isClosed</c> argument passed to the filter's constructor.
+            </summary>
+        </member>
+        <member name="T:PolyBot.Attributes.PollIsAnonymousFilterAttribute">
+            <summary>
+            Marker attribute applying the <c>PollIsAnonymousFilter</c> filter (see <c>global::PolyBot.Filters.PollIsAnonymousFilter</c>) to a handler.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PollIsAnonymousFilterAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.PollIsAnonymousFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Attributes.PollIsAnonymousFilterAttribute.#ctor(System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Attributes.PollIsAnonymousFilterAttribute"/> class.
+            </summary>
+        </member>
+        <member name="P:PolyBot.Attributes.PollIsAnonymousFilterAttribute.IsAnonymous">
+            <summary>
+            Gets or sets the <c>isAnonymous</c> argument passed to the filter's constructor.
             </summary>
         </member>
         <member name="T:PolyBot.Awaits.AwaitIdentity">
@@ -918,6 +2064,756 @@
             required argument is missing, when a token cannot be parsed into its type, or when
             a <c>[Parse]</c> pattern does not match the remaining text.
             </exception>
+        </member>
+        <member name="T:PolyBot.Filters.CallbackDataFilter">
+            <summary>
+            Filter that checks if the callback query data equals the specified data.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackDataFilter.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.CallbackDataFilter"/> class.
+            </summary>
+            <param name="data">The callback data to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackDataFilter.CanPass(Telegram.Bot.Types.CallbackQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.CallbackDataContainsFilter">
+            <summary>
+            Filter that checks if the callback query data contains the specified value.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackDataContainsFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.CallbackDataContainsFilter"/> class.
+            </summary>
+            <param name="value">The value to check if the callback data contains.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackDataContainsFilter.CanPass(Telegram.Bot.Types.CallbackQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.CallbackDataStartsWithFilter">
+            <summary>
+            Filter that checks if the callback query data starts with the specified value.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackDataStartsWithFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.CallbackDataStartsWithFilter"/> class.
+            </summary>
+            <param name="value">The value to check if the callback data starts with.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackDataStartsWithFilter.CanPass(Telegram.Bot.Types.CallbackQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.CallbackDataEndsWithFilter">
+            <summary>
+            Filter that checks if the callback query data ends with the specified value.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackDataEndsWithFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.CallbackDataEndsWithFilter"/> class.
+            </summary>
+            <param name="value">The value to check if the callback data ends with.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackDataEndsWithFilter.CanPass(Telegram.Bot.Types.CallbackQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.CallbackInlineIdFilter">
+            <summary>
+            Filter that checks if the callback query belongs to the specified inline message.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackInlineIdFilter.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.CallbackInlineIdFilter"/> class.
+            </summary>
+            <param name="inlineMessageId">The inline message id to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackInlineIdFilter.CanPass(Telegram.Bot.Types.CallbackQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.CallbackRegexFilter">
+            <summary>
+            Filter that checks if the callback query data matches a regular expression.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackRegexFilter.#ctor(System.String,System.Text.RegularExpressions.RegexOptions)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.CallbackRegexFilter"/> class with a pattern and options.
+            </summary>
+            <param name="pattern">The regex pattern.</param>
+            <param name="regexOptions">The regex options.</param>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackRegexFilter.#ctor(System.Text.RegularExpressions.Regex)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.CallbackRegexFilter"/> class with a regex object.
+            </summary>
+            <param name="regex">The regex object.</param>
+        </member>
+        <member name="M:PolyBot.Filters.CallbackRegexFilter.CanPass(Telegram.Bot.Types.CallbackQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.ChatJoinRequestInviteLinkFilter">
+            <summary>
+            Filter that checks if the chat join request was made via the specified invite link.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.ChatJoinRequestInviteLinkFilter.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.ChatJoinRequestInviteLinkFilter"/> class.
+            </summary>
+            <param name="inviteLink">The invite link to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.ChatJoinRequestInviteLinkFilter.CanPass(Telegram.Bot.Types.ChatJoinRequest)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.ChosenInlineResultIdFilter">
+            <summary>
+            Filter that checks if the chosen inline result has the specified result id.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.ChosenInlineResultIdFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.ChosenInlineResultIdFilter"/> class.
+            </summary>
+            <param name="resultId">The result id to filter by.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.ChosenInlineResultIdFilter.CanPass(Telegram.Bot.Types.ChosenInlineResult)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.ChosenInlineResultQueryFilter">
+            <summary>
+            Filter that checks if the chosen inline result has the specified query.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.ChosenInlineResultQueryFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.ChosenInlineResultQueryFilter"/> class.
+            </summary>
+            <param name="query">The query to filter by.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.ChosenInlineResultQueryFilter.CanPass(Telegram.Bot.Types.ChosenInlineResult)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.EnvironmentVariableFilter">
+            <summary>
+            Filter that checks environment variable values.
+            When no value is given, the filter passes as soon as the variable exists (with any value).
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.EnvironmentVariableFilter.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.EnvironmentVariableFilter"/> class that checks for existence.
+            </summary>
+            <param name="variable">The environment variable name to check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.EnvironmentVariableFilter.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.EnvironmentVariableFilter"/> class with a specific value.
+            </summary>
+            <param name="variable">The environment variable name to check.</param>
+            <param name="value">The expected value of the environment variable.</param>
+        </member>
+        <member name="M:PolyBot.Filters.EnvironmentVariableFilter.#ctor(System.String,System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.EnvironmentVariableFilter"/> class with a specific value and custom comparison.
+            </summary>
+            <param name="variable">The environment variable name to check.</param>
+            <param name="value">The expected value of the environment variable.</param>
+            <param name="comparison">The string comparison type to use for value matching.</param>
+        </member>
+        <member name="M:PolyBot.Filters.EnvironmentVariableFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.EnvironmentVariableFilter"/> class with custom comparison.
+            </summary>
+            <param name="variable">The environment variable name to check.</param>
+            <param name="comparison">The string comparison type to use for value matching.</param>
+        </member>
+        <member name="M:PolyBot.Filters.EnvironmentVariableFilter.CanPass(Telegram.Bot.Types.Update)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.InlineQueryTextFilter">
+            <summary>
+            Filter that checks if the inline query text equals the specified text.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryTextFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.InlineQueryTextFilter"/> class.
+            </summary>
+            <param name="text">The text to filter by.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryTextFilter.CanPass(Telegram.Bot.Types.InlineQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.InlineQueryContainsFilter">
+            <summary>
+            Filter that checks if the inline query text contains the specified text.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryContainsFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.InlineQueryContainsFilter"/> class.
+            </summary>
+            <param name="text">The text to check if the inline query contains.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryContainsFilter.CanPass(Telegram.Bot.Types.InlineQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.InlineQueryStartsWithFilter">
+            <summary>
+            Filter that checks if the inline query text starts with the specified text.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryStartsWithFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.InlineQueryStartsWithFilter"/> class.
+            </summary>
+            <param name="text">The text to check if the inline query starts with.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryStartsWithFilter.CanPass(Telegram.Bot.Types.InlineQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.InlineQueryEndsWithFilter">
+            <summary>
+            Filter that checks if the inline query text ends with the specified text.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryEndsWithFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.InlineQueryEndsWithFilter"/> class.
+            </summary>
+            <param name="text">The text to check if the inline query ends with.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryEndsWithFilter.CanPass(Telegram.Bot.Types.InlineQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.InlineQueryRegexFilter">
+            <summary>
+            Filter that checks if the inline query text matches a regular expression.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryRegexFilter.#ctor(System.String,System.Text.RegularExpressions.RegexOptions)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.InlineQueryRegexFilter"/> class with a pattern and options.
+            </summary>
+            <param name="pattern">The regex pattern.</param>
+            <param name="regexOptions">The regex options.</param>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryRegexFilter.#ctor(System.Text.RegularExpressions.Regex)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.InlineQueryRegexFilter"/> class with a regex object.
+            </summary>
+            <param name="regex">The regex object.</param>
+        </member>
+        <member name="M:PolyBot.Filters.InlineQueryRegexFilter.CanPass(Telegram.Bot.Types.InlineQuery)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.MentionedFilter">
+            <summary>
+            Filter that checks if a message contains a mention of the bot or a specific user.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.MentionedFilter.#ctor(System.String,PolyBot.PolyBotOptions)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MentionedFilter"/> class.
+            </summary>
+            <param name="mention">The username to check for in the mention; when omitted, the bot's username is used.</param>
+            <param name="options">The bot options carrying the bot username.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MentionedFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.ChatIsForumFilter">
+            <summary>
+            Filter that checks if the message chat is a forum.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.ChatIsForumFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.MessageChatIdFilter">
+            <summary>
+            Filter that checks if the message chat has the specified id.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.MessageChatIdFilter.#ctor(System.Int64)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MessageChatIdFilter"/> class.
+            </summary>
+            <param name="id">The chat id to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MessageChatIdFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.ChatTypeFilter">
+            <summary>
+            Filter that checks if the message chat has the specified <see cref="T:Telegram.Bot.Types.Enums.ChatType"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.ChatTypeFilter.#ctor(Telegram.Bot.Types.Enums.ChatType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.ChatTypeFilter"/> class.
+            </summary>
+            <param name="type">The chat type to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.ChatTypeFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.ChatTitleFilter">
+            <summary>
+            Filter that checks if the message chat title equals the specified title.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.ChatTitleFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.ChatTitleFilter"/> class.
+            </summary>
+            <param name="title">The chat title to filter by.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.ChatTitleFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.ChatUsernameFilter">
+            <summary>
+            Filter that checks if the message chat username equals the specified username.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.ChatUsernameFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.ChatUsernameFilter"/> class.
+            </summary>
+            <param name="username">The chat username to filter by.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.ChatUsernameFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.ChatNameFilter">
+            <summary>
+            Filter that checks if the message chat first and last names equal the specified names.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.ChatNameFilter.#ctor(System.String,System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.ChatNameFilter"/> class.
+            </summary>
+            <param name="firstName">The chat first name to filter by.</param>
+            <param name="lastName">The chat last name to filter by.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.ChatNameFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.DiceType">
+            <summary>
+            Enumeration of dice types supported by Telegram.
+            Used for filtering dice messages and determining dice emoji representations.
+            </summary>
+        </member>
+        <member name="F:PolyBot.Filters.DiceType.Dice">
+            <summary>
+            Standard dice (🎲).
+            </summary>
+        </member>
+        <member name="F:PolyBot.Filters.DiceType.Darts">
+            <summary>
+            Darts (🎯).
+            </summary>
+        </member>
+        <member name="F:PolyBot.Filters.DiceType.Bowling">
+            <summary>
+            Bowling (🎳).
+            </summary>
+        </member>
+        <member name="F:PolyBot.Filters.DiceType.Basketball">
+            <summary>
+            Basketball (🏀).
+            </summary>
+        </member>
+        <member name="F:PolyBot.Filters.DiceType.Football">
+            <summary>
+            Football (⚽).
+            </summary>
+        </member>
+        <member name="F:PolyBot.Filters.DiceType.Casino">
+            <summary>
+            Casino slot machine (🎰).
+            </summary>
+        </member>
+        <member name="T:PolyBot.Filters.MessageTypeFilter">
+            <summary>
+            Filters messages by their <see cref="T:Telegram.Bot.Types.Enums.MessageType"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.MessageTypeFilter.#ctor(Telegram.Bot.Types.Enums.MessageType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MessageTypeFilter"/> class.
+            </summary>
+            <param name="type">The message type to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MessageTypeFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.IsAutomaticForwardMessageFilter">
+            <summary>
+            Filters messages that are automatic forwards.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.IsAutomaticForwardMessageFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.IsFromOfflineMessageFilter">
+            <summary>
+            Filters messages that are sent from offline.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.IsFromOfflineMessageFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.IsServiceMessageFilter">
+            <summary>
+            Filters service messages (e.g., chat events).
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.IsServiceMessageFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.IsCommunityChatAddedMessageFilter">
+            <summary>
+            Filters "community chat added" service messages — emitted when a chat is added to a community.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.IsCommunityChatAddedMessageFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.IsCommunityChatRemovedMessageFilter">
+            <summary>
+            Filters "community chat removed" service messages — emitted when a chat is removed from a community.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.IsCommunityChatRemovedMessageFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.IsTopicMessageFilter">
+            <summary>
+            Filters messages that are topic messages.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.IsTopicMessageFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.DiceThrowedFilter">
+            <summary>
+            Filters messages by dice throw value and optionally by dice type.
+            When constructed with only a value, the dice type (emoji) is not checked.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.DiceThrowedFilter.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.DiceThrowedFilter"/> class for a specific value.
+            </summary>
+            <param name="value">The dice value to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.DiceThrowedFilter.#ctor(PolyBot.Filters.DiceType,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.DiceThrowedFilter"/> class for a specific dice type and value.
+            </summary>
+            <param name="diceType">The dice type to filter by.</param>
+            <param name="value">The dice value to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.DiceThrowedFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.MessageRegexFilter">
+            <summary>
+            Filters messages by matching their text with a regular expression.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.MessageRegexFilter.#ctor(System.String,System.Text.RegularExpressions.RegexOptions)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MessageRegexFilter"/> class with a pattern and options.
+            </summary>
+            <param name="pattern">The regex pattern.</param>
+            <param name="regexOptions">The regex options.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MessageRegexFilter.#ctor(System.Text.RegularExpressions.Regex)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MessageRegexFilter"/> class with a regex object.
+            </summary>
+            <param name="regex">The regex object.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MessageRegexFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.MessageHasEntityFilter">
+            <summary>
+            Filters messages that contain a specific entity type, content, offset, or length.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.MessageHasEntityFilter.#ctor(Telegram.Bot.Types.Enums.MessageEntityType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MessageHasEntityFilter"/> class for a specific entity type.
+            </summary>
+            <param name="type">The entity type to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MessageHasEntityFilter.#ctor(Telegram.Bot.Types.Enums.MessageEntityType,System.Nullable{System.Int32},System.Nullable{System.Int32})">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MessageHasEntityFilter"/> class for a specific entity type, offset, and length.
+            </summary>
+            <param name="type">The entity type to filter by.</param>
+            <param name="offset">The offset to filter by.</param>
+            <param name="length">The length to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MessageHasEntityFilter.#ctor(Telegram.Bot.Types.Enums.MessageEntityType,System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MessageHasEntityFilter"/> class for a specific entity type and content.
+            </summary>
+            <param name="type">The entity type to filter by.</param>
+            <param name="content">The content to filter by.</param>
+            <param name="stringComparison">The string comparison to use.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MessageHasEntityFilter.#ctor(Telegram.Bot.Types.Enums.MessageEntityType,System.Nullable{System.Int32},System.Nullable{System.Int32},System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MessageHasEntityFilter"/> class for a specific entity type, offset, length, and content.
+            </summary>
+            <param name="type">The entity type to filter by.</param>
+            <param name="offset">The offset to filter by.</param>
+            <param name="length">The length to filter by.</param>
+            <param name="content">The content to filter by.</param>
+            <param name="stringComparison">The string comparison to use.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MessageHasEntityFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.MessageHasReplyFilter">
+            <summary>
+            Filter that checks if the message has a reply chain of the specified depth.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.MessageHasReplyFilter.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MessageHasReplyFilter"/> class.
+            </summary>
+            <param name="replyDepth">The depth of the reply chain to traverse (default: 1).</param>
+        </member>
+        <member name="M:PolyBot.Filters.MessageHasReplyFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.MeRepliedFilter">
+            <summary>
+            Filter that checks if the directly replied message was sent by the bot itself.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.MeRepliedFilter.#ctor(PolyBot.PolyBotOptions)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.MeRepliedFilter"/> class.
+            </summary>
+            <param name="options">The bot options carrying the bot username; when omitted, the filter never passes.</param>
+        </member>
+        <member name="M:PolyBot.Filters.MeRepliedFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.FromUsernameFilter">
+            <summary>
+            Filter that checks if the message sender's username equals the specified username.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.FromUsernameFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.FromUsernameFilter"/> class.
+            </summary>
+            <param name="username">The sender username to filter by.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.FromUsernameFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.FromUserFilter">
+            <summary>
+            Filter that checks if the message sender's first (and optionally last) name equals the specified names.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.FromUserFilter.#ctor(System.String,System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.FromUserFilter"/> class.
+            </summary>
+            <param name="firstName">The sender first name to filter by.</param>
+            <param name="lastName">The sender last name to filter by, when provided.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.FromUserFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.FromUserIdFilter">
+            <summary>
+            Filter that checks if the message sender has the specified user id.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.FromUserIdFilter.#ctor(System.Int64)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.FromUserIdFilter"/> class.
+            </summary>
+            <param name="userId">The sender user id to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.FromUserIdFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.FromBotFilter">
+            <summary>
+            Filter that checks if the message was sent by a bot.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.FromBotFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.FromPremiumUserFilter">
+            <summary>
+            Filter that checks if the message was sent by a premium user.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.FromPremiumUserFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.TextStartsWithFilter">
+            <summary>
+            Filter that checks if the message text starts with the specified content.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.TextStartsWithFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.TextStartsWithFilter"/> class.
+            </summary>
+            <param name="content">The content to check if the message text starts with.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.TextStartsWithFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.TextEndsWithFilter">
+            <summary>
+            Filter that checks if the message text ends with the specified content.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.TextEndsWithFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.TextEndsWithFilter"/> class.
+            </summary>
+            <param name="content">The content to check if the message text ends with.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.TextEndsWithFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.TextContainsFilter">
+            <summary>
+            Filter that checks if the message text contains the specified content.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.TextContainsFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.TextContainsFilter"/> class.
+            </summary>
+            <param name="content">The content to check if the message text contains.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.TextContainsFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.TextEqualsFilter">
+            <summary>
+            Filter that checks if the message text equals the specified content.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.TextEqualsFilter.#ctor(System.String,System.StringComparison)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.TextEqualsFilter"/> class.
+            </summary>
+            <param name="content">The content to check if the message text equals.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+        </member>
+        <member name="M:PolyBot.Filters.TextEqualsFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.TextNotNullOrEmptyFilter">
+            <summary>
+            Filter that checks if the message text is not null or empty.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.TextNotNullOrEmptyFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.TextContainsWordFilter">
+            <summary>
+            Filter that checks if the message text contains a 'word'.
+            'Word' must be a separate member of the text, and not have any alphabetic characters next to it.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.TextContainsWordFilter.#ctor(System.String,System.StringComparison,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.TextContainsWordFilter"/> class.
+            </summary>
+            <param name="word">The word to check if the message text contains.</param>
+            <param name="comparison">The string comparison type to use for the check.</param>
+            <param name="startIndex">The search starting position.</param>
+        </member>
+        <member name="M:PolyBot.Filters.TextContainsWordFilter.CanPass(Telegram.Bot.Types.Message)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.PollTypeFilter">
+            <summary>
+            Filter that checks if the poll has the specified <see cref="T:Telegram.Bot.Types.Enums.PollType"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.PollTypeFilter.#ctor(Telegram.Bot.Types.Enums.PollType)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.PollTypeFilter"/> class.
+            </summary>
+            <param name="pollType">The poll type to filter by.</param>
+        </member>
+        <member name="M:PolyBot.Filters.PollTypeFilter.CanPass(Telegram.Bot.Types.Poll)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.PollIsClosedFilter">
+            <summary>
+            Filter that checks if the poll is closed.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.PollIsClosedFilter.#ctor(System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.PollIsClosedFilter"/> class.
+            </summary>
+            <param name="isClosed">The closed state to filter by (default: <c>true</c>).</param>
+        </member>
+        <member name="M:PolyBot.Filters.PollIsClosedFilter.CanPass(Telegram.Bot.Types.Poll)">
+            <inheritdoc/>
+        </member>
+        <member name="T:PolyBot.Filters.PollIsAnonymousFilter">
+            <summary>
+            Filter that checks if the poll is anonymous.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Filters.PollIsAnonymousFilter.#ctor(System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:PolyBot.Filters.PollIsAnonymousFilter"/> class.
+            </summary>
+            <param name="isAnonymous">The anonymous state to filter by (default: <c>true</c>).</param>
+        </member>
+        <member name="M:PolyBot.Filters.PollIsAnonymousFilter.CanPass(Telegram.Bot.Types.Poll)">
+            <inheritdoc/>
         </member>
         <member name="T:PolyBot.IAllowedUpdatesProvider">
             <summary>
@@ -2685,6 +4581,45 @@
             A special attribute recognized by Roslyn, that marks a type as "embedded", meaning it won't ever be visible from other assemblies.
             </summary>
         </member>
+        <member name="T:System.Runtime.CompilerServices.RequiredMemberAttribute">
+            <summary>
+            Specifies that a type has required members or that a member is required.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute">
+            <summary>
+            Specifies the priority of a member in overload resolution. When unspecified, the default priority is 0.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute"/> class.
+            </summary>
+            <param name="priority">The priority of the attributed member. Higher numbers are prioritized, lower numbers are deprioritized. 0 is the default if no attribute is present.</param>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute.Priority">
+            <summary>
+            The priority of the member.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.InterpolatedStringHandlerAttribute">
+            <summary>
+            Indicates the attributed type is to be used as an interpolated string handler.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.ExtensionMarkerAttribute">
+            <summary>
+            This attribute is used to mark extension members and associate them with a specific marker type (which provides detailed information about an extension block and its receiver parameter).
+            This attribute should not be used by developers in source code.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.ExtensionMarkerAttribute.#ctor(System.String)">
+            <summary>Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.ExtensionMarkerAttribute"/> class.</summary>
+            <param name="name">The name of the marker type this extension member is associated with.</param>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.ExtensionMarkerAttribute.Name">
+            <summary>The name of the marker type this extension member is associated with.</summary>
+        </member>
         <member name="M:System.Runtime.CompilerServices.CollectionBuilderAttribute.#ctor(System.Type,System.String)">
             <summary>
             Initialize the attribute to refer to the <paramref name="methodName"/> method on the <paramref name="builderType"/> type.
@@ -2711,27 +4646,57 @@
             For example, this might be ".ctor" if targeting the type's constructor.
             </remarks>
         </member>
-        <member name="T:System.Runtime.CompilerServices.ModuleInitializerAttribute">
-             <summary>
-             Used to indicate to the compiler that a method should be called
-             in its containing module's initializer.
-             </summary>
-             <remarks>
-             When one or more valid methods
-             with this attribute are found in a compilation, the compiler will
-             emit a module initializer which calls each of the attributed methods.
-            
-             Certain requirements are imposed on any method targeted with this attribute:
-             - The method must be `static`.
-             - The method must be an ordinary member method, as opposed to a property accessor, constructor, local function, etc.
-             - The method must be parameterless.
-             - The method must return `void`.
-             - The method must not be generic or be contained in a generic type.
-             - The method's effective accessibility must be `internal` or `public`.
-            
-             The specification for module initializers in the .NET runtime can be found here:
-             https://github.com/dotnet/runtime/blob/main/docs/design/specs/Ecma-335-Augments.md#module-initializer
-             </remarks>
+        <member name="T:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute">
+            <summary>
+            An attribute that allows parameters to receive the expression of other parameters.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute"/> class.
+            </summary>
+            <param name="parameterName">The condition parameter value.</param>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute.ParameterName">
+            <summary>
+            Gets the parameter name the expression is retrieved from.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.RequiresLocationAttribute">
+            <summary>
+            Reserved for use by a compiler for tracking metadata.
+            This attribute should not be used by developers in source code.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.SkipLocalsInitAttribute">
+            <summary>
+            Used to indicate to the compiler that the <c>.locals init</c> flag should not be set in method headers.
+            </summary>
+        </member>
+        <member name="T:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute">
+            <summary>
+            Indicates which arguments to a method involving an interpolated string handler should be passed to that handler.
+            </summary>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute"/> class.
+            </summary>
+            <param name="argument">The name of the argument that should be passed to the handler.</param>
+            <remarks><see langword="null"/> may be used as the name of the receiver in an instance method.</remarks>
+        </member>
+        <member name="M:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute.#ctor(System.String[])">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute"/> class.
+            </summary>
+            <param name="arguments">The names of the arguments that should be passed to the handler.</param>
+            <remarks><see langword="null"/> may be used as the name of the receiver in an instance method.</remarks>
+        </member>
+        <member name="P:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute.Arguments">
+            <summary>
+            Gets the names of the arguments that should be passed to the handler.
+            </summary>
+            <remarks><see langword="null"/> may be used as the name of the receiver in an instance method.</remarks>
         </member>
         <member name="T:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute">
             <summary>
@@ -2764,61 +4729,6 @@
             The <see cref="P:System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute.FeatureName"/> used for the required members C# feature.
             </summary>
         </member>
-        <member name="T:System.Runtime.CompilerServices.ParamCollectionAttribute">
-            <summary>
-            Indicates that a method will allow a variable number of arguments in its invocation.
-            </summary>
-        </member>
-        <member name="T:System.Runtime.CompilerServices.SkipLocalsInitAttribute">
-            <summary>
-            Used to indicate to the compiler that the <c>.locals init</c> flag should not be set in method headers.
-            </summary>
-        </member>
-        <member name="T:System.Runtime.CompilerServices.ExtensionMarkerAttribute">
-            <summary>
-            This attribute is used to mark extension members and associate them with a specific marker type (which provides detailed information about an extension block and its receiver parameter).
-            This attribute should not be used by developers in source code.
-            </summary>
-        </member>
-        <member name="M:System.Runtime.CompilerServices.ExtensionMarkerAttribute.#ctor(System.String)">
-            <summary>Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.ExtensionMarkerAttribute"/> class.</summary>
-            <param name="name">The name of the marker type this extension member is associated with.</param>
-        </member>
-        <member name="P:System.Runtime.CompilerServices.ExtensionMarkerAttribute.Name">
-            <summary>The name of the marker type this extension member is associated with.</summary>
-        </member>
-        <member name="T:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute">
-            <summary>
-            An attribute that allows parameters to receive the expression of other parameters.
-            </summary>
-        </member>
-        <member name="M:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute.#ctor(System.String)">
-            <summary>
-            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute"/> class.
-            </summary>
-            <param name="parameterName">The condition parameter value.</param>
-        </member>
-        <member name="P:System.Runtime.CompilerServices.CallerArgumentExpressionAttribute.ParameterName">
-            <summary>
-            Gets the parameter name the expression is retrieved from.
-            </summary>
-        </member>
-        <member name="T:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute">
-            <summary>
-            Specifies the priority of a member in overload resolution. When unspecified, the default priority is 0.
-            </summary>
-        </member>
-        <member name="M:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute.#ctor(System.Int32)">
-            <summary>
-            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute"/> class.
-            </summary>
-            <param name="priority">The priority of the attributed member. Higher numbers are prioritized, lower numbers are deprioritized. 0 is the default if no attribute is present.</param>
-        </member>
-        <member name="P:System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute.Priority">
-            <summary>
-            The priority of the member.
-            </summary>
-        </member>
         <member name="T:System.Runtime.CompilerServices.CompilerLoweringPreserveAttribute">
             <summary>
             When applied to an attribute class, instructs the compiler to flow applications of that attribute,
@@ -2835,51 +4745,37 @@
             Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.CompilerLoweringPreserveAttribute"/> class.
             </summary>
         </member>
-        <member name="T:System.Runtime.CompilerServices.RequiredMemberAttribute">
-            <summary>
-            Specifies that a type has required members or that a member is required.
-            </summary>
-        </member>
         <member name="T:System.Runtime.CompilerServices.IsExternalInit">
             <summary>
             Reserved to be used by the compiler for tracking metadata.
             This class should not be used by developers in source code.
             </summary>
         </member>
-        <member name="T:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute">
-            <summary>
-            Indicates which arguments to a method involving an interpolated string handler should be passed to that handler.
-            </summary>
+        <member name="T:System.Runtime.CompilerServices.ModuleInitializerAttribute">
+             <summary>
+             Used to indicate to the compiler that a method should be called
+             in its containing module's initializer.
+             </summary>
+             <remarks>
+             When one or more valid methods
+             with this attribute are found in a compilation, the compiler will
+             emit a module initializer which calls each of the attributed methods.
+            
+             Certain requirements are imposed on any method targeted with this attribute:
+             - The method must be `static`.
+             - The method must be an ordinary member method, as opposed to a property accessor, constructor, local function, etc.
+             - The method must be parameterless.
+             - The method must return `void`.
+             - The method must not be generic or be contained in a generic type.
+             - The method's effective accessibility must be `internal` or `public`.
+            
+             The specification for module initializers in the .NET runtime can be found here:
+             https://github.com/dotnet/runtime/blob/main/docs/design/specs/Ecma-335-Augments.md#module-initializer
+             </remarks>
         </member>
-        <member name="M:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute.#ctor(System.String)">
+        <member name="T:System.Runtime.CompilerServices.ParamCollectionAttribute">
             <summary>
-            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute"/> class.
-            </summary>
-            <param name="argument">The name of the argument that should be passed to the handler.</param>
-            <remarks><see langword="null"/> may be used as the name of the receiver in an instance method.</remarks>
-        </member>
-        <member name="M:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute.#ctor(System.String[])">
-            <summary>
-            Initializes a new instance of the <see cref="T:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute"/> class.
-            </summary>
-            <param name="arguments">The names of the arguments that should be passed to the handler.</param>
-            <remarks><see langword="null"/> may be used as the name of the receiver in an instance method.</remarks>
-        </member>
-        <member name="P:System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute.Arguments">
-            <summary>
-            Gets the names of the arguments that should be passed to the handler.
-            </summary>
-            <remarks><see langword="null"/> may be used as the name of the receiver in an instance method.</remarks>
-        </member>
-        <member name="T:System.Runtime.CompilerServices.RequiresLocationAttribute">
-            <summary>
-            Reserved for use by a compiler for tracking metadata.
-            This attribute should not be used by developers in source code.
-            </summary>
-        </member>
-        <member name="T:System.Runtime.CompilerServices.InterpolatedStringHandlerAttribute">
-            <summary>
-            Indicates the attributed type is to be used as an interpolated string handler.
+            Indicates that a method will allow a variable number of arguments in its invocation.
             </summary>
         </member>
         <member name="M:System.Runtime.Versioning.RequiresPreviewFeaturesAttribute.#ctor">
@@ -2908,6 +4804,28 @@
             Specifies that an output may be null even if the corresponding type disallows it.
             </summary>
         </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute">
+            <summary>
+            Specifies that the output will be non-null if the named parameter is non-null.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.#ctor(System.String)">
+            <summary>
+            Initializes the attribute with the associated parameter name.
+            </summary>
+            <param name="parameterName">The associated parameter name. The output will be non-null if the argument to the parameter specified is non-null.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.ParameterName">
+            <summary>
+            Gets the associated parameter name.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullAttribute">
+            <summary>
+            Specifies that an output will not be null even if the corresponding type allows it.
+            Specifies that an input argument was not null when the call returns.
+            </summary>
+        </member>
         <member name="T:System.Diagnostics.CodeAnalysis.UnscopedRefAttribute">
             <summary>
             Used to indicate a byref escapes and is not scoped.
@@ -2934,28 +4852,50 @@
             </para>
             </remarks>
         </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute">
+        <member name="T:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute">
             <summary>
-            Specifies that the method will not return if the associated Boolean parameter is passed the specified value.
+            Specifies that the method or property will ensure that the listed field and property
+            members have not-null values when returning with the specified return value condition.
             </summary>
         </member>
-        <member name="M:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.#ctor(System.Boolean)">
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.#ctor(System.Boolean,System.String)">
             <summary>
-            Initializes the attribute with the specified parameter value.
+            Initializes the attribute with the specified return value condition and a field or property member.
             </summary>
-            <param name="parameterValue">
-            The condition parameter value. Code after the method will be considered unreachable
-            by diagnostics if the argument to the associated parameter matches this value.
-            </param>
+            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter will not be null.</param>
+            <param name="member">The field or property member that is promised to be not-null.</param>
         </member>
-        <member name="P:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.ParameterValue">
+        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.#ctor(System.Boolean,System.String[])">
             <summary>
-            Gets the condition parameter value.
+            Initializes the attribute with the specified return value condition and list of field and property members.
+            </summary>
+            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter will not be null.</param>
+            <param name="members">The list of field and property members that are promised to be not-null.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.ReturnValue">
+            <summary>
+            Gets the return value condition.
             </summary>
         </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute">
+        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.Members">
             <summary>
-            Applied to a method that will never return under any circumstance.
+            Gets field or property member names.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute">
+            <summary>
+            Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue"/>, the parameter may be null even if the corresponding type disallows it.
+            </summary>
+        </member>
+        <member name="M:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.#ctor(System.Boolean)">
+            <summary>
+            Initializes the attribute with the specified return value condition.
+            </summary>
+            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter may be null.</param>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue">
+            <summary>
+            Gets the return value condition.
             </summary>
         </member>
         <member name="T:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute">
@@ -3016,34 +4956,23 @@
         <member name="F:System.Diagnostics.CodeAnalysis.StringSyntaxAttribute.Xml">
             <summary>The syntax identifier for strings containing XML.</summary>
         </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute">
+        <member name="T:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute">
             <summary>
-            Specifies that the method or property will ensure that the listed field and property
-            members have not-null values when returning with the specified return value condition.
+            Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue"/>, the parameter will not be null even if the corresponding type allows it.
             </summary>
         </member>
-        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.#ctor(System.Boolean,System.String)">
+        <member name="M:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.#ctor(System.Boolean)">
             <summary>
-            Initializes the attribute with the specified return value condition and a field or property member.
-            </summary>
-            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter will not be null.</param>
-            <param name="member">The field or property member that is promised to be not-null.</param>
-        </member>
-        <member name="M:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.#ctor(System.Boolean,System.String[])">
-            <summary>
-            Initializes the attribute with the specified return value condition and list of field and property members.
+            Initializes the attribute with the specified return value condition.
             </summary>
             <param name="returnValue">The return value condition. If the method returns this value, the associated parameter will not be null.</param>
-            <param name="members">The list of field and property members that are promised to be not-null.</param>
         </member>
-        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.ReturnValue">
-            <summary>
-            Gets the return value condition.
-            </summary>
+        <member name="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue">
+            <summary>Gets the return value condition.</summary>
         </member>
-        <member name="P:System.Diagnostics.CodeAnalysis.MemberNotNullWhenAttribute.Members">
+        <member name="T:System.Diagnostics.CodeAnalysis.AllowNullAttribute">
             <summary>
-            Gets field or property member names.
+            Specifies that null is allowed as an input even if the corresponding type disallows it.
             </summary>
         </member>
         <member name="T:System.Diagnostics.CodeAnalysis.ExperimentalAttribute">
@@ -3080,60 +5009,6 @@
             <value>The format string that represents a URL to corresponding documentation.</value>
             <remarks>An example format string is <c>https://contoso.com/obsoletion-warnings/{0}</c>.</remarks>
         </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.ConstantExpectedAttribute">
-            <summary>
-            Indicates that the specified method parameter expects a constant.
-            </summary>
-            <remarks>
-            This can be used to inform tooling that a constant should be used as an argument for the annotated parameter.
-            </remarks>
-        </member>
-        <member name="P:System.Diagnostics.CodeAnalysis.ConstantExpectedAttribute.Min">
-            <summary>
-            Indicates the minimum bound of the expected constant, inclusive.
-            </summary>
-        </member>
-        <member name="P:System.Diagnostics.CodeAnalysis.ConstantExpectedAttribute.Max">
-            <summary>
-            Indicates the maximum bound of the expected constant, inclusive.
-            </summary>
-        </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute">
-            <summary>
-            Specifies that this constructor sets all required members for the current type,
-            and callers do not need to set any required members themselves.
-            </summary>
-        </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute">
-            <summary>
-            Specifies that the output will be non-null if the named parameter is non-null.
-            </summary>
-        </member>
-        <member name="M:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.#ctor(System.String)">
-            <summary>
-            Initializes the attribute with the associated parameter name.
-            </summary>
-            <param name="parameterName">The associated parameter name. The output will be non-null if the argument to the parameter specified is non-null.</param>
-        </member>
-        <member name="P:System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute.ParameterName">
-            <summary>
-            Gets the associated parameter name.
-            </summary>
-        </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute">
-            <summary>
-            Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue"/>, the parameter will not be null even if the corresponding type allows it.
-            </summary>
-        </member>
-        <member name="M:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.#ctor(System.Boolean)">
-            <summary>
-            Initializes the attribute with the specified return value condition.
-            </summary>
-            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter will not be null.</param>
-        </member>
-        <member name="P:System.Diagnostics.CodeAnalysis.NotNullWhenAttribute.ReturnValue">
-            <summary>Gets the return value condition.</summary>
-        </member>
         <member name="T:System.Diagnostics.CodeAnalysis.MemberNotNullAttribute">
             <summary>
             Specifies that the method or property will ensure that the listed field and property members have not-null values.
@@ -3156,36 +5031,57 @@
             Gets field or property member names.
             </summary>
         </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.AllowNullAttribute">
-            <summary>
-            Specifies that null is allowed as an input even if the corresponding type disallows it.
-            </summary>
-        </member>
         <member name="T:System.Diagnostics.CodeAnalysis.DisallowNullAttribute">
             <summary>
             Specifies that null is disallowed as an input even if the corresponding type allows it.
             </summary>
         </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute">
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute">
             <summary>
-            Specifies that when a method returns <see cref="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue"/>, the parameter may be null even if the corresponding type disallows it.
+            Specifies that the method will not return if the associated Boolean parameter is passed the specified value.
             </summary>
         </member>
-        <member name="M:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.#ctor(System.Boolean)">
+        <member name="M:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.#ctor(System.Boolean)">
             <summary>
-            Initializes the attribute with the specified return value condition.
+            Initializes the attribute with the specified parameter value.
             </summary>
-            <param name="returnValue">The return value condition. If the method returns this value, the associated parameter may be null.</param>
+            <param name="parameterValue">
+            The condition parameter value. Code after the method will be considered unreachable
+            by diagnostics if the argument to the associated parameter matches this value.
+            </param>
         </member>
-        <member name="P:System.Diagnostics.CodeAnalysis.MaybeNullWhenAttribute.ReturnValue">
+        <member name="P:System.Diagnostics.CodeAnalysis.DoesNotReturnIfAttribute.ParameterValue">
             <summary>
-            Gets the return value condition.
+            Gets the condition parameter value.
             </summary>
         </member>
-        <member name="T:System.Diagnostics.CodeAnalysis.NotNullAttribute">
+        <member name="T:System.Diagnostics.CodeAnalysis.ConstantExpectedAttribute">
             <summary>
-            Specifies that an output will not be null even if the corresponding type allows it.
-            Specifies that an input argument was not null when the call returns.
+            Indicates that the specified method parameter expects a constant.
+            </summary>
+            <remarks>
+            This can be used to inform tooling that a constant should be used as an argument for the annotated parameter.
+            </remarks>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.ConstantExpectedAttribute.Min">
+            <summary>
+            Indicates the minimum bound of the expected constant, inclusive.
+            </summary>
+        </member>
+        <member name="P:System.Diagnostics.CodeAnalysis.ConstantExpectedAttribute.Max">
+            <summary>
+            Indicates the maximum bound of the expected constant, inclusive.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.DoesNotReturnAttribute">
+            <summary>
+            Applied to a method that will never return under any circumstance.
+            </summary>
+        </member>
+        <member name="T:System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute">
+            <summary>
+            Specifies that this constructor sets all required members for the current type,
+            and callers do not need to set any required members themselves.
             </summary>
         </member>
     </members>

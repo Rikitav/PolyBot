@@ -69,7 +69,7 @@ internal static class BotRouterEmitter
                 List<string> literals = new();
                 foreach (string filter in site.Filters.Items)
                 {
-                    literals.Add($"typeof({filter})");
+                    literals.Add($"typeof({SplitAwaitFilterEntry(filter).TypeFqn})");
                 }
 
                 fields.Add(EmitterSyntax.BuildStaticArrayField("global::System.Type", $"__curator_awt_{siteIndex}", "new global::System.Type[] { " + string.Join(", ", literals) + " }"));
@@ -476,6 +476,19 @@ internal static class BotRouterEmitter
     }
 
     /// <summary>
+    /// Splits an await-site filter entry into its type FQN and captured ctor args.
+    /// Entries are stored as <c>TypeFqn</c> or <c>TypeFqn|name: literal, …</c>; the type FQN
+    /// never contains the separator, so only the first one splits.
+    /// </summary>
+    private static (string TypeFqn, string? CtorArgs) SplitAwaitFilterEntry(string entry)
+    {
+        int separator = entry.IndexOf('|');
+        return separator < 0
+            ? (entry, null)
+            : (entry.Substring(0, separator), entry.Substring(separator + 1));
+    }
+
+    /// <summary>
     /// Whether control can fall through past this statement (per C# end-point reachability):
     /// a trailing <c>return</c>, or a block/if-else whose every branch ends without falling through.
     /// </summary>
@@ -527,8 +540,8 @@ internal static class BotRouterEmitter
         for (int i = 0; i < site.Filters.Count; i++)
         {
             string filterVar = $"__curator_awf_{siteIndex}_{i}";
-            string filterType = site.Filters[i];
-            statements.Add(EmitterSyntax.BuildLocalDeclaration(filterType, filterVar, EmitterSyntax.ResolveFilter(filterType)));
+            (string filterType, string? ctorArgs) = SplitAwaitFilterEntry(site.Filters[i]);
+            statements.Add(EmitterSyntax.BuildLocalDeclaration(filterType, filterVar, EmitterSyntax.ResolveFilterWithArgs(filterType, ctorArgs)));
             filterVars.Add(filterVar);
         }
 
@@ -974,8 +987,8 @@ internal static class BotRouterEmitter
         for (int i = 0; i < handler.Filters.Count; i++)
         {
             string filterVar = $"__curator_filter_{id}_{i}";
-            string filterType = handler.Filters[i].TypeFqn;
-            statements.Add(EmitterSyntax.BuildLocalDeclaration(filterType, filterVar, EmitterSyntax.ResolveFilter(filterType)));
+            FilterModel filter = handler.Filters[i];
+            statements.Add(EmitterSyntax.BuildLocalDeclaration(filter.TypeFqn, filterVar, EmitterSyntax.ResolveFilterWithArgs(filter.TypeFqn, filter.CtorArgs)));
             filterVars.Add(filterVar);
         }
 

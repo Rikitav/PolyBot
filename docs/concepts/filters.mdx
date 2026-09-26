@@ -212,6 +212,58 @@ public static Task<Result> OnInline(InlineQuery query) { ... }
 Evaluation order is attribute declaration order on the method. There is no way to configure evaluation order separately from attribute order.
 </Note>
 
+## Parameterized filters
+
+When a filter's constructor takes attribute-legal parameters (primitives, `string`, enums, `Type`, and arrays of those), the generator mirrors its public constructors onto the wrapper attribute and the `With*` extension. Arguments must be compile-time constants — anything else is a compile error (`CUR044`):
+
+```csharp
+// Positional constructor arguments
+[MessageHandler]
+[TextEqualsFilter("filtertrigger")]
+public static Task<Result> OnTrigger(Message msg) { ... }
+
+// Optional parameters can also be set by name (the wrapper exposes them as properties)
+[MessageHandler]
+[TextStartsWithFilter("pre", Comparison = StringComparison.Ordinal)]
+public static Task<Result> OnPrefix(Message msg) { ... }
+```
+
+The same works in await chains — the generated `With*` overloads mirror the filter's constructors:
+
+```csharp
+Message? next = await awaiter.WaitForMessageAsync()
+    .WithTextEqualsFilter("awaittrigger")
+    .ByUserId(ct);
+```
+
+Rules and caveats:
+
+- Arguments captured from the attribute or `With*` call are spliced into the generated code as `new TFilter(name: literal, …)`. When arguments are present they bypass DI; parameterless usage keeps the `GetService<T>() ?? ActivatorUtilities` resolution, so DI-registered instances still win there.
+- Only attribute-legal parameter types are mirrored. Constructors with other required parameters (e.g. a DI service) are not mirrored — register such filters in DI and use the parameterless attribute.
+- Arguments that don't match any mirrored constructor produce `CUR045`; non-constant expressions produce `CUR044`.
+- The await registration key includes only the filter *type*: two *pending* awaits using the same filter type with different arguments are treated as the same signature and the registration conflict throws.
+
+## Built-in filters (`PolyBot.Filters`)
+
+PolyBot ships a set of ready-made filters (migrated from the classic Telegrator filter pack). All follow the rules above — parameterized ones accept their constructor arguments in the attribute or `With*` call:
+
+| Group | Filters |
+|---|---|
+| Message | `MessageTypeFilter`, `IsAutomaticForwardMessageFilter`, `IsFromOfflineMessageFilter`, `IsServiceMessageFilter`, `IsCommunityChatAddedMessageFilter`, `IsCommunityChatRemovedMessageFilter`, `IsTopicMessageFilter`, `DiceThrowedFilter`, `MessageRegexFilter`, `MessageHasEntityFilter` |
+| Message text | `TextStartsWithFilter`, `TextEndsWithFilter`, `TextContainsFilter`, `TextEqualsFilter`, `TextNotNullOrEmptyFilter`, `TextContainsWordFilter` |
+| Message chat | `ChatIsForumFilter`, `MessageChatIdFilter`, `ChatTypeFilter`, `ChatTitleFilter`, `ChatUsernameFilter`, `ChatNameFilter` |
+| Message sender | `FromUsernameFilter`, `FromUserFilter`, `FromUserIdFilter`, `FromBotFilter`, `FromPremiumUserFilter` |
+| Replies | `MessageHasReplyFilter`, `MeRepliedFilter` |
+| Mentions | `MentionedFilter` |
+| Callback query | `CallbackDataFilter`, `CallbackDataContainsFilter`, `CallbackDataStartsWithFilter`, `CallbackDataEndsWithFilter`, `CallbackInlineIdFilter`, `CallbackRegexFilter` |
+| Inline query | `InlineQueryTextFilter`, `InlineQueryContainsFilter`, `InlineQueryStartsWithFilter`, `InlineQueryEndsWithFilter`, `InlineQueryRegexFilter` |
+| Poll | `PollTypeFilter`, `PollIsClosedFilter`, `PollIsAnonymousFilter` |
+| Chat join request | `ChatJoinRequestInviteLinkFilter` |
+| Chosen inline result | `ChosenInlineResultIdFilter`, `ChosenInlineResultQueryFilter` |
+| Environment | `EnvironmentVariableFilter` (implements `IUpdateFilter` directly) |
+
+Bot-identity filters (`MeRepliedFilter`, `MentionedFilter`) optionally accept `PolyBotOptions` to compare against `BotUsername`; when it is not configured (or not resolvable from DI), they evaluate to `false` rather than throwing.
+
 ## Runtime resolution
 
 <Steps>

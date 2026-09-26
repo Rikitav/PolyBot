@@ -421,7 +421,7 @@ internal static class HandlerDiscovery
             {
                 if (filterClass.ShortName == stem)
                 {
-                    match = new FilterModel { TypeFqn = filterClass.TypeFqn };
+                    match = BuildFilterModel(filterClass.TypeFqn, filterClass.Ctors, attributeData, semanticModel, diagnostics);
                     break;
                 }
             }
@@ -433,10 +433,12 @@ internal static class HandlerDiscovery
                 INamedTypeSymbol? libraryFilter = FindFilterInAssembly(attributeClass.ContainingAssembly, stem, updateFilterType);
                 if (libraryFilter is not null)
                 {
-                    match = new FilterModel
-                    {
-                        TypeFqn = libraryFilter.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                    };
+                    match = BuildFilterModel(
+                        libraryFilter.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                        FilterCtorInfo.ReadMirroredCtors(libraryFilter),
+                        attributeData,
+                        semanticModel,
+                        diagnostics);
                 }
             }
 
@@ -896,7 +898,8 @@ internal static class HandlerDiscovery
                         }
                     }
 
-                    string? libraryFilterFqn = null;
+                    INamedTypeSymbol? libraryFilter = null;
+                    IMethodSymbol? boundWithMethod = null;
                     if (match is null &&
                         semanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol withMethod &&
                         !SymbolEqualityComparer.Default.Equals(withMethod.ContainingAssembly, semanticModel.Compilation.Assembly))
@@ -906,31 +909,37 @@ internal static class HandlerDiscovery
                             withMethod.TypeArguments.Length == 1 &&
                             withMethod.TypeArguments[0] is INamedTypeSymbol genericFilter)
                         {
-                            libraryFilterFqn = genericFilter.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            libraryFilter = genericFilter;
                         }
                         else
                         {
-                            INamedTypeSymbol? paired = FindFilterInAssembly(withMethod.ContainingAssembly, stem, updateFilterType);
-                            libraryFilterFqn = paired?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                            boundWithMethod = withMethod;
+                            libraryFilter = FindFilterInAssembly(withMethod.ContainingAssembly, stem, updateFilterType);
                         }
                     }
 
-                    if (match is not null)
-                    {
-                        filterFqns.Add(match.TypeFqn);
-                        conditions.Add(new AwaitConditionModel { Kind = AwaitConditionKind.Filter, Value = match.TypeFqn });
-                    }
-                    else if (libraryFilterFqn is not null)
-                    {
-                        filterFqns.Add(libraryFilterFqn);
-                        conditions.Add(new AwaitConditionModel { Kind = AwaitConditionKind.Filter, Value = libraryFilterFqn });
-                    }
-                    else
+                    string? filterFqn = match?.TypeFqn ??
+                        libraryFilter?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+                    if (filterFqn is null)
                     {
                         diagnostics.Add(Diagnostic.Create(
                             PolyBotDiagnostics.UnknownFilterInAwaitChain,
                             invocation.GetLocation(),
                             stem));
+                    }
+                    else
+                    {
+                        EquatableArray<FilterCtorModel> ctors = match is not null
+                            ? match.Ctors
+                            : FilterCtorInfo.ReadMirroredCtors(libraryFilter!);
+                        string? args = CaptureWithFilterArgs(filterFqn, ctors, boundWithMethod, invocation, semanticModel, diagnostics);
+                        if (args is not null || invocation.ArgumentList.Arguments.Count == 0)
+                        {
+                            string composite = args is null ? filterFqn : filterFqn + "|" + args;
+                            filterFqns.Add(composite);
+                            conditions.Add(new AwaitConditionModel { Kind = AwaitConditionKind.Filter, Value = composite });
+                        }
                     }
 
                     current = memberAccess.Expression;
@@ -2113,6 +2122,312 @@ internal static class HandlerDiscovery
     private static IPropertySymbol? FindUpdateProperty(INamedTypeSymbol updateClass, string propertyName)
     {
         return updateClass.GetMembers(propertyName).OfType<IPropertySymbol>().FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Builds the filter model for a handler attribute usage, capturing the constructor
+    /// arguments (as emitted literals) when the usage passes any. Returns <c>null</c> when a
+    /// diagnostic was reported; the filter is then omitted from the handler.
+    /// </summary>
+    private static FilterModel? BuildFilterModel(
+        string filterTypeFqn,
+        EquatableArray<FilterCtorModel> ctors,
+        AttributeData attributeData,
+        SemanticModel semanticModel,
+        List<Diagnostic> diagnostics)
+    {
+        string? ctorArgs = null;
+        if (attributeData.ApplicationSyntaxReference?.GetSyntax() is AttributeSyntax { ArgumentList.Arguments.Count: > 0 } attributeSyntax)
+        {
+            ctorArgs = CaptureFilterCtorArgs(filterTypeFqn, ctors, attributeData, attributeSyntax, semanticModel, diagnostics);
+            if (ctorArgs is null)
+            {
+                return null;
+            }
+        }
+
+        return new FilterModel { TypeFqn = filterTypeFqn, CtorArgs = ctorArgs };
+    }
+
+    /// <summary>
+    /// Captures the attribute's constructor arguments as an emitted <c>name: literal</c> list.
+    /// Bound (library) usages identify the mirrored ctor via the compiler-selected wrapper ctor;
+    /// own-assembly usages (error-symbol wrappers) select it structurally, preferring the
+    /// candidate with the fewest parameters (optional-filling betterness rule).
+    /// </summary>
+    private static string? CaptureFilterCtorArgs(
+        string filterTypeFqn,
+        EquatableArray<FilterCtorModel> ctors,
+        AttributeData attributeData,
+        AttributeSyntax attributeSyntax,
+        SemanticModel semanticModel,
+        List<Diagnostic> diagnostics)
+    {
+        string shortName = filterTypeFqn.Substring(filterTypeFqn.LastIndexOf('.') + 1);
+        SeparatedSyntaxList<AttributeArgumentSyntax> arguments = attributeSyntax.ArgumentList?.Arguments ?? default;
+
+        FilterCtorModel? selected = null;
+        if (attributeData.AttributeConstructor is { } boundCtor)
+        {
+            string[] boundNames = boundCtor.Parameters.Select(static p => p.Name).ToArray();
+            foreach (FilterCtorModel candidate in ctors.Items)
+            {
+                if (candidate.Params.Items.Select(static p => p.Name).SequenceEqual(boundNames))
+                {
+                    selected = candidate;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            foreach (FilterCtorModel candidate in ctors.Items.OrderBy(static c => c.Params.Count))
+            {
+                if (TryMapFilterArguments(candidate, arguments, out _))
+                {
+                    selected = candidate;
+                    break;
+                }
+            }
+        }
+
+        if (selected is null ||
+            !TryMapFilterArguments(selected, arguments, out List<(FilterParamModel Param, ExpressionSyntax Expression)> mapped))
+        {
+            diagnostics.Add(Diagnostic.Create(
+                PolyBotDiagnostics.NoMatchingFilterConstructor,
+                attributeSyntax.GetLocation(),
+                shortName));
+            return null;
+        }
+
+        return EmitFilterArgList(mapped, semanticModel, shortName, diagnostics);
+    }
+
+    /// <summary>
+    /// Captures a <c>With*</c> invocation's arguments as an emitted <c>name: literal</c> list,
+    /// or <c>null</c> when the call passes no arguments. Bound (library) calls identify the
+    /// mirrored ctor via the extension method's parameters (minus the builder receiver);
+    /// own-assembly calls select it structurally, preferring the fewest parameters.
+    /// </summary>
+    private static string? CaptureWithFilterArgs(
+        string filterTypeFqn,
+        EquatableArray<FilterCtorModel> ctors,
+        IMethodSymbol? boundWithMethod,
+        InvocationExpressionSyntax invocation,
+        SemanticModel semanticModel,
+        List<Diagnostic> diagnostics)
+    {
+        if (invocation.ArgumentList.Arguments.Count == 0)
+        {
+            return null;
+        }
+
+        string shortName = filterTypeFqn.Substring(filterTypeFqn.LastIndexOf('.') + 1);
+        SeparatedSyntaxList<ArgumentSyntax> arguments = invocation.ArgumentList.Arguments;
+
+        FilterCtorModel? selected = null;
+        if (boundWithMethod is not null)
+        {
+            // Reduced extension methods exclude the receiver from Parameters; static forms include it.
+            IEnumerable<string> boundNames = boundWithMethod.ReducedFrom is not null
+                ? boundWithMethod.Parameters.Select(static p => p.Name)
+                : boundWithMethod.Parameters.Skip(1).Select(static p => p.Name);
+            foreach (FilterCtorModel candidate in ctors.Items)
+            {
+                if (candidate.Params.Items.Select(static p => p.Name).SequenceEqual(boundNames))
+                {
+                    selected = candidate;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            foreach (FilterCtorModel candidate in ctors.Items.OrderBy(static c => c.Params.Count))
+            {
+                if (TryMapWithArguments(candidate, arguments, out _))
+                {
+                    selected = candidate;
+                    break;
+                }
+            }
+        }
+
+        if (selected is null ||
+            !TryMapWithArguments(selected, arguments, out List<(FilterParamModel Param, ExpressionSyntax Expression)> mapped))
+        {
+            diagnostics.Add(Diagnostic.Create(
+                PolyBotDiagnostics.NoMatchingFilterConstructor,
+                invocation.GetLocation(),
+                shortName));
+            return null;
+        }
+
+        return EmitFilterArgList(mapped, semanticModel, shortName, diagnostics);
+    }
+
+    /// <summary>
+    /// Maps invocation arguments onto a candidate ctor's parameters: positional in declaration
+    /// order, <c>name:</c> by parameter name. Fails on unknown names or duplicate assignments.
+    /// The result is ordered by parameter declaration order.
+    /// </summary>
+    private static bool TryMapWithArguments(
+        FilterCtorModel candidate,
+        SeparatedSyntaxList<ArgumentSyntax> arguments,
+        out List<(FilterParamModel Param, ExpressionSyntax Expression)> mapped)
+    {
+        mapped = new List<(FilterParamModel, ExpressionSyntax)>();
+        int positionalIndex = 0;
+        HashSet<string> assigned = new(StringComparer.Ordinal);
+        foreach (ArgumentSyntax argument in arguments)
+        {
+            FilterParamModel? parameter;
+            if (argument.NameColon is not null)
+            {
+                string parameterName = argument.NameColon.Name.Identifier.ValueText;
+                parameter = candidate.Params.Items.FirstOrDefault(p => p.Name == parameterName);
+            }
+            else
+            {
+                parameter = positionalIndex < candidate.Params.Count ? candidate.Params[positionalIndex] : null;
+                positionalIndex++;
+            }
+
+            if (parameter is null || !assigned.Add(parameter.Name))
+            {
+                mapped = new List<(FilterParamModel, ExpressionSyntax)>();
+                return false;
+            }
+
+            mapped.Add((parameter, argument.Expression));
+        }
+
+        mapped = mapped
+            .OrderBy(m => candidate.Params.Items.ToList().IndexOf(m.Param))
+            .ToList();
+        return true;
+    }
+
+    /// <summary>
+    /// Emits the captured argument mappings as a <c>name: literal, …</c> list; reports CUR044
+    /// and returns <c>null</c> when any argument is not a compile-time constant.
+    /// </summary>
+    private static string? EmitFilterArgList(
+        IReadOnlyList<(FilterParamModel Param, ExpressionSyntax Expression)> mapped,
+        SemanticModel semanticModel,
+        string shortName,
+        List<Diagnostic> diagnostics)
+    {
+        List<string> parts = new();
+        foreach ((FilterParamModel parameter, ExpressionSyntax expression) in mapped)
+        {
+            ITypeSymbol? expectedType = ResolveFilterParamType(parameter.TypeFqn, semanticModel.Compilation);
+            if (!FilterArgEmitter.TryEmit(expression, expectedType, semanticModel, out string literal))
+            {
+                diagnostics.Add(Diagnostic.Create(
+                    PolyBotDiagnostics.NonConstantFilterArgument,
+                    expression.GetLocation(),
+                    shortName));
+                return null;
+            }
+
+            parts.Add($"{parameter.Name}: {literal}");
+        }
+
+        return string.Join(", ", parts);
+    }
+
+    /// <summary>
+    /// Maps attribute arguments onto a candidate ctor's parameters: positional in declaration
+    /// order, <c>name:</c> by parameter name, <c>Name =</c> by property name. Fails on unknown
+    /// names or duplicate assignments. The result is ordered by parameter declaration order.
+    /// </summary>
+    private static bool TryMapFilterArguments(
+        FilterCtorModel candidate,
+        SeparatedSyntaxList<AttributeArgumentSyntax> arguments,
+        out List<(FilterParamModel Param, ExpressionSyntax Expression)> mapped)
+    {
+        mapped = new List<(FilterParamModel, ExpressionSyntax)>();
+        int positionalIndex = 0;
+        HashSet<string> assigned = new(StringComparer.Ordinal);
+        foreach (AttributeArgumentSyntax argument in arguments)
+        {
+            FilterParamModel? parameter = null;
+            if (argument.NameEquals is not null)
+            {
+                string propertyName = argument.NameEquals.Name.Identifier.ValueText;
+                parameter = candidate.Params.Items.FirstOrDefault(p => p.PropertyName == propertyName);
+            }
+            else if (argument.NameColon is not null)
+            {
+                string parameterName = argument.NameColon.Name.Identifier.ValueText;
+                parameter = candidate.Params.Items.FirstOrDefault(p => p.Name == parameterName);
+            }
+            else
+            {
+                parameter = positionalIndex < candidate.Params.Count ? candidate.Params[positionalIndex] : null;
+                positionalIndex++;
+            }
+
+            if (parameter is null || !assigned.Add(parameter.Name))
+            {
+                mapped = new List<(FilterParamModel, ExpressionSyntax)>();
+                return false;
+            }
+
+            mapped.Add((parameter, argument.Expression));
+        }
+
+        mapped = mapped
+            .OrderBy(m => candidate.Params.Items.ToList().IndexOf(m.Param))
+            .ToList();
+        return true;
+    }
+
+    /// <summary>
+    /// Resolves a mirrored parameter's emitted type name back to a symbol (for enum-member and
+    /// array-element literal evaluation).
+    /// </summary>
+    private static ITypeSymbol? ResolveFilterParamType(string typeFqn, Compilation compilation)
+    {
+        string name = typeFqn.StartsWith("global::", StringComparison.Ordinal) ? typeFqn.Substring("global::".Length) : typeFqn;
+        if (name.EndsWith("?", StringComparison.Ordinal))
+        {
+            name = name.Substring(0, name.Length - 1);
+        }
+
+        if (name.EndsWith("[]", StringComparison.Ordinal))
+        {
+            ITypeSymbol? elementType = ResolveNamedType(name.Substring(0, name.Length - 2), compilation);
+            return elementType is null ? null : compilation.CreateArrayTypeSymbol(elementType);
+        }
+
+        return ResolveNamedType(name, compilation);
+    }
+
+    private static readonly Dictionary<string, SpecialType> SpecialTypeKeywords = new(StringComparer.Ordinal)
+    {
+        ["bool"] = SpecialType.System_Boolean,
+        ["byte"] = SpecialType.System_Byte,
+        ["sbyte"] = SpecialType.System_SByte,
+        ["short"] = SpecialType.System_Int16,
+        ["ushort"] = SpecialType.System_UInt16,
+        ["int"] = SpecialType.System_Int32,
+        ["uint"] = SpecialType.System_UInt32,
+        ["long"] = SpecialType.System_Int64,
+        ["ulong"] = SpecialType.System_UInt64,
+        ["float"] = SpecialType.System_Single,
+        ["double"] = SpecialType.System_Double,
+        ["char"] = SpecialType.System_Char,
+        ["string"] = SpecialType.System_String,
+    };
+
+    private static ITypeSymbol? ResolveNamedType(string name, Compilation compilation)
+    {
+        return SpecialTypeKeywords.TryGetValue(name, out SpecialType specialType)
+            ? compilation.GetSpecialType(specialType)
+            : compilation.GetTypeByMetadataName(name);
     }
 
     /// <summary>

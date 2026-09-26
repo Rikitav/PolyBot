@@ -46,3 +46,5 @@ CUR040 | PolyBot | Error | An [UpdateHandler] method does not declare a Telegram
 CUR041 | PolyBot | Error | A method combines [UpdateHandler] with another handler attribute
 CUR042 | PolyBot | Warning | A universal [UpdateHandler] matches all update types; AllowedUpdates inference falls back to all update types
 CUR043 | PolyBot | Error | An [UpdateHandler] declares a typed-payload guard ([Command], [Pattern], or state conditions)
+CUR044 | PolyBot | Error | Filter arguments must be compile-time constants
+CUR045 | PolyBot | Error | No public constructor of the filter matches the supplied arguments

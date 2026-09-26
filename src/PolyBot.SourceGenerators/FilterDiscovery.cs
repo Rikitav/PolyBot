@@ -89,6 +89,8 @@ internal static class FilterDiscovery
                     TypeFqn = typeFqn,
                     ShortName = typeSymbol.Name,
                     DtoBaseName = FindDtoBaseName(typeSymbol, knownBaseNames),
+                    Ctors = FilterCtorInfo.ReadMirroredCtors(typeSymbol),
+                    HasParameterlessUsage = FilterCtorInfo.HasParameterlessUsage(typeSymbol),
                 });
             }
         }

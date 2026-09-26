@@ -50,7 +50,7 @@ internal static class WaitForExtensionsEmitter
         }
 
         ClassDeclarationSyntax extensionsClass = SyntaxFactory.ClassDeclaration("PolyBotAwaiterExtensions")
-            .AddModifiers(SyntaxKind.PublicKeyword, SyntaxKind.StaticKeyword)
+            .AddModifiers(SyntaxKind.PublicKeyword, SyntaxKind.StaticKeyword, SyntaxKind.PartialKeyword)
             .AddMembers(methods.ToArray())
             .WithLeadingTrivia(EmitterSyntax.DocComment(
                 "<summary>",

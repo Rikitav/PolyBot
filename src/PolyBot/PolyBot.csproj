@@ -61,6 +61,9 @@
   <!-- Featured analuzers -->
   <ItemGroup>
     <ProjectReference Include="..\PolyBot.InternalsGenerators\PolyBot.InternalsGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <!-- Runs FilterDiscovery over PolyBot itself so the built-in filters in Filters/ ship
+         with their generated [XxxFilter] wrapper attributes and With* awaiter extensions. -->
+    <ProjectReference Include="..\PolyBot.SourceGenerators\PolyBot.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <!-- Shipped analyzers -->

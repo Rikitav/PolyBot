@@ -121,4 +121,16 @@ internal static class EmitterSyntax
     {
         return $"global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<{filterTypeFqn}>({provider}) ?? ({filterTypeFqn})global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance({provider}, typeof({filterTypeFqn}))";
     }
+
+    /// <summary>
+    /// Filter resolution with constructor arguments captured from the attribute/With* usage:
+    /// explicit arguments bypass DI and construct the filter directly; without arguments the
+    /// service collection is consulted first, then <c>ActivatorUtilities</c>.
+    /// </summary>
+    public static string ResolveFilterWithArgs(string filterTypeFqn, string? ctorArgs, string provider = "_services")
+    {
+        return ctorArgs is null
+            ? ResolveFilter(filterTypeFqn, provider)
+            : $"new {filterTypeFqn}({ctorArgs})";
+    }
 }

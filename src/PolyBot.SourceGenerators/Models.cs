@@ -125,6 +125,63 @@ internal sealed class TailConsumerModel : IEquatable<TailConsumerModel>
     }
 }
 
+/// <summary>
+/// One attribute-legal constructor parameter of a filter class, mirrored onto the wrapper
+/// attribute (ctor parameter + settable property) and the <c>With*</c> extension.
+/// </summary>
+internal sealed class FilterParamModel : IEquatable<FilterParamModel>
+{
+    /// <summary>Constructor parameter name (used for named arguments at the construction site).</summary>
+    public required string Name { get; init; }
+
+    /// <summary>PascalCase name of the mirrored wrapper property (for attribute named arguments).</summary>
+    public required string PropertyName { get; init; }
+
+    public required string TypeFqn { get; init; }
+
+    public required bool IsOptional { get; init; }
+
+    /// <summary>Emitted C# literal of the declared default; only set when <see cref="IsOptional"/>.</summary>
+    public string? DefaultLiteral { get; init; }
+
+    public bool Equals(FilterParamModel? other)
+    {
+        return other is not null && Name == other.Name && PropertyName == other.PropertyName && TypeFqn == other.TypeFqn &&
+               IsOptional == other.IsOptional && DefaultLiteral == other.DefaultLiteral;
+    }
+
+    public override bool Equals(object? obj) => Equals(obj as FilterParamModel);
+
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = (hash * 31) + Name.GetHashCode();
+            hash = (hash * 31) + PropertyName.GetHashCode();
+            hash = (hash * 31) + TypeFqn.GetHashCode();
+            hash = (hash * 31) + IsOptional.GetHashCode();
+            hash = (hash * 31) + (DefaultLiteral?.GetHashCode() ?? 0);
+            return hash;
+        }
+    }
+}
+
+/// <summary>
+/// A public filter constructor as mirrored onto the generated wrapper surface: only its
+/// attribute-legal parameters (optional non-legal parameters are dropped; their defaults apply).
+/// </summary>
+internal sealed class FilterCtorModel : IEquatable<FilterCtorModel>
+{
+    public required EquatableArray<FilterParamModel> Params { get; init; }
+
+    public bool Equals(FilterCtorModel? other) => other is not null && Params.Equals(other.Params);
+
+    public override bool Equals(object? obj) => Equals(obj as FilterCtorModel);
+
+    public override int GetHashCode() => Params.GetHashCode();
+}
+
 internal sealed class FilterClassModel : IEquatable<FilterClassModel>
 {
     public required string TypeFqn { get; init; }
@@ -136,9 +193,22 @@ internal sealed class FilterClassModel : IEquatable<FilterClassModel>
     /// </summary>
     public string? DtoBaseName { get; init; }
 
+    /// <summary>
+    /// Public constructors mirrored onto the generated wrapper attribute and <c>With*</c>
+    /// extensions: only the attribute-legal parameters of each qualifying constructor.
+    /// </summary>
+    public required EquatableArray<FilterCtorModel> Ctors { get; init; }
+
+    /// <summary>
+    /// Whether the filter can be constructed without arguments (public parameterless ctor,
+    /// or every ctor parameter optional) — enables the parameterless wrapper surface.
+    /// </summary>
+    public required bool HasParameterlessUsage { get; init; }
+
     public bool Equals(FilterClassModel? other)
     {
-        return other is not null && TypeFqn == other.TypeFqn && ShortName == other.ShortName && DtoBaseName == other.DtoBaseName;
+        return other is not null && TypeFqn == other.TypeFqn && ShortName == other.ShortName && DtoBaseName == other.DtoBaseName &&
+               Ctors.Equals(other.Ctors) && HasParameterlessUsage == other.HasParameterlessUsage;
     }
 
     public override bool Equals(object? obj) => Equals(obj as FilterClassModel);
@@ -151,6 +221,8 @@ internal sealed class FilterClassModel : IEquatable<FilterClassModel>
             hash = (hash * 31) + TypeFqn.GetHashCode();
             hash = (hash * 31) + ShortName.GetHashCode();
             hash = (hash * 31) + (DtoBaseName?.GetHashCode() ?? 0);
+            hash = (hash * 31) + Ctors.GetHashCode();
+            hash = (hash * 31) + HasParameterlessUsage.GetHashCode();
             return hash;
         }
     }
@@ -432,11 +504,26 @@ internal sealed class FilterModel : IEquatable<FilterModel>
 {
     public required string TypeFqn { get; init; }
 
-    public bool Equals(FilterModel? other) => other is not null && TypeFqn == other.TypeFqn;
+    /// <summary>
+    /// Emitted named-argument list constructing the filter (e.g. <c>content: "x"</c>);
+    /// <c>null</c> for parameterless usage, which keeps the DI-first resolution.
+    /// </summary>
+    public string? CtorArgs { get; init; }
+
+    public bool Equals(FilterModel? other) => other is not null && TypeFqn == other.TypeFqn && CtorArgs == other.CtorArgs;
 
     public override bool Equals(object? obj) => Equals(obj as FilterModel);
 
-    public override int GetHashCode() => TypeFqn.GetHashCode();
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = (hash * 31) + TypeFqn.GetHashCode();
+            hash = (hash * 31) + (CtorArgs?.GetHashCode() ?? 0);
+            return hash;
+        }
+    }
 }
 
 internal sealed class HandlerModel : IEquatable<HandlerModel>

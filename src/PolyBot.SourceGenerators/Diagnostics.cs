@@ -349,4 +349,20 @@ internal static class PolyBotDiagnostics
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor NonConstantFilterArgument = new(
+        id: "CUR044",
+        title: "Non-constant filter argument",
+        messageFormat: "Arguments for filter '{0}' must be compile-time constants (literals, enum members, typeof, or constant expressions)",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor NoMatchingFilterConstructor = new(
+        id: "CUR045",
+        title: "No matching filter constructor",
+        messageFormat: "No public constructor of filter '{0}' matches the supplied arguments (attribute-legal parameter types only)",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }
