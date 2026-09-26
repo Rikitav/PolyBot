@@ -6,6 +6,8 @@ description: "Define slash commands with typed argument extraction, optional par
 
 PolyBot maps incoming Telegram commands to handler methods declaratively. Decorate any `[MessageHandler]` method with `[Command]` to restrict it to messages whose first entity is a bot command. The source generator emits all entity-checking, argument-parsing, and `@botname`-suffix verification code so you never write routing boilerplate by hand.
 
+Aliases can be declared positionally: `[Command("start", "begin")]` is shorthand for `[Command(Aliases = ["start", "begin"])]` — both forms are equivalent and can be combined.
+
 ## The `[Command]` attribute
 
 ```csharp
@@ -31,7 +33,7 @@ public static async Task<Result> StartHandler(Message msg, ITelegramBotClient bo
 | `Aliases` | `string[]` | `[]` | Command names without the leading `/`, matched case-insensitively |
 | `Prefix` | `char` | `'/'` | Controls the matching mode (see below) |
 | `NoArgs` | `bool` | `false` | Throws `CommandArgsParseException` if the message carries any tokens after the command |
-| `Description` | `string?` | `null` | BotFather menu description; values over 256 chars are a compile-time error (`CUR022`) |
+| `Description` | `string?` | `null` | BotFather menu description; missing values are a compile-time warning (`CUR021`) and the command is routed but not synced; values over 256 chars are a compile-time error (`CUR022`) |
 | `LanguageCode` | `string?` | `null` | BotFather localization code (e.g. `"en"`, `"ru"`); `null` registers for all languages |
 | `Scope` | `CommandScope` | `Default` | The BotFather audience for the command |
 | `IsHidden` | `bool` | `false` | Routes normally but is excluded from BotFather sync and skips the missing-description warning |
@@ -155,6 +157,10 @@ public static async Task<Result> Add(
 ## BotFather auto-sync
 
 Commands with a `Description` property are automatically collected into `PolyBotBotFatherSync` and synchronized with BotFather on startup. The generator groups commands by `(Scope, LanguageCode)` and sends one `SetMyCommands` call per unique pair.
+
+<Note>
+Commands without a `Description` still route normally, but are skipped during synchronization — the Bot API rejects empty command descriptions, so pushing one would throw. `CUR021` (warning) reminds you to either set a description or mark the command `IsHidden = true`.
+</Note>
 
 ```csharp
 [MessageHandler]

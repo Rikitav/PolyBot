@@ -11,6 +11,25 @@ namespace PolyBot.Attributes;
 public sealed class CommandAttribute : Attribute
 {
     /// <summary>
+    /// Initializes an empty attribute; configure via <see cref="Aliases"/> and the other
+    /// properties.
+    /// </summary>
+    public CommandAttribute()
+    {
+    }
+
+    /// <summary>
+    /// Initializes the attribute with command aliases — shorthand for
+    /// <c>Aliases = [..aliases]</c>, e.g. <c>[Command("start")]</c> is equivalent to
+    /// <c>[Command(Aliases = ["start"])]</c>.
+    /// </summary>
+    /// <param name="aliases">Command names without the leading '/', matched case-insensitively.</param>
+    public CommandAttribute(params string[] aliases)
+    {
+        Aliases = aliases;
+    }
+
+    /// <summary>
     /// Command names without the leading '/', matched case-insensitively.
     /// </summary>
     public string[] Aliases { get; set; } = [];

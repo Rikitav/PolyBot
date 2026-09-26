@@ -84,9 +84,43 @@ public static Task<Result> OnLogs(CallbackQuery query, [Arg] string path) { ... 
 
 A failed parse causes the pattern guard to emit `false` and the handler falls through to the next candidate — no exception is thrown.
 
+## Imperative matching in inline await loops
+
+`[Pattern]` covers routing into handlers, but inline conversations that await callbacks in a loop (via `IUpdateAwaiter`) used to fall back to manual `CallbackSegments` probing. The template-based `CallbackPatternMatcher.Match` overloads are the imperative twin of `[Pattern]`: same template syntax, same conversion rules, but the captures bind positionally to generic type arguments:
+
+```csharp
+[MessageHandler, Command(Aliases = ["start"], Description = "desc")]
+public static async ValueTask Start(Message msg, ITelegramBotClient client, IUpdateAwaiter awaiter, CancellationToken ct)
+{
+    await client.SendMessage(msg.Chat, "Pick an item", replyMarkup: Keyboard(), cancellationToken: ct);
+
+    while (true)
+    {
+        CallbackQuery? callback = await awaiter
+            .WaitForCallbackQueryAsync()
+            .ByUserInChat(ct);
+
+        // "item;{index}" → literal "item", one int capture; non-matching taps are skipped
+        if (callback?.Data is not null &&
+            CallbackPatternMatcher.Match(callback.Data, ';', "item;{index}", out int itemIndex))
+        {
+            await client.AnswerCallbackQuery(callback.Id, cancellationToken: ct);
+            await client.SendMessage(msg.Chat, "You picked " + itemIndex, cancellationToken: ct);
+            break;
+        }
+    }
+}
+```
+
+- Overloads exist for zero (literal-only) through five captures; a `char` overload of each takes an explicit separator, the rest default to `':'`.
+- Generic arguments correspond to `{name}` placeholders in template order — placeholder names are documentation only at this point.
+- A `{*name}` wildcard tail binds to a `string` argument and accepts any remaining text, exactly like `[Pattern]`.
+- Template problems (unbalanced braces, wildcard not in tail position, placeholder/out-argument count mismatch, wildcard bound to a non-`string`) throw `ArgumentException` immediately — they are coding errors, not data errors. Data that simply doesn't match returns `false`.
+- A capture type with no accessible static `TryParse` throws `InvalidOperationException` on first use — the runtime counterpart of diagnostic `CUR028`.
+
 ## Zero-allocation matching
 
-The `CallbackPatternMatcher` / `CallbackSegments` implementation is zero-allocation per update: segment bounds are recomputed by scanning the `callback_data` string rather than splitting it into an array. This means pattern routing adds no heap pressure on the hot path.
+The `CallbackPatternMatcher` / `CallbackSegments` implementation used by the generated router is zero-allocation per update: segment bounds are recomputed by scanning the `callback_data` string rather than splitting it into an array. This means pattern routing adds no heap pressure on the hot path. The template-based `Match<T…>` overloads above are meant for inline await loops, not the hot path; they parse the template and allocate capture substrings per call.
 
 ## The 64-byte `callback_data` limit
 

@@ -37,7 +37,8 @@
               "concepts/handlers",
               "concepts/parameter-injection",
               "concepts/routing-result",
-              "concepts/filters"
+              "concepts/filters",
+              "concepts/inline-awaiting"
             ]
           },
           {

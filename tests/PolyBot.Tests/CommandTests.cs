@@ -102,4 +102,27 @@ public sealed class CommandTests
         Assert.HasCount(1, texts);
         StringAssert.Contains(texts[0], "error:InvalidOperationException");
     }
+
+    [TestMethod]
+    public async Task PositionalConstructorAlias_RoutesLikeAliasesArray()
+    {
+        TestHostHandle host = TestHost.BuildHost();
+        await using ServiceProvider provider = host.Provider;
+
+        await host.Router.HandleUpdateAsync(host.Client, TestHost.CommandUpdate(9, "/pos", 100, 200), CancellationToken.None);
+        await host.Router.HandleUpdateAsync(host.Client, TestHost.CommandUpdate(10, "/positional", 100, 200), CancellationToken.None);
+
+        CollectionAssert.AreEqual(new List<string> { "positional", "positional" }, SentTexts(host));
+    }
+
+    [TestMethod]
+    public async Task CommandWithoutDescription_RoutesNormally()
+    {
+        TestHostHandle host = TestHost.BuildHost();
+        await using ServiceProvider provider = host.Provider;
+
+        await host.Router.HandleUpdateAsync(host.Client, TestHost.CommandUpdate(11, "/nodesc", 100, 200), CancellationToken.None);
+
+        CollectionAssert.AreEqual(new List<string> { "nodesc" }, SentTexts(host));
+    }
 }

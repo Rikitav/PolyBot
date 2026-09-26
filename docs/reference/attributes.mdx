@@ -83,6 +83,8 @@ You will not use this attribute directly; it is read by the generator to resolve
 
 Restricts a handler to messages whose first entity is a bot command. Only meaningful on handlers whose payload is `Message`. The `@botname` suffix is automatically verified against `PolyBotOptions.BotUsername`.
 
+Aliases can be declared positionally through the constructor — `[Command("start", "begin")]` is equivalent to `[Command(Aliases = ["start", "begin"])]`; both forms can also be combined.
+
 <ParamField path="Aliases" type="string[]" default="[]">
   Command names without the leading `'/'`, matched case-insensitively. Example: `Aliases = ["start", "begin"]`.
 </ParamField>

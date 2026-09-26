@@ -1,0 +1,160 @@
+---
+title: "Inline Awaiting: Conversational Flows as Plain Code"
+sidebarTitle: "Inline Awaiting"
+description: "Model multi-step bot conversations as ordinary linear code: suspend a handler on an await, then parse the user's reply with the bundled command-args and callback-pattern helpers."
+---
+
+Some conversations are naturally sequential: ask a question, wait for the answer, ask the next one. State machines (see [State Machines](/features/state-machines)) model this with explicit steps and transitions, which pays off for long-lived or branchy flows. For everything else, **inline awaiting** lets you write the conversation as ordinary linear code — no steps, no transitions, no stored progress.
+
+```csharp
+[MessageHandler, Command(Aliases = ["register"], Description = "Register")]
+public static async Task<Result> Register(Message msg, IUpdateAwaiter awaiter, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat, "What is your name?", cancellationToken: ct);
+
+    Message? nameMsg = await awaiter.WaitForMessageAsync(TimeSpan.FromMinutes(5)).ByUserInChat(ct);
+    if (nameMsg?.Text is null)
+        return Result.Handled(); // timed out or cancelled
+
+    await bot.SendMessage(msg.Chat, $"Nice to meet you, {nameMsg.Text}! Which city?", cancellationToken: ct);
+
+    Message? cityMsg = await awaiter.WaitForMessageAsync(TimeSpan.FromMinutes(5)).ByUserInChat(ct);
+    if (cityMsg?.Text is null)
+        return Result.Handled();
+
+    await bot.SendMessage(msg.Chat, $"Registered: {nameMsg.Text} from {cityMsg.Text}", cancellationToken: ct);
+    return Result.Handled();
+}
+```
+
+The handler runs on the first update, suspends at the `await` without blocking the polling loop, and resumes on the matching update — local variables (`nameMsg`) survive the suspension as normal async state. The builder chain (`TextMatches`, `With{FilterName}`, `Where`, timeouts) is covered in [Inline Awaits](/features/inline-awaits).
+
+## Choosing between inline awaiting and state machines
+
+| Inline awaiting | State machines |
+|---|---|
+| Short, linear flows (2–5 steps) | Long, branching, or resumable flows |
+| Steps exist only while the handler is suspended | Progress survives restarts when persisted |
+| Plain code; easy to read top to bottom | Explicit step types enable analytics/inspection |
+| Cancellation/timeout is just `null` from the await | Per-step entry/exit hooks |
+
+## Parsing what the user sent
+
+The awaited update arrives as a raw `Message` or `CallbackQuery`. Two bundled helpers parse its payload with exactly the same rules the generated router uses for `[Arg]` parameters and `[Pattern]` templates — so inline flows and routed handlers never disagree about what "parseable" means.
+
+### Command arguments: `CommandHelper.ParseArgs`
+
+`CommandHelper.ParseArgs` tokenizes the message text and converts each token with the same engine behind `[Arg]`: numbers parse invariant-culture, enums parse case-insensitively (names or numeric values), everything else goes through `TypeDescriptor` converters. Combine it with `CommandHelper.MatchCommand` when the reply itself carries a command:
+
+```csharp
+Message? reply = await awaiter.WaitForMessageAsync().ByUserInChat(ct);
+if (reply?.Text is null)
+    return Result.Handled();
+
+try
+{
+    // Reply looks like "/set 20" — the same alias/prefix rules as [Command].
+    if (!CommandHelper.MatchCommand(reply, "set", '/', botUsername: null, out int argsStart))
+    {
+        await bot.SendMessage(msg.Chat, "Reply with /set <seconds>.", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    object?[] values = CommandHelper.ParseArgs(
+        reply,
+        argsStart,
+        specs: [new ArgSpec(typeof(int), "seconds", isOptional: false)],
+        noArgs: false,
+        tailPatterns: []);
+
+    int seconds = (int)values[0];
+    // ...
+}
+catch (CommandArgsParseException)
+{
+    await bot.SendMessage(msg.Chat, "Couldn't parse that — send /set with a whole number.", cancellationToken: ct);
+}
+```
+
+Each `ArgSpec` mirrors one `[Arg]` parameter: `Type`, a name used in error messages, and `IsOptional` (missing optional tokens yield the type's default). A failing parse throws `CommandArgsParseException`, so a `try/catch` is the natural "re-ask the user" loop. For plain free-text replies without a command prefix, pass `argsStartIndex: 0` to treat the whole text as arguments.
+
+### Callback data: `CallbackPatternMatcher.Match<T…>`
+
+For inline keyboards, `CallbackPatternMatcher` exposes template overloads that are the imperative twin of `[Pattern]`: literal segments plus `{name}` placeholders, with captures bound positionally to generic type arguments (up to five, plus a literal-only overload for exact routes):
+
+```csharp
+await bot.SendMessage(msg.Chat, "Pick an item", replyMarkup: Keyboard(), cancellationToken: ct);
+
+while (true)
+{
+    // Non-matching taps (other buttons, stale keyboards) are skipped, not errors.
+    CallbackQuery? callback = await awaiter.WaitForCallbackQueryAsync().ByUserInChat(ct);
+    if (callback?.Data is not null &&
+        CallbackPatternMatcher.Match(callback.Data, ';', "item;{index}", out int itemIndex))
+    {
+        await bot.AnswerCallbackQuery(callback.Id, cancellationToken: ct);
+        await bot.SendMessage(msg.Chat, $"You picked {itemIndex}", cancellationToken: ct);
+        break;
+    }
+}
+```
+
+The conversion rules match the router exactly: `string` binds verbatim, enums parse case-insensitively, numerics parse invariant-culture, other types need a static `TryParse`. A `{*name}` wildcard tail binds to a `string` and captures everything after the separator. Template syntax details, the 64-byte `callback_data` budget, and the full overload list live in [Callback-Data Patterns](/features/callback-patterns).
+
+## A complete flow combining both
+
+```csharp
+[MessageHandler, Command(Aliases = ["order"], Description = "Place an order")]
+public static async Task<Result> Order(Message msg, IUpdateAwaiter awaiter, ITelegramBotClient bot, CancellationToken ct)
+{
+    await bot.SendMessage(msg.Chat, "How many items? Reply like: /qty 2", cancellationToken: ct);
+
+    int count;
+    while (true)
+    {
+        Message? reply = await awaiter.WaitForMessageAsync(TimeSpan.FromMinutes(5)).ByUserInChat(ct);
+        if (reply is null)
+            return Result.Handled();
+
+        try
+        {
+            if (!CommandHelper.MatchCommand(reply, "qty", '/', null, out int argsStart))
+                throw new CommandArgsParseException("expected /qty <count>", null, reply);
+
+            count = (int)CommandHelper.ParseArgs(
+                reply, argsStart,
+                [new ArgSpec(typeof(int), "count", isOptional: false)],
+                noArgs: false, tailPatterns: [])[0]!;
+            break;
+        }
+        catch (CommandArgsParseException)
+        {
+            await bot.SendMessage(msg.Chat, "Please reply with /qty and a whole number.", cancellationToken: ct);
+        }
+    }
+
+    await bot.SendMessage(msg.Chat, "Confirm?", replyMarkup: ConfirmKeyboard(count), cancellationToken: ct);
+
+    while (true)
+    {
+        CallbackQuery? callback = await awaiter.WaitForCallbackQueryAsync().ByUserInChat(ct);
+        if (callback?.Data is null)
+            return Result.Handled();
+
+        if (CallbackPatternMatcher.Match(callback.Data, ';', "order;{action};{count}", out string action, out int confirmCount) &&
+            confirmCount == count)
+        {
+            await bot.AnswerCallbackQuery(callback.Id, cancellationToken: ct);
+            await bot.SendMessage(msg.Chat, action == "yes" ? $"Ordered {count}." : "Cancelled.", cancellationToken: ct);
+            return Result.Handled();
+        }
+    }
+}
+```
+
+## Pitfalls
+
+- **The awaited payload is raw.** Values you extract with `ParseArgs` or `CallbackPatternMatcher` come as `object?[]` / typed `out` parameters, not handler parameters — cast explicitly.
+- **Always handle `null` from the await.** A `null` means the timeout expired or the wait was cancelled; reply with guidance (or silently drop) instead of continuing.
+- **Non-matching updates fall through.** While a handler is suspended, other updates for the same user go through normal routing; design your prompts so stray messages don't derail the flow.
+- **A suspended handler is single-shot memory.** If the bot restarts, suspended flows are gone. Anything that must survive restarts belongs in a persisted state machine instead.

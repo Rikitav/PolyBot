@@ -217,6 +217,25 @@ public sealed partial class TestHandlers
         return Result.Handled();
     }
 
+    // Positional constructor argument: [Command("pos", "positional")] ≡ Aliases = ["pos", "positional"].
+    [MessageHandler(Priority = -1)]
+    [Command("pos", "positional", Description = "Positional alias demo")]
+    public static async Task<Result> PositionalAliasHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "positional", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    // No Description on purpose: the command routes, but BotFather sync must skip it
+    // (empty descriptions are rejected by the Bot API). Intentional CUR021 warning.
+    [MessageHandler(Priority = -1)]
+    [Command(Aliases = ["nodesc"])]
+    public static async Task<Result> NoDescriptionHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "nodesc", cancellationToken: ct);
+        return Result.Handled();
+    }
+
     [MessageHandler(Priority = -1)]
     [Command(Aliases = ["fsm"], Description = "FSM demo")]
     [NoState<RegistrationStep>]

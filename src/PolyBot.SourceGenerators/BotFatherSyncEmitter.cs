@@ -15,14 +15,17 @@ internal static class BotFatherSyncEmitter
         List<SyncCommand> commands = new();
         foreach (HandlerModel handler in handlers)
         {
-            if (handler.Prefix != '/' || handler.Aliases.Count == 0 || handler.CommandHidden)
+            if (handler.Prefix != '/' ||
+                handler.Aliases.Count == 0 ||
+                handler.CommandHidden ||
+                string.IsNullOrEmpty(handler.CommandDescription))
             {
                 continue;
             }
 
             commands.Add(new SyncCommand(
                 handler.Aliases[0],
-                handler.CommandDescription ?? string.Empty,
+                handler.CommandDescription!,
                 handler.CommandScope,
                 handler.CommandLanguageCode));
         }

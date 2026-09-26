@@ -10,7 +10,9 @@ namespace PolyBot.BotFather;
 public interface IBotFatherSync
 {
     /// <summary>
-    /// The discovered commands, in declaration order (hidden commands excluded).
+    /// The discovered commands, in declaration order (hidden commands and commands without a
+    /// <c>Description</c> excluded — BotFather rejects empty descriptions, so only described
+    /// commands are synchronized).
     /// </summary>
     IReadOnlyList<BotCommand> DiscoveredCommands { get; }
 

@@ -20,7 +20,7 @@
 
     <!-- NuGet package metadata properties -->
 	<Title>PolyBot</Title>
-	<Version>1.3.0</Version>
+	<Version>1.4.0</Version>
 	<Authors>Rikitav Tim4ik</Authors>
 	<Company>Rikitav Tim4ik</Company>
 	<RepositoryUrl>https://github.com/Rikitav/Telegrator</RepositoryUrl>
@@ -40,11 +40,11 @@
 
   <!-- Project dependencies -->
   <ItemGroup>
-    <PackageReference Include="Telegram.Bot" Version="22.10.3.1" />
+    <PackageReference Include="Telegram.Bot" Version="22.10.3.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />  
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.12" />
-    <PackageReference Include="System.Threading.Channels" Version="9.0.0" />
+    <PackageReference Include="System.Threading.Channels" Version="10.0.12" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.12" />
     <PackageReference Include="System.Text.Json" Version="10.0.12" />
@@ -61,8 +61,6 @@
   <!-- Featured analuzers -->
   <ItemGroup>
     <ProjectReference Include="..\PolyBot.InternalsGenerators\PolyBot.InternalsGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <!-- Runs FilterDiscovery over PolyBot itself so the built-in filters in Filters/ ship
-         with their generated [XxxFilter] wrapper attributes and With* awaiter extensions. -->
     <ProjectReference Include="..\PolyBot.SourceGenerators\PolyBot.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 

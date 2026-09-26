@@ -165,6 +165,7 @@ internal static class HandlerDiscovery
                 }
 
                 commandData ??= attributeData;
+                aliases.AddRange(ReadStringConstructorArguments(attributeData));
                 aliases.AddRange(ReadStringArray(attributeData, "Aliases"));
             }
         }
@@ -2094,6 +2095,32 @@ internal static class HandlerDiscovery
                 {
                     yield return s;
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads positional constructor arguments as strings; a <c>params string[]</c> parameter
+    /// arrives as a single array-valued argument, so both <c>[Command("a")]</c> and
+    /// <c>[Command("a", "b")]</c> yield the individual aliases.
+    /// </summary>
+    private static IEnumerable<string> ReadStringConstructorArguments(AttributeData attributeData)
+    {
+        foreach (TypedConstant argument in attributeData.ConstructorArguments)
+        {
+            if (argument.Kind == TypedConstantKind.Array)
+            {
+                foreach (TypedConstant element in argument.Values)
+                {
+                    if (element.Value is string s)
+                    {
+                        yield return s;
+                    }
+                }
+            }
+            else if (argument.Value is string single)
+            {
+                yield return single;
             }
         }
     }
