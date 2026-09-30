@@ -3410,6 +3410,9 @@
         <member name="M:PolyBot.RichMessages.RichMessageBuilder.op_Implicit(PolyBot.RichMessages.RichMessageBuilder)~Telegram.Bot.Types.InputRichMessage">
             <summary>Builds the accumulated nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>.</summary>
         </member>
+        <member name="M:PolyBot.RichMessages.RichMessageBuilder.op_Implicit(PolyBot.RichMessages.RichMessageBuilder)~Telegram.Bot.Types.InlineQueryResults.InputRichMessageContent">
+            <summary>Builds the accumulated nodes into a single <see cref="T:Telegram.Bot.Types.RichText"/>.</summary>
+        </member>
         <member name="T:PolyBot.RichMessages.RichTextBuilder">
             <summary>
             Fluent builder that accumulates <see cref="T:Telegram.Bot.Types.RichText"/> inline nodes and produces a single

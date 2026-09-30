@@ -1,5 +1,6 @@
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InlineQueryResults;
 
 namespace PolyBot.RichMessages;
 
@@ -262,4 +263,7 @@ public sealed class RichMessageBuilder
 
     /// <summary>Builds the accumulated nodes into a single <see cref="RichText"/>.</summary>
     public static implicit operator InputRichMessage(RichMessageBuilder builder) => builder.Build();
+
+    /// <summary>Builds the accumulated nodes into a single <see cref="RichText"/>.</summary>
+    public static implicit operator InputRichMessageContent(RichMessageBuilder builder) => new InputRichMessageContent(builder.Build());
 }
