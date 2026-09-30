@@ -185,6 +185,10 @@ public sealed class RichMessageBuilder
     /// <summary>Appends a buttons block.</summary>
     public RichMessageBuilder Buttons(IEnumerable<RichMessageButton> buttons, RichBlockTableCellAlign? align = null) => Block(RichBlockFactory.Buttons(buttons, align));
 
+    /// <summary>Appends a buttons block, configuring the buttons with a <see cref="RichButtonsBuilder"/>.</summary>
+    public RichMessageBuilder Buttons(Action<RichButtonsBuilder> configure, RichBlockTableCellAlign? align = null)
+        => Buttons(BuildButtons(configure), align);
+
     /// <summary>Appends a pre-built block.</summary>
     public RichMessageBuilder Block(InputRichBlock block)
     {
@@ -257,6 +261,13 @@ public sealed class RichMessageBuilder
     private static RichText BuildText(Action<RichTextBuilder> configure)
     {
         RichTextBuilder builder = new();
+        configure(builder);
+        return builder.Build();
+    }
+
+    private static RichMessageButton[] BuildButtons(Action<RichButtonsBuilder> configure)
+    {
+        RichButtonsBuilder builder = new();
         configure(builder);
         return builder.Build();
     }

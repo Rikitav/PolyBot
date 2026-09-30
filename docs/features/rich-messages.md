@@ -187,6 +187,33 @@ RichText linked = new RichTextBuilder()
     .Build();
 ```
 
+## Buttons: `RichButtonsBuilder`
+
+Use `RichButtonsBuilder` to compose a standalone buttons block (as opposed to a button embedded inside a paragraph via `RichTextBuilder`). Every button kind has a plain-label overload and a `RichButtonTextBuilder` overload whose label is restricted to the entity subset the Bot API allows inside button text (plain text, custom emoji, date/time):
+
+```csharp
+InputRichMessage message = new RichMessageBuilder()
+    .Paragraph("Pick an action:")
+    .Buttons(buttons => buttons
+        .CallbackButton("Open", "open", RichMessageButtonStyle.Primary)
+        .CallbackButton(label => label.Plain("Launch ").CustomEmoji("5368324170671202286", "🚀"), "launch")
+        .UrlButton("Documentation", "https://poly-bot.mintlify.site")
+        .CopyTextButton("Copy ID", "123456")
+        .WebAppButton("Dashboard", webAppInfo)
+        .SwitchInlineQueryButton("Share", "polybot")
+        .SwitchCurrentChatButton("Share here", "polybot")
+        .SwitchChosenChatButton("Share to…", chosenChat)
+        .CallbackButton("Delete", "delete", RichMessageButtonStyle.Danger, disabled: true),
+        RichBlockTableCellAlign.Center)
+    .Build();
+```
+
+The generic `Button(...)` overloads accept a pre-built `RichText` label plus exactly one action (`url`, `callbackData`, `webApp`, `loginUrl`, `switchInlineQuery`, `switchInlineQueryCurrentChat`, `switchInlineQueryChosenChat`, or `copyText`). `Build()` returns `RichMessageButton[]`, and an implicit conversion to the array type exists, so a `RichButtonsBuilder` can be passed anywhere a button collection is expected.
+
+<Note>
+`RichMessageButtonStyle` (Primary, Success, Danger, …) styles the button inside the rich-message render; `disabled: true` renders the button as non-interactive.
+</Note>
+
 ## Low-level composition: `RichBlockFactory` & `RichTextFactory`
 
 For scenarios where dynamic block construction or AST-like manipulation is required, use `RichBlockFactory` and `RichTextFactory` directly. The factory handles setting block discriminators automatically so you only populate content models.
