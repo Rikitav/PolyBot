@@ -2052,6 +2052,22 @@
             the command arguments begin (the end of the command entity or alias).
             </param>
         </member>
+        <member name="M:PolyBot.Commands.CommandHelper.MatchGuestCommand(Telegram.Bot.Types.Message,System.String,System.Char,System.String,System.Int32@)">
+            <summary>
+            Guest-message variant of <see cref="M:PolyBot.Commands.CommandHelper.MatchCommand(Telegram.Bot.Types.Message,System.String,System.Char,System.String,System.Int32@)"/>: guest updates arrive with the bot's mention first.
+            </summary>
+            <param name="message"></param>
+            <param name="alias"></param>
+            <param name="prefix"></param>
+            <param name="botUsername"></param>
+            <param name="argsStartIndex"></param>
+            <returns></returns>
+        </member>
+        <member name="M:PolyBot.Commands.CommandHelper.TryGetGuestCommandOffset(Telegram.Bot.Types.Message,System.String,System.Int32@)">
+            <summary>
+            Locates the start of the command in a guest message.
+            </summary>
+        </member>
         <member name="M:PolyBot.Commands.CommandHelper.ParseArgs(Telegram.Bot.Types.Message,System.Int32,PolyBot.Commands.ArgSpec[],System.Boolean,System.String[])">
             <summary>
             Parses the whitespace-separated tokens that follow a command into values for the
@@ -2080,6 +2096,11 @@
             required argument is missing, when a token cannot be parsed into its type, or when
             a <c>[Parse]</c> pattern does not match the remaining text.
             </exception>
+        </member>
+        <member name="M:PolyBot.Commands.CommandHelper.MatchEntityCommandAt(Telegram.Bot.Types.Message,System.String,System.Int32,System.String,System.String,System.Int32@)">
+            <summary>
+            Matches a <c>BotCommand</c> entity that starts exactly at <paramref name="requiredOffset"/> in the text.
+            </summary>
         </member>
         <member name="T:PolyBot.Filters.CallbackDataFilter">
             <summary>

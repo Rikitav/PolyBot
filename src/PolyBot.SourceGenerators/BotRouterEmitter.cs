@@ -1193,13 +1193,19 @@ internal static class BotRouterEmitter
     {
         string cmdLenVar = $"__curator_cmdlen_{id}";
 
+        // Guest messages arrive as "@BotName /start ..." — the matcher skips the leading
+        // mention and binds the command that follows it.
+        string matcherMethod = handler.UpdateTypeMemberName == "GuestMessage"
+            ? "MatchGuestCommand"
+            : "MatchCommand";
+
         List<ExpressionSyntax> checks = new();
         int aliasIndex = 0;
         foreach (string alias in handler.Aliases.Items)
         {
             string outArgument = aliasIndex == 0 ? $"out int {cmdLenVar}" : $"out {cmdLenVar}";
             checks.Add(SyntaxFactory.ParseExpression(
-                $"global::PolyBot.Commands.CommandHelper.MatchCommand({payloadVar}, {EscapeString(alias)}, {EscapeChar(handler.Prefix)}, this.@__curatorOptions?.BotUsername, {outArgument})"));
+                $"global::PolyBot.Commands.CommandHelper.{matcherMethod}({payloadVar}, {EscapeString(alias)}, {EscapeChar(handler.Prefix)}, this.@__curatorOptions?.BotUsername, {outArgument})"));
             aliasIndex++;
         }
 

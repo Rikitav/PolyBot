@@ -64,6 +64,21 @@ public static Task<Result> Hi(Message msg) { ... }
 public static Task<Result> Time(Message msg) { ... }
 ```
 
+### Guest messages
+
+Guest updates arrive with the bot's mention first — `@PolyBot /start` — and Telegram marks that mention with a `Mention` entity at offset 0. On a `[GuestMessageHandler]`, `[Command]` uses that entity to find where the command begins and matches from there, so the example below handles only `/start`:
+
+```csharp
+// "@PolyBot /start"     → matched
+// "@PolyBot /start arg" → matched, [Arg] binds from "arg"
+// "/start" (no mention) → NOT matched; route it with a regular [MessageHandler]
+[GuestMessageHandler]
+[Command(Aliases = ["start"])]
+public static Task<Result> GuestStart(Message msg) { ... }
+```
+
+The mention itself is not verified by name — Telegram only delivers guest messages for the bot that was mentioned, and matching is entity-driven: text that merely *looks* like `@BotName /cmd` without a `Mention` entity does not match. The `@botsuffix` check on the command entity itself (`/start@MyBot`) still applies. Non-`'/'` prefixes work the same way: the remainder after the mention entity is matched as if it were the whole text. Imperative code can use the same rule via `CommandHelper.MatchGuestCommand`.
+
 ### `CommandScope` values
 
 The `Scope` property maps to Telegram's `BotCommandScope` and controls which chats see the command in the BotFather menu.

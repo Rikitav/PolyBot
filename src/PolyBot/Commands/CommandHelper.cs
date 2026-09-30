@@ -108,6 +108,88 @@ public static class CommandHelper
     }
 
     /// <summary>
+    /// Guest-message variant of <see cref="MatchCommand"/>: guest updates arrive with the bot's mention first.
+    /// </summary>
+    /// <param name="message"></param>
+    /// <param name="alias"></param>
+    /// <param name="prefix"></param>
+    /// <param name="botUsername"></param>
+    /// <param name="argsStartIndex"></param>
+    /// <returns></returns>
+    public static bool MatchGuestCommand(Message message, string alias, char prefix, string? botUsername, out int argsStartIndex)
+    {
+        argsStartIndex = 0;
+        string? text = message.Text;
+        if (text is null)
+        {
+            return false;
+        }
+
+        if (!TryGetGuestCommandOffset(message, text, out int commandOffset))
+        {
+            return false;
+        }
+
+        if (prefix == '/')
+        {
+            return MatchEntityCommandAt(message, text, commandOffset, alias, botUsername, out argsStartIndex);
+        }
+
+        if (prefix == ' ' || prefix == '\0')
+        {
+            return MatchTextCommand(text, alias, commandOffset, commandOffset + alias.Length, out argsStartIndex);
+        }
+
+        if (text.Length <= commandOffset || text[commandOffset] != prefix)
+        {
+            return false;
+        }
+
+        return MatchTextCommand(text, alias, commandOffset + 1, commandOffset + 1 + alias.Length, out argsStartIndex);
+    }
+
+    /// <summary>
+    /// Locates the start of the command in a guest message.
+    /// </summary>
+    private static bool TryGetGuestCommandOffset(Message message, string text, out int commandOffset)
+    {
+        commandOffset = 0;
+        if (message.Entities is null)
+        {
+            return false;
+        }
+
+        foreach (MessageEntity entity in message.Entities)
+        {
+            if (entity.Type != MessageEntityType.Mention || entity.Offset != 0)
+            {
+                continue;
+            }
+
+            if (entity.Length <= 0 || entity.Offset + entity.Length > text.Length)
+            {
+                return false;
+            }
+
+            int end = entity.Offset + entity.Length;
+            while (end < text.Length && char.IsWhiteSpace(text[end]))
+            {
+                end++;
+            }
+
+            if (end >= text.Length)
+            {
+                return false; // mention with nothing after it
+            }
+
+            commandOffset = end;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Parses the whitespace-separated tokens that follow a command into values for the
     /// given argument specifications.
     /// </summary>
@@ -222,6 +304,12 @@ public static class CommandHelper
     }
 
     private static bool MatchEntityCommand(Message message, string text, string alias, string? botUsername, out int argsStartIndex)
+        => MatchEntityCommandAt(message, text, 0, alias, botUsername, out argsStartIndex);
+
+    /// <summary>
+    /// Matches a <c>BotCommand</c> entity that starts exactly at <paramref name="requiredOffset"/> in the text.
+    /// </summary>
+    private static bool MatchEntityCommandAt(Message message, string text, int requiredOffset, string alias, string? botUsername, out int argsStartIndex)
     {
         argsStartIndex = 0;
         if (message.Entities is null)
@@ -231,7 +319,7 @@ public static class CommandHelper
 
         foreach (MessageEntity entity in message.Entities)
         {
-            if (entity.Type != MessageEntityType.BotCommand || entity.Offset != 0)
+            if (entity.Type != MessageEntityType.BotCommand || entity.Offset != requiredOffset)
             {
                 continue;
             }

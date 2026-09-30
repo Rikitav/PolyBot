@@ -236,6 +236,32 @@ public sealed partial class TestHandlers
         return Result.Handled();
     }
 
+    // Guest messages arrive as "@BotName /command" — [Command] on a GuestMessageHandler
+    // skips the leading mention via CommandHelper.MatchGuestCommand.
+    [GuestMessageHandler]
+    [Command(Aliases = ["gstart"], IsHidden = true)]
+    public static async Task<Result> GuestStartHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "guest:start", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    [GuestMessageHandler]
+    [Command(Aliases = ["gadd"], IsHidden = true)]
+    public static async Task<Result> GuestAddHandler(Message msg, ITelegramBotClient bot, [Arg] int x, [Arg] int y, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, $"guest:{x + y}", cancellationToken: ct);
+        return Result.Handled();
+    }
+
+    [GuestMessageHandler]
+    [Command(Aliases = ["gtime"], Prefix = ' ', IsHidden = true)]
+    public static async Task<Result> GuestTimeHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
+    {
+        await bot.SendMessage(msg.Chat.Id, "guest:time", cancellationToken: ct);
+        return Result.Handled();
+    }
+
     [MessageHandler(Priority = -1)]
     [Command(Aliases = ["fsm"], Description = "FSM demo")]
     [NoState<RegistrationStep>]
