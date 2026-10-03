@@ -79,8 +79,8 @@ InputRichMessage rich = new RichMessageBuilder()
 
 ```csharp
 InlineKeyboardMarkup keyboard = new InlineKeyboardBuilder()
-    .WithCallbackButton("Open", "open")
-    .WithCallbackButton("Close", "close")
+    .CallbackButton("Open", "open")
+    .CallbackButton("Close", "close")
     .Adjust(2);
 ```
 

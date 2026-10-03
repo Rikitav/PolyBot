@@ -306,9 +306,7 @@ public sealed class PolyBotClient : IAsyncDisposable
         {
             _telegramOptions = new TelegramBotClientOptions(options.BotToken, options.BaseUrl, options.UseTestEnvironment);
             Services
-                .AddHttpClient("tgbot-client")
-                .RemoveAllLoggers()
-                .AddTypedClient<ITelegramBotClient>(httpClient => new TelegramBotClient(_telegramOptions, httpClient))
+                .AddHttpClient<ITelegramBotClient>("tgbot-client", configureClient: httpClient => new TelegramBotClient(_telegramOptions, httpClient))
                 .RemoveAllLoggers();
         }
 

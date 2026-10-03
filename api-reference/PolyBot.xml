@@ -2895,34 +2895,191 @@
         </member>
         <member name="T:PolyBot.Keyboards.InlineKeyboardBuilder">
             <summary>
-            Fluent builder for <see cref="T:Telegram.Bot.Types.ReplyMarkups.InlineKeyboardMarkup"/>.
+            Fluent builder for <see cref="T:Telegram.Bot.Types.ReplyMarkups.InlineKeyboardMarkup"/>. Buttons are accumulated flat
+            (one per row in <see cref="M:PolyBot.Keyboards.InlineKeyboardBuilder.Build"/>, chunked by <see cref="M:PolyBot.Keyboards.InlineKeyboardBuilder.Adjust(System.Int32[])"/>) or composed into
+            explicit rows with <see cref="M:PolyBot.Keyboards.InlineKeyboardBuilder.Row(System.Action{PolyBot.Keyboards.InlineKeyboardRowBuilder})"/>;
+            composed rows precede the flat buttons in the built markup.
             </summary>
         </member>
-        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.WithCallbackButton(System.String,System.String)">
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.CallbackButton(System.String,System.String)">
             <summary>
             Appends a callback button to the flat button list.
             </summary>
         </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.UrlButton(System.String,System.String)">
+            <summary>
+            Appends a URL button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.UrlButton(System.String,System.Uri)">
+            <summary>
+            Appends a URL button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.WebAppButton(System.String,Telegram.Bot.Types.WebAppInfo)">
+            <summary>
+            Appends a Web App button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.CopyTextButton(System.String,System.String)">
+            <summary>
+            Appends a button that copies <paramref name="copyText"/> to the clipboard when pressed.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.SwitchInlineQueryButton(System.String,System.String)">
+            <summary>
+            Appends a button that inserts the bot's username and <paramref name="query"/> into the chat's input field.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.SwitchCurrentChatButton(System.String,System.String)">
+            <summary>
+            Appends a button that inserts the bot's username and <paramref name="query"/> into the current chat's input field.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.SwitchChosenChatButton(System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat)">
+            <summary>
+            Appends a button that prompts the user to select a chat and inserts the bot's username and the chosen inline query.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.LoginUrlButton(System.String,Telegram.Bot.Types.LoginUrl)">
+            <summary>
+            Appends a login button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.PayButton(System.String)">
+            <summary>
+            Appends a pay button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.Add(Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton)">
+            <summary>
+            Appends a pre-built button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.Row(System.Action{PolyBot.Keyboards.InlineKeyboardRowBuilder})">
+            <summary>
+            Appends an explicitly composed row; composed rows precede the flat buttons in <see cref="M:PolyBot.Keyboards.InlineKeyboardBuilder.Build"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.Row(Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton[])">
+            <summary>
+            Appends an explicitly composed row of pre-built buttons; composed rows precede the flat buttons in <see cref="M:PolyBot.Keyboards.InlineKeyboardBuilder.Build"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.Row(System.Collections.Generic.IEnumerable{Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton})">
+            <summary>
+            Appends an explicitly composed row of pre-built buttons; composed rows precede the flat buttons in <see cref="M:PolyBot.Keyboards.InlineKeyboardBuilder.Build"/>.
+            </summary>
+        </member>
         <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.Build">
             <summary>
-            Builds the markup placing every button on its own row.
+            Builds the markup: composed rows first, then every flat button on its own row.
             </summary>
         </member>
         <member name="M:PolyBot.Keyboards.InlineKeyboardBuilder.Adjust(System.Int32[])">
             <summary>
             Builds the markup chunking the flat button list into rows of the given sizes,
-            repeating the last size for the remaining buttons.
+            repeating the last size for the remaining buttons. Rows composed via
+            <c>Row(...)</c> are not part of the chunked list; use <see cref="M:PolyBot.Keyboards.InlineKeyboardBuilder.Build"/> to include them.
             </summary>
+        </member>
+        <member name="T:PolyBot.Keyboards.InlineKeyboardRowBuilder">
+            <summary>
+            Fluent builder for one row of an <see cref="T:Telegram.Bot.Types.ReplyMarkups.InlineKeyboardMarkup"/>, used by
+            <see cref="M:PolyBot.Keyboards.InlineKeyboardBuilder.Row(System.Action{PolyBot.Keyboards.InlineKeyboardRowBuilder})"/>.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.CallbackButton(System.String,System.String)">
+            <summary>Appends a callback button.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.UrlButton(System.String,System.String)">
+            <summary>Appends a URL button.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.UrlButton(System.String,System.Uri)">
+            <summary>Appends a URL button.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.WebAppButton(System.String,Telegram.Bot.Types.WebAppInfo)">
+            <summary>Appends a Web App button.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.CopyTextButton(System.String,System.String)">
+            <summary>Appends a button that copies <paramref name="copyText"/> to the clipboard when pressed.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.SwitchInlineQueryButton(System.String,System.String)">
+            <summary>Appends a button that inserts the bot's username and <paramref name="query"/> into the chat's input field.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.SwitchCurrentChatButton(System.String,System.String)">
+            <summary>Appends a button that inserts the bot's username and <paramref name="query"/> into the current chat's input field.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.SwitchChosenChatButton(System.String,Telegram.Bot.Types.SwitchInlineQueryChosenChat)">
+            <summary>Appends a button that prompts the user to select a chat and inserts the bot's username and the chosen inline query.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.LoginUrlButton(System.String,Telegram.Bot.Types.LoginUrl)">
+            <summary>Appends a login button.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.PayButton(System.String)">
+            <summary>Appends a pay button.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.Add(Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton)">
+            <summary>Appends a pre-built button.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.Build">
+            <summary>Builds the accumulated buttons into a row array.</summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.InlineKeyboardRowBuilder.op_Implicit(PolyBot.Keyboards.InlineKeyboardRowBuilder)~Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton[]">
+            <summary>Builds the accumulated buttons into a row array.</summary>
         </member>
         <member name="T:PolyBot.Keyboards.ReplyKeyboardBuilder">
             <summary>
             Fluent builder for <see cref="T:Telegram.Bot.Types.ReplyMarkups.ReplyKeyboardMarkup"/>. Built markups set
             <see cref="P:Telegram.Bot.Types.ReplyMarkups.ReplyKeyboardMarkup.ResizeKeyboard"/> so the client sizes the keyboard to its buttons.
+            Buttons are accumulated flat (one per row in <see cref="M:PolyBot.Keyboards.ReplyKeyboardBuilder.Build"/>, chunked by
+            <see cref="M:PolyBot.Keyboards.ReplyKeyboardBuilder.Adjust(System.Int32[])"/>).
             </summary>
         </member>
-        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.WithButton(System.String)">
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.Button(System.String)">
             <summary>
-            Appends a button to the flat button list.
+            Appends a plain text button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.ContactButton(System.String)">
+            <summary>
+            Appends a button that requests the user's contact information when pressed.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.LocationButton(System.String)">
+            <summary>
+            Appends a button that requests the user's location when pressed.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.PollButton(System.String,Telegram.Bot.Types.ReplyMarkups.KeyboardButtonPollType)">
+            <summary>
+            Appends a button that requests a poll of the given kind (any poll when
+            <paramref name="poll"/> is <c>null</c>) when pressed.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.RequestUsersButton(System.String,Telegram.Bot.Types.ReplyMarkups.KeyboardButtonRequestUsers)">
+            <summary>
+            Appends a button that requests users matching <paramref name="request"/> when pressed.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.RequestChatButton(System.String,Telegram.Bot.Types.ReplyMarkups.KeyboardButtonRequestChat)">
+            <summary>
+            Appends a button that requests a chat matching <paramref name="request"/> when pressed.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.RequestManagedBotButton(System.String,Telegram.Bot.Types.ReplyMarkups.KeyboardButtonRequestManagedBot)">
+            <summary>
+            Appends a button that requests a managed business bot matching <paramref name="request"/> when pressed.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.WebAppButton(System.String,Telegram.Bot.Types.WebAppInfo)">
+            <summary>
+            Appends a Web App button to the flat button list.
+            </summary>
+        </member>
+        <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.Add(Telegram.Bot.Types.ReplyMarkups.KeyboardButton)">
+            <summary>
+            Appends a pre-built button to the flat button list.
             </summary>
         </member>
         <member name="M:PolyBot.Keyboards.ReplyKeyboardBuilder.Build">

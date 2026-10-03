@@ -123,13 +123,13 @@ public sealed partial class BotHandlers
         int end = Math.Min(start + PageSize, Items.Length);
 
         for (int i = start; i < end; i++)
-            builder.WithCallbackButton(Items[i], $"item:{Items[i]}");
+            builder.CallbackButton(Items[i], $"item:{Items[i]}");
 
-        builder.WithCallbackButton("Prev", "prev");
-        builder.WithCallbackButton("Done", "done");
+        builder.CallbackButton("Prev", "prev");
+        builder.CallbackButton("Done", "done");
         if (page < maxPage)
         {
-            builder.WithCallbackButton("Next", "next");
+            builder.CallbackButton("Next", "next");
             return builder.Adjust(PageSize, 3);
         }
 

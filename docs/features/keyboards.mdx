@@ -12,47 +12,70 @@ PolyBot provides two approaches to constructing Telegram keyboards: a chainable 
 
     ### `InlineKeyboardBuilder`
 
+    Flat methods cover every button kind — callback, URL (`string` or `Uri`), copy-text, Web App, switch-inline-query variants, login, and pay — plus `Add(...)` for pre-built `InlineKeyboardButton`s. `Row(...)` composes an explicit row (via a nested `InlineKeyboardRowBuilder` or pre-built buttons); composed rows precede the flat buttons in `Build()`.
+
     ```csharp
     using PolyBot.Keyboards;
 
     // One button per row
     InlineKeyboardMarkup linear = new InlineKeyboardBuilder()
-        .WithCallbackButton("Open", "open")
-        .WithCallbackButton("Close", "close")
+        .CallbackButton("Open", "open")
+        .CallbackButton("Close", "close")
         .Build();
 
     // Two buttons on the first row, one on the second
     InlineKeyboardMarkup twoByOne = new InlineKeyboardBuilder()
-        .WithCallbackButton("Yes", "confirm:yes")
-        .WithCallbackButton("No", "confirm:no")
-        .WithCallbackButton("Cancel", "confirm:cancel")
+        .CallbackButton("Yes", "confirm:yes")
+        .CallbackButton("No", "confirm:no")
+        .CallbackButton("Cancel", "confirm:cancel")
         .Adjust(2, 1);
 
     // Adjust with a single size repeats for all remaining rows
     InlineKeyboardMarkup grid = new InlineKeyboardBuilder()
-        .WithCallbackButton("A", "a")
-        .WithCallbackButton("B", "b")
-        .WithCallbackButton("C", "c")
-        .WithCallbackButton("D", "d")
-        .WithCallbackButton("E", "e")
+        .CallbackButton("A", "a")
+        .CallbackButton("B", "b")
+        .CallbackButton("C", "c")
+        .CallbackButton("D", "d")
+        .CallbackButton("E", "e")
         .Adjust(2, 1, 2); // rows of 2, 1, 2 → [A B] [C] [D E]
+
+    // Explicit rows: [Yes No] [Docs] — composed rows come first, then flat buttons
+    InlineKeyboardMarkup confirm = new InlineKeyboardBuilder()
+        .Row(row => row
+            .CallbackButton("Yes", "confirm:yes")
+            .CallbackButton("No", "confirm:no"))
+        .Row(InlineKeyboardButton.WithUrl("Docs", "https://example.com"))
+        .CallbackButton("Cancel", "confirm:cancel")
+        .Build();
     ```
+
+    <Note>
+    `Adjust(...)` chunks only the flat buttons; composed rows are included by `Build()`.
+    </Note>
 
     ### `ReplyKeyboardBuilder`
 
-    `ReplyKeyboardBuilder` mirrors the inline builder and always sets `ResizeKeyboard = true` on the produced markup.
+    `ReplyKeyboardBuilder` mirrors the inline builder and always sets `ResizeKeyboard = true` on the produced markup. Beyond plain text buttons it covers the request-style buttons: contact, location, poll, users, chat, managed business bot, and Web App.
 
     ```csharp
     using PolyBot.Keyboards;
 
     ReplyKeyboardMarkup twoColumns = new ReplyKeyboardBuilder()
-        .WithButton("Morning")
-        .WithButton("Afternoon")
-        .WithButton("Evening")
+        .Button("Morning")
+        .Button("Afternoon")
+        .Button("Evening")
         .Adjust(2);
     // → [Morning  Afternoon]
     //   [Evening]
     // ResizeKeyboard = true
+
+    ReplyKeyboardMarkup share = new ReplyKeyboardBuilder()
+        .ContactButton("Share contact")
+        .LocationButton("Share location")
+        .PollButton("Create poll", new KeyboardButtonPollType { Type = PollType.Quiz })
+        .RequestUsersButton("Pick admins", new KeyboardButtonRequestUsers { RequestId = 1, MaxQuantity = 3 })
+        .WebAppButton("Open app", webAppInfo)
+        .Adjust(2);
     ```
   </Tab>
   <Tab title="Generated keyboards">
@@ -119,12 +142,12 @@ PolyBot provides two approaches to constructing Telegram keyboards: a chainable 
 ```csharp
 // 6 buttons, sizes [2, 1] → rows of 2, 1, 1, 1, 1 (last size 1 repeated)
 new InlineKeyboardBuilder()
-    .WithCallbackButton("A", "a")
-    .WithCallbackButton("B", "b")
-    .WithCallbackButton("C", "c")
-    .WithCallbackButton("D", "d")
-    .WithCallbackButton("E", "e")
-    .WithCallbackButton("F", "f")
+    .CallbackButton("A", "a")
+    .CallbackButton("B", "b")
+    .CallbackButton("C", "c")
+    .CallbackButton("D", "d")
+    .CallbackButton("E", "e")
+    .CallbackButton("F", "f")
     .Adjust(2, 1);
 // → [A B] [C] [D] [E] [F]
 ```

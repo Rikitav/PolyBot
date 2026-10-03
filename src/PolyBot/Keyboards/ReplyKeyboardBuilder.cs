@@ -1,3 +1,4 @@
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PolyBot.Keyboards;
@@ -5,17 +6,92 @@ namespace PolyBot.Keyboards;
 /// <summary>
 /// Fluent builder for <see cref="ReplyKeyboardMarkup"/>. Built markups set
 /// <see cref="ReplyKeyboardMarkup.ResizeKeyboard"/> so the client sizes the keyboard to its buttons.
+/// Buttons are accumulated flat (one per row in <see cref="Build"/>, chunked by
+/// <see cref="Adjust"/>).
 /// </summary>
 public sealed class ReplyKeyboardBuilder
 {
     private readonly List<KeyboardButton> _buttons = new();
 
     /// <summary>
-    /// Appends a button to the flat button list.
+    /// Appends a plain text button to the flat button list.
     /// </summary>
-    public ReplyKeyboardBuilder WithButton(string text)
+    public ReplyKeyboardBuilder Button(string text)
     {
         _buttons.Add(new KeyboardButton(text));
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a button that requests the user's contact information when pressed.
+    /// </summary>
+    public ReplyKeyboardBuilder ContactButton(string text)
+    {
+        _buttons.Add(new KeyboardButton(text) { RequestContact = true });
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a button that requests the user's location when pressed.
+    /// </summary>
+    public ReplyKeyboardBuilder LocationButton(string text)
+    {
+        _buttons.Add(new KeyboardButton(text) { RequestLocation = true });
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a button that requests a poll of the given kind (any poll when
+    /// <paramref name="poll"/> is <c>null</c>) when pressed.
+    /// </summary>
+    public ReplyKeyboardBuilder PollButton(string text, KeyboardButtonPollType? poll = null)
+    {
+        _buttons.Add(new KeyboardButton(text) { RequestPoll = poll ?? new KeyboardButtonPollType() });
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a button that requests users matching <paramref name="request"/> when pressed.
+    /// </summary>
+    public ReplyKeyboardBuilder RequestUsersButton(string text, KeyboardButtonRequestUsers request)
+    {
+        _buttons.Add(new KeyboardButton(text) { RequestUsers = request });
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a button that requests a chat matching <paramref name="request"/> when pressed.
+    /// </summary>
+    public ReplyKeyboardBuilder RequestChatButton(string text, KeyboardButtonRequestChat request)
+    {
+        _buttons.Add(new KeyboardButton(text) { RequestChat = request });
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a button that requests a managed business bot matching <paramref name="request"/> when pressed.
+    /// </summary>
+    public ReplyKeyboardBuilder RequestManagedBotButton(string text, KeyboardButtonRequestManagedBot request)
+    {
+        _buttons.Add(new KeyboardButton(text) { RequestManagedBot = request });
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a Web App button to the flat button list.
+    /// </summary>
+    public ReplyKeyboardBuilder WebAppButton(string text, WebAppInfo webApp)
+    {
+        _buttons.Add(new KeyboardButton(text) { WebApp = webApp });
+        return this;
+    }
+
+    /// <summary>
+    /// Appends a pre-built button to the flat button list.
+    /// </summary>
+    public ReplyKeyboardBuilder Add(KeyboardButton button)
+    {
+        _buttons.Add(button);
         return this;
     }
 
