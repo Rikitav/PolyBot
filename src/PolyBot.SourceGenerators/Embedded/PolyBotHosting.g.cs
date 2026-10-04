@@ -3,9 +3,9 @@
 
 namespace PolyBot;
 /// <summary>
-/// Hosted-service long polling: starts <c>ReceiveAsync</c> in the background on
-/// start (after deleting any stale webhook) and signals a cancellation token on
-/// stop, awaiting the polling loop's completion.
+/// Hosted-service long polling: syncs the BotFather command menu on start, starts
+/// <c>ReceiveAsync</c> in the background (after deleting any stale webhook) and
+/// signals a cancellation token on stop, awaiting the polling loop's completion.
 /// </summary>
 public sealed class PolyBotPollingHostedService : global::Microsoft.Extensions.Hosting.IHostedService
 {
@@ -13,18 +13,25 @@ public sealed class PolyBotPollingHostedService : global::Microsoft.Extensions.H
     private readonly global::Telegram.Bot.Polling.IUpdateHandler _updateHandler;
     private readonly global::Telegram.Bot.Polling.ReceiverOptions _receiverOptions;
     private readonly global::PolyBot.PolyBotOptions _options;
+    private readonly global::PolyBot.BotFather.IBotFatherSync? _botFatherSync;
     private readonly global::System.Threading.CancellationTokenSource _stoppingCts = new global::System.Threading.CancellationTokenSource();
     private global::System.Threading.Tasks.Task? _pollingTask;
-    public PolyBotPollingHostedService(global::Telegram.Bot.ITelegramBotClient botClient, global::PolyBot.PolyBotOptions options, global::Telegram.Bot.Polling.IUpdateHandler updateHandler, global::Telegram.Bot.Polling.ReceiverOptions? receiverOptions = null)
+    public PolyBotPollingHostedService(global::Telegram.Bot.ITelegramBotClient botClient, global::PolyBot.PolyBotOptions options, global::Telegram.Bot.Polling.IUpdateHandler updateHandler, global::Telegram.Bot.Polling.ReceiverOptions? receiverOptions = null, global::PolyBot.BotFather.IBotFatherSync? botFatherSync = null)
     {
         _botClient = botClient;
         _options = options;
         _updateHandler = updateHandler;
         _receiverOptions = receiverOptions ?? new global::Telegram.Bot.Polling.ReceiverOptions();
+        _botFatherSync = botFatherSync;
     }
 
     public async global::System.Threading.Tasks.Task StartAsync(global::System.Threading.CancellationToken cancellationToken)
     {
+        if (_botFatherSync is not null)
+        {
+            await _botFatherSync.SyncCommandsAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         global::Telegram.Bot.Types.User me = await global::Telegram.Bot.TelegramBotClientExtensions.GetMe(_botClient!, cancellationToken).ConfigureAwait(false);
         if (!string.IsNullOrEmpty(me.Username))
         {
@@ -56,11 +63,26 @@ public sealed class PolyBotPollingHostedService : global::Microsoft.Extensions.H
 public static class PolyBotHostingExtensions
 {
     /// <summary>
-    /// Registers the router and a <c>PolyBotPollingHostedService</c> that long-polls
+    /// Registers the router, a fallback <c>ITelegramBotClient</c> built from the
+    /// registered <see cref="T:PolyBot.PolyBotOptions"/>'s <c>BotToken</c> over a named
+    /// <c>HttpClient</c> with default loggers removed (skipped when the consumer already
+    /// registered a client), and a <c>PolyBotPollingHostedService</c> that long-polls
     /// updates in the background.
     /// </summary>
     public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddPolyBotHostedPolling(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services, global::System.Action<global::Telegram.Bot.Polling.ReceiverOptions>? configureReceiver = null)
     {
+        global::Microsoft.Extensions.DependencyInjection.HttpClientBuilderExtensions.RemoveAllLoggers(global::Microsoft.Extensions.DependencyInjection.HttpClientFactoryServiceCollectionExtensions.AddHttpClient(services, "tgbot-client"));
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton<global::Telegram.Bot.ITelegramBotClient>(services, static (global::System.IServiceProvider sp) =>
+        {
+            global::PolyBot.PolyBotOptions options = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::PolyBot.PolyBotOptions>(sp) ?? new global::PolyBot.PolyBotOptions();
+            if (string.IsNullOrEmpty(options.BotToken))
+            {
+                throw new global::System.InvalidOperationException("ITelegramBotClient is not registered and PolyBotOptions.BotToken is not set. Register ITelegramBotClient before AddPolyBotHostedPolling, or register a PolyBotOptions singleton with BotToken configured.");
+            }
+
+            global::System.Net.Http.IHttpClientFactory httpClientFactory = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::System.Net.Http.IHttpClientFactory>(sp);
+            return new global::Telegram.Bot.TelegramBotClient(new global::Telegram.Bot.TelegramBotClientOptions(options.BotToken, options.BaseUrl, options.UseTestEnvironment), httpClientFactory.CreateClient("tgbot-client"));
+        });
         global::PolyBot.PolyBotExtensions.AddPolyBotRouter(services);
         global::Telegram.Bot.Polling.ReceiverOptions receiverOptions = new global::Telegram.Bot.Polling.ReceiverOptions();
         if (configureReceiver is not null)
@@ -70,7 +92,7 @@ public static class PolyBotHostingExtensions
 
         receiverOptions.AllowedUpdates ??= global::PolyBot.BotRouter.AllowedUpdates;
         global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton(services, receiverOptions);
-        global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::Microsoft.Extensions.Hosting.IHostedService>(services, static (global::System.IServiceProvider sp) => new global::PolyBot.PolyBotPollingHostedService(global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.ITelegramBotClient>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::PolyBot.PolyBotOptions>(sp) ?? new global::PolyBot.PolyBotOptions(), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.Polling.IUpdateHandler>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::Telegram.Bot.Polling.ReceiverOptions>(sp)));
+        global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::Microsoft.Extensions.Hosting.IHostedService>(services, static (global::System.IServiceProvider sp) => new global::PolyBot.PolyBotPollingHostedService(global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.ITelegramBotClient>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::PolyBot.PolyBotOptions>(sp) ?? new global::PolyBot.PolyBotOptions(), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Telegram.Bot.Polling.IUpdateHandler>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::Telegram.Bot.Polling.ReceiverOptions>(sp), global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::PolyBot.BotFather.IBotFatherSync>(sp)));
         return services;
     }
 }

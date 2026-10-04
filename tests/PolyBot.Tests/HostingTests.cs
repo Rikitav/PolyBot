@@ -14,6 +14,35 @@ namespace PolyBot.Tests;
 public sealed class HostingTests
 {
     [TestMethod]
+    public async Task HostedPolling_RunsBotFatherSyncOnStartup()
+    {
+        PolyTests client = new();
+        ServiceCollection services = new();
+        services.AddSingleton(new PolyBotOptions { BotUsername = "test_bot" });
+        services.AddSingleton<Telegram.Bot.ITelegramBotClient>(client);
+        services.AddPolyBotHostedPolling();
+        await using ServiceProvider provider = services.BuildServiceProvider();
+
+        IHostedService hosted = provider.GetRequiredService<IHostedService>();
+        await hosted.StartAsync(CancellationToken.None);
+        await hosted.StopAsync(CancellationToken.None);
+
+        Assert.IsTrue(client.SentRequests.OfType<SetMyCommandsRequest>().Any(),
+            "the hosted service must sync the BotFather command menu at startup");
+    }
+
+    [TestMethod]
+    public void HostedPolling_RegistersBotClientFromOptionsToken()
+    {
+        ServiceCollection services = new();
+        services.AddSingleton(new PolyBotOptions { BotToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" });
+        services.AddPolyBotHostedPolling();
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        Assert.IsInstanceOfType<Telegram.Bot.TelegramBotClient>(provider.GetRequiredService<Telegram.Bot.ITelegramBotClient>());
+    }
+
+    [TestMethod]
     public async Task HostedPolling_DeliversEnqueuedUpdatesAndDeletesWebhook()
     {
         PolyTests client = new();

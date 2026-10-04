@@ -5,7 +5,8 @@ namespace PolyBot.BotFather;
 /// <summary>
 /// Pushes the commands discovered from <c>[Command]</c>-decorated handlers to BotFather via
 /// <c>SetMyCommands</c>. Implemented by the generated <c>PolyBot.PolyBotBotFatherSync</c>;
-/// register it with the generated <c>PolyBotExtensions.AddPolyBotBotFatherSync</c>.
+/// registered by <c>PolyBotExtensions.AddPolyBotRouter</c> and invoked at startup by
+/// <c>PolyBotClient.RunPollingAsync</c> and the hosted polling service.
 /// </summary>
 public interface IBotFatherSync
 {
