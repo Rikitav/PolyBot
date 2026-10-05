@@ -71,8 +71,7 @@ public static class PolyBotHostingExtensions
     /// </summary>
     public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddPolyBotHostedPolling(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services, global::System.Action<global::Telegram.Bot.Polling.ReceiverOptions>? configureReceiver = null)
     {
-        global::Microsoft.Extensions.DependencyInjection.HttpClientBuilderExtensions.RemoveAllLoggers(global::Microsoft.Extensions.DependencyInjection.HttpClientFactoryServiceCollectionExtensions.AddHttpClient(services, "tgbot-client"));
-        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton<global::Telegram.Bot.ITelegramBotClient>(services, static (global::System.IServiceProvider sp) =>
+        global::Microsoft.Extensions.DependencyInjection.HttpClientBuilderExtensions.RemoveAllLoggers(global::Microsoft.Extensions.DependencyInjection.HttpClientFactoryServiceCollectionExtensions.AddHttpClient<global::Telegram.Bot.ITelegramBotClient>(services, "tgbot-client", (HttpClient httpClient) =>
         {
             global::PolyBot.PolyBotOptions options = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<global::PolyBot.PolyBotOptions>(sp) ?? new global::PolyBot.PolyBotOptions();
             if (string.IsNullOrEmpty(options.BotToken))
@@ -82,7 +81,7 @@ public static class PolyBotHostingExtensions
 
             global::System.Net.Http.IHttpClientFactory httpClientFactory = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::System.Net.Http.IHttpClientFactory>(sp);
             return new global::Telegram.Bot.TelegramBotClient(new global::Telegram.Bot.TelegramBotClientOptions(options.BotToken, options.BaseUrl, options.UseTestEnvironment), httpClientFactory.CreateClient("tgbot-client"));
-        });
+        }));
         global::PolyBot.PolyBotExtensions.AddPolyBotRouter(services);
         global::Telegram.Bot.Polling.ReceiverOptions receiverOptions = new global::Telegram.Bot.Polling.ReceiverOptions();
         if (configureReceiver is not null)
