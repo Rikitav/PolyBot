@@ -1,6 +1,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.FlowAnalysis;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace PolyBot.SourceGenerators;
 
@@ -677,6 +679,13 @@ internal static class HandlerDiscovery
             return HandlerItem.ForModel(null, new List<Diagnostic> { diagnostic });
         }
 
+        // Guest messages are answered exclusively through AnswerGuestQuery with the
+        // message's GuestQueryId (CUR046 on SendMessage, CUR047 on double answers).
+        if (updateTypeMemberNames.Contains("GuestMessage"))
+        {
+            AnalyzeGuestMessageAnswers(methodSymbol, methodSyntax, semanticModel, diagnostics);
+        }
+
         HandlerModel model = new()
         {
             ContainingTypeFqn = methodSymbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
@@ -764,6 +773,320 @@ internal static class HandlerDiscovery
     }
 
     private const string MessageDtoFqn = "global::Telegram.Bot.Types.Message";
+
+    private static void AnalyzeGuestMessageAnswers(
+        IMethodSymbol methodSymbol,
+        MethodDeclarationSyntax methodSyntax,
+        SemanticModel semanticModel,
+        List<Diagnostic> diagnostics)
+    {
+        foreach (InvocationExpressionSyntax invocation in methodSyntax.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        {
+            if (semanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol { Name: "SendMessage" } target &&
+                IsTelegramBotApiMethod(target))
+            {
+                diagnostics.Add(Diagnostic.Create(
+                    PolyBotDiagnostics.GuestMessageHandlerUsesSendMessage,
+                    invocation.GetLocation(),
+                    methodSymbol.Name));
+            }
+        }
+
+        if (TryCreateMethodCfg(methodSyntax, semanticModel) is { } cfg)
+        {
+            ReportDoubleAnswersInCfg(cfg, methodSymbol, diagnostics);
+        }
+        else
+        {
+            ReportDoubleAnswersBySyntax(methodSymbol, methodSyntax, semanticModel, diagnostics);
+        }
+
+        foreach (SyntaxNode nested in methodSyntax.DescendantNodes())
+        {
+            if (nested is LocalFunctionStatementSyntax localFunction)
+            {
+                ReportDoubleAnswersBySyntax(methodSymbol, localFunction, semanticModel, diagnostics);
+            }
+        }
+    }
+
+    private static ControlFlowGraph? TryCreateMethodCfg(MethodDeclarationSyntax methodSyntax, SemanticModel semanticModel)
+    {
+        try
+        {
+            // ControlFlowGraph.Create requires a parentless root operation; walk up from
+            // the method declaration to the IMethodBodyOperation.
+            IOperation? operation = semanticModel.GetOperation(methodSyntax, CancellationToken.None);
+            while (operation?.Parent is not null)
+            {
+                operation = operation.Parent;
+            }
+
+            return operation is IMethodBodyOperation methodBody
+                ? ControlFlowGraph.Create(methodBody, CancellationToken.None)
+                : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    private static void ReportDoubleAnswersInCfg(ControlFlowGraph cfg, IMethodSymbol handlerSymbol, List<Diagnostic> diagnostics)
+    {
+        CfgGuestAnswerAnalyzer analyzer = new(cfg);
+        analyzer.Run();
+        if (analyzer.CanAnswerTwice)
+        {
+            diagnostics.Add(Diagnostic.Create(
+                PolyBotDiagnostics.GuestMessageHandlerDoubleAnswer,
+                analyzer.SecondAnswerLocation ?? handlerSymbol.Locations.FirstOrDefault(),
+                handlerSymbol.Name));
+        }
+
+        // Lambdas have their own control-flow graphs reachable from the containing graph.
+        foreach (BasicBlock block in cfg.Blocks)
+        {
+            foreach (IOperation operation in block.Operations)
+            {
+                ReportDoubleAnswersInNestedCfg(cfg, operation, handlerSymbol, diagnostics);
+            }
+
+            if (block.BranchValue is not null)
+            {
+                ReportDoubleAnswersInNestedCfg(cfg, block.BranchValue, handlerSymbol, diagnostics);
+            }
+        }
+    }
+
+    private static void ReportDoubleAnswersInNestedCfg(ControlFlowGraph cfg, IOperation operation, IMethodSymbol handlerSymbol, List<Diagnostic> diagnostics)
+    {
+        foreach (IOperation node in operation.DescendantsAndSelf())
+        {
+            if (node is IFlowAnonymousFunctionOperation anonymousFunction)
+            {
+                ControlFlowGraph? nested = cfg.GetAnonymousFunctionControlFlowGraph(anonymousFunction, CancellationToken.None);
+                if (nested is not null)
+                {
+                    ReportDoubleAnswersInCfg(nested, handlerSymbol, diagnostics);
+                }
+            }
+        }
+    }
+
+    private static void ReportDoubleAnswersBySyntax(
+        IMethodSymbol handlerSymbol,
+        SyntaxNode unit,
+        SemanticModel semanticModel,
+        List<Diagnostic> diagnostics)
+    {
+        int answerCount = 0;
+        Location? secondAnswerLocation = null;
+        foreach (InvocationExpressionSyntax invocation in unit.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        {
+            if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol target ||
+                !IsAnswerGuestQuery(target) ||
+                IsInsideLoop(invocation))
+            {
+                continue;
+            }
+
+            answerCount++;
+            if (answerCount == 2)
+            {
+                secondAnswerLocation = invocation.GetLocation();
+            }
+        }
+
+        if (answerCount > 1)
+        {
+            diagnostics.Add(Diagnostic.Create(
+                PolyBotDiagnostics.GuestMessageHandlerDoubleAnswer,
+                secondAnswerLocation ?? handlerSymbol.Locations.FirstOrDefault(),
+                handlerSymbol.Name));
+        }
+    }
+
+    private sealed class CfgGuestAnswerAnalyzer
+    {
+        private readonly ControlFlowGraph _cfg;
+        private readonly HashSet<BasicBlock> _visitedAnswerBlocks = new();
+        private readonly Dictionary<BasicBlock, int> _zeroAnswerBestCount = new();
+        private bool _canAnswerTwice;
+        private Location? _secondAnswerLocation;
+
+        public CfgGuestAnswerAnalyzer(ControlFlowGraph cfg)
+        {
+            _cfg = cfg;
+        }
+
+        public bool CanAnswerTwice => _canAnswerTwice;
+
+        public Location? SecondAnswerLocation => _secondAnswerLocation;
+
+        public void Run()
+        {
+            foreach (BasicBlock block in _cfg.Blocks)
+            {
+                if (block.Kind == BasicBlockKind.Entry)
+                {
+                    Visit(block, priorAnswers: 0);
+                    return;
+                }
+            }
+        }
+
+        private void Visit(BasicBlock block, int priorAnswers)
+        {
+            if (_canAnswerTwice)
+            {
+                return;
+            }
+
+            int blockAnswers = CountBlockAnswers(block);
+            bool tracksAnswers = blockAnswers > 0;
+            if (tracksAnswers)
+            {
+                // Re-executing an answer-carrying block (a plain loop around one answer)
+                // is counted once by design.
+                if (!_visitedAnswerBlocks.Add(block))
+                {
+                    return;
+                }
+            }
+            else
+            {
+                if (_zeroAnswerBestCount.TryGetValue(block, out int best) && best >= priorAnswers)
+                {
+                    return;
+                }
+
+                _zeroAnswerBestCount[block] = priorAnswers;
+            }
+
+            try
+            {
+                if (tracksAnswers && priorAnswers + blockAnswers >= 2)
+                {
+                    _secondAnswerLocation = FindBlockAnswerLocation(block, ordinal: 2 - priorAnswers);
+                    _canAnswerTwice = true;
+                    return;
+                }
+
+                int answers = priorAnswers + blockAnswers;
+                foreach (BasicBlock successor in Successors(block))
+                {
+                    Visit(successor, answers);
+                    if (_canAnswerTwice)
+                    {
+                        return;
+                    }
+                }
+            }
+            finally
+            {
+                if (tracksAnswers)
+                {
+                    _visitedAnswerBlocks.Remove(block);
+                }
+            }
+        }
+
+        private static IEnumerable<BasicBlock> Successors(BasicBlock block)
+        {
+            BasicBlock? fallThrough = block.FallThroughSuccessor?.Destination;
+            if (fallThrough is not null)
+            {
+                yield return fallThrough;
+            }
+
+            BasicBlock? conditional = block.ConditionalSuccessor?.Destination;
+            if (conditional is not null && !ReferenceEquals(conditional, fallThrough))
+            {
+                yield return conditional;
+            }
+        }
+    }
+
+    private static int CountBlockAnswers(BasicBlock block)
+    {
+        int count = 0;
+        foreach (IOperation operation in block.Operations)
+        {
+            count += CountAnswerInvocations(operation);
+        }
+
+        if (block.BranchValue is not null)
+        {
+            count += CountAnswerInvocations(block.BranchValue);
+        }
+
+        return count;
+    }
+
+    private static int CountAnswerInvocations(IOperation operation)
+    {
+        int count = 0;
+        foreach (IOperation node in operation.DescendantsAndSelf())
+        {
+            if (node is IInvocationOperation invocation && IsAnswerGuestQuery(invocation.TargetMethod))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static Location? FindBlockAnswerLocation(BasicBlock block, int ordinal)
+    {
+        int seen = 0;
+        foreach (IOperation operation in block.Operations)
+        {
+            foreach (IOperation node in operation.DescendantsAndSelf())
+            {
+                if (node is IInvocationOperation invocation && IsAnswerGuestQuery(invocation.TargetMethod) && ++seen == ordinal)
+                {
+                    return invocation.Syntax.GetLocation();
+                }
+            }
+        }
+
+        if (block.BranchValue is not null)
+        {
+            foreach (IOperation node in block.BranchValue.DescendantsAndSelf())
+            {
+                if (node is IInvocationOperation invocation && IsAnswerGuestQuery(invocation.TargetMethod) && ++seen == ordinal)
+                {
+                    return invocation.Syntax.GetLocation();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsAnswerGuestQuery(IMethodSymbol method)
+        => method.Name == "AnswerGuestQuery" && IsTelegramBotApiMethod(method);
+
+    private static bool IsTelegramBotApiMethod(IMethodSymbol method)
+    {
+        string? containingType = method.ContainingType?.ToDisplayString();
+        return containingType is "Telegram.Bot.TelegramBotClientExtensions" or "Telegram.Bot.TelegramBotClient" or "Telegram.Bot.ITelegramBotClient";
+    }
+
+    private static bool IsInsideLoop(SyntaxNode node)
+    {
+        for (SyntaxNode? current = node.Parent; current is not null; current = current.Parent)
+        {
+            if (current is WhileStatementSyntax or DoStatementSyntax or ForStatementSyntax or ForEachStatementSyntax)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static List<AwaitSiteModel> ExtractAwaitSites(
         MethodDeclarationSyntax methodSyntax,

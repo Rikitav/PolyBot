@@ -133,6 +133,11 @@ public sealed class PolyTests : ITelegramBotClient
                     return Task.FromResult((TResponse)(object)BuildMessage(sendMessage));
                 }
 
+            case AnswerGuestQueryRequest:
+                {
+                    return Task.FromResult((TResponse)(object)new SentGuestMessage { InlineMessageId = "guest-test-inline-message" });
+                }
+
             default:
                 {
                     throw new NotSupportedException(

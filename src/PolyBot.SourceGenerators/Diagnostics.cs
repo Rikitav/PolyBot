@@ -365,4 +365,20 @@ internal static class PolyBotDiagnostics
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor GuestMessageHandlerUsesSendMessage = new(
+        id: "CUR046",
+        title: "GuestMessage handler sends a regular message",
+        messageFormat: "GuestMessage handler '{0}' calls SendMessage; guest messages must be answered with AnswerGuestQuery using the message's GuestQueryId — a regular SendMessage targets the wrong chat or fails silently",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor GuestMessageHandlerDoubleAnswer = new(
+        id: "CUR047",
+        title: "GuestMessage handler can answer the guest query more than once",
+        messageFormat: "GuestMessage handler '{0}' can execute AnswerGuestQuery more than once on a single update (control-flow analysis); a guest query can be answered only once, so every call after the first fails",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
 }

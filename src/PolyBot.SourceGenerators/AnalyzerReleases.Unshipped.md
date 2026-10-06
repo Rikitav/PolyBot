@@ -48,3 +48,5 @@ CUR042 | PolyBot | Warning | A universal [UpdateHandler] matches all update type
 CUR043 | PolyBot | Error | An [UpdateHandler] declares a typed-payload guard ([Command], [Pattern], or state conditions)
 CUR044 | PolyBot | Error | Filter arguments must be compile-time constants
 CUR045 | PolyBot | Error | No public constructor of the filter matches the supplied arguments
+CUR046 | PolyBot | Warning | A GuestMessage handler calls SendMessage instead of AnswerGuestQuery with the message GuestQueryId
+CUR047 | PolyBot | Warning | A GuestMessage handler can reach more than one AnswerGuestQuery call on a single update (control-flow analysis)

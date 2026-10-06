@@ -1,7 +1,7 @@
 ---
-title: "PolyBot Compiler Diagnostics: CUR001–CUR036 Guide"
+title: "PolyBot Compiler Diagnostics: CUR001–CUR047 Guide"
 sidebarTitle: "Diagnostics"
-description: "Complete reference for every PolyBot source-generator diagnostic (CUR001–CUR036) — severity, trigger condition, and fix, grouped by feature area."
+description: "Complete reference for every PolyBot source-generator diagnostic (CUR001–CUR047) — severity, trigger condition, and fix, grouped by feature area."
 ---
 
 The PolyBot source generator reports diagnostics as standard Roslyn compiler messages. Warnings do not prevent compilation but indicate that an attribute or parameter was silently skipped. Errors prevent the affected handler, keyboard, or pattern from being emitted and must be resolved before the router will compile. All diagnostics use the `CUR` prefix and appear in the Error List / build output like any other C# diagnostic.
@@ -259,6 +259,32 @@ public static Task<Result> GoodHandler(Message msg)
 **Trigger:** A method or property annotated with `[CallbackButton]` is not marked `partial` (or its containing type is not `partial`). The generator cannot provide the implementation.
 
 **Fix:** Add `partial` to the method (or property in C# 13) and to every enclosing type.
+</Accordion>
+
+---
+
+## Guest messages
+
+<Accordion title="CUR046 — GuestMessage handler sends a regular message (Warning)">
+**Trigger:** A `[GuestMessageHandler]` calls `SendMessage`. Guest messages are not addressed to a bot chat — replies must go through `AnswerGuestQuery` with the message's `GuestQueryId`. A regular `SendMessage` targets the wrong chat or fails silently.
+
+**Fix:** Answer with `AnswerGuestQuery` instead:
+
+```csharp
+// ❌ CUR046
+await bot.SendMessage(msg.Chat, "hello");
+
+// ✅ correct
+await bot.AnswerGuestQuery(msg.GuestQueryId!, result);
+```
+</Accordion>
+
+<Accordion title="CUR047 — GuestMessage handler can answer the guest query more than once (Warning)">
+**Trigger:** Control-flow analysis of the handler body found an execution path on which `AnswerGuestQuery` can run twice for one update — sequential calls, two calls in one loop body, or a call before and another inside a loop. A guest query can be answered only once; every call after the first fails.
+
+**Not reported:** two calls on mutually exclusive `if/else` branches (only one runs per update), or a single call inside a loop whose iterations may await new guest messages. Local functions fall back to straight-line counting.
+
+**Fix:** Keep a single `AnswerGuestQuery` call per update, or move the decision into one answer call.
 </Accordion>
 
 ---

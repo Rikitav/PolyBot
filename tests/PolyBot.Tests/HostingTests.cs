@@ -68,6 +68,20 @@ public sealed class HostingTests
     }
 
     [TestMethod]
+    public async Task PolyBotClient_WithToken_ResolvesRealTelegramBotClient()
+    {
+        // Regression: the typed-client registration must resolve ITelegramBotClient to a
+        // TelegramBotClient (the single-type-param Action overload silently discarded it).
+        PolyBotClient client = new(new PolyBotOptions { BotToken = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" });
+        MethodInfo buildProvider = typeof(PolyBotClient).GetMethod("BuildProvider", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new AssertFailedException("BuildProvider was not found");
+        buildProvider.Invoke(client, [true, false]);
+
+        Assert.IsInstanceOfType<Telegram.Bot.TelegramBotClient>(client.BotClient);
+        await client.DisposeAsync();
+    }
+
+    [TestMethod]
     public async Task Webhook_LifecycleSetsAndDeletesWebhook()
     {
         PolyTests client = new();

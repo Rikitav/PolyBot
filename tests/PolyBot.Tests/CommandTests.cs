@@ -3,6 +3,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Requests;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InlineQueryResults;
 
 namespace PolyBot.Tests;
 
@@ -12,6 +13,13 @@ public sealed class CommandTests
     private static List<string> SentTexts(TestHostHandle host)
     {
         return host.Client.SentRequests.OfType<SendMessageRequest>().Select(static r => r.Text).ToList();
+    }
+
+    private static List<string> SentGuestTexts(TestHostHandle host)
+    {
+        return host.Client.SentRequests.OfType<AnswerGuestQueryRequest>()
+            .Select(static r => ((InputTextMessageContent)((InlineQueryResultArticle)r.Result).InputMessageContent!).MessageText)
+            .ToList();
     }
 
     [TestMethod]
@@ -172,7 +180,7 @@ public sealed class CommandTests
 
         await host.Router.HandleUpdateAsync(host.Client, GuestUpdate(20, "@TestBot /gstart", 100, 300), CancellationToken.None);
 
-        CollectionAssert.AreEqual(new List<string> { "guest:start" }, SentTexts(host));
+        CollectionAssert.AreEqual(new List<string> { "guest:start" }, SentGuestTexts(host));
     }
 
     [TestMethod]
@@ -183,7 +191,7 @@ public sealed class CommandTests
 
         await host.Router.HandleUpdateAsync(host.Client, GuestUpdate(21, "@TestBot /gadd 2 3", 100, 300), CancellationToken.None);
 
-        CollectionAssert.AreEqual(new List<string> { "guest:5" }, SentTexts(host));
+        CollectionAssert.AreEqual(new List<string> { "guest:5" }, SentGuestTexts(host));
     }
 
     [TestMethod]
@@ -194,7 +202,7 @@ public sealed class CommandTests
 
         await host.Router.HandleUpdateAsync(host.Client, GuestUpdate(22, "@TestBot gtime", 100, 300), CancellationToken.None);
 
-        CollectionAssert.AreEqual(new List<string> { "guest:time" }, SentTexts(host));
+        CollectionAssert.AreEqual(new List<string> { "guest:time" }, SentGuestTexts(host));
     }
 
     [TestMethod]
@@ -205,7 +213,7 @@ public sealed class CommandTests
 
         await host.Router.HandleUpdateAsync(host.Client, GuestUpdate(23, "/gstart", 100, 300), CancellationToken.None);
 
-        Assert.HasCount(0, host.Client.SentRequests.OfType<SendMessageRequest>());
+        Assert.HasCount(0, host.Client.SentRequests.OfType<AnswerGuestQueryRequest>());
     }
 
     [TestMethod]
@@ -223,6 +231,6 @@ public sealed class CommandTests
 
         await host.Router.HandleUpdateAsync(host.Client, update, CancellationToken.None);
 
-        Assert.HasCount(0, host.Client.SentRequests.OfType<SendMessageRequest>());
+        Assert.HasCount(0, host.Client.SentRequests.OfType<AnswerGuestQueryRequest>());
     }
 }

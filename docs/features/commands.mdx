@@ -79,6 +79,10 @@ public static Task<Result> GuestStart(Message msg) { ... }
 
 The mention itself is not verified by name — Telegram only delivers guest messages for the bot that was mentioned, and matching is entity-driven: text that merely *looks* like `@BotName /cmd` without a `Mention` entity does not match. The `@botsuffix` check on the command entity itself (`/start@MyBot`) still applies. Non-`'/'` prefixes work the same way: the remainder after the mention entity is matched as if it were the whole text. Imperative code can use the same rule via `CommandHelper.MatchGuestCommand`.
 
+<Tip>
+Replies to guest messages never go through `SendMessage` — answer the guest query with `AnswerGuestQuery` and the message's `GuestQueryId`. The generator reports a `CUR046` warning when a `[GuestMessageHandler]` calls `SendMessage`, and a `CUR047` warning when it answers the same guest query more than once. See the [diagnostics reference](/reference/diagnostics).
+</Tip>
+
 ### `CommandScope` values
 
 The `Scope` property maps to Telegram's `BotCommandScope` and controls which chats see the command in the BotFather menu.
@@ -270,4 +274,16 @@ The `Description` string exceeds BotFather's 256-character limit.
 **Severity:** Warning
 
 Two commands with the same alias target the same `(Scope, LanguageCode)` pair. The second registration is discarded.
+</Accordion>
+
+<Accordion title="CUR046 – GuestMessage handler calls SendMessage">
+**Severity:** Warning
+
+A `[GuestMessageHandler]` calls `SendMessage`. Guest messages must be answered with `AnswerGuestQuery` using the message's `GuestQueryId`.
+</Accordion>
+
+<Accordion title="CUR047 – GuestMessage handler can answer the guest query more than once">
+**Severity:** Warning
+
+Control-flow analysis found a path where `AnswerGuestQuery` executes twice on one update (sequential calls, two calls in one loop body, or one before and one inside a loop). Mutually exclusive `if/else` branches with one call each are not flagged.
 </Accordion>

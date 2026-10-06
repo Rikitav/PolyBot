@@ -4,6 +4,7 @@ using System.Globalization;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PolyBot.Tests;
@@ -237,12 +238,13 @@ public sealed partial class TestHandlers
     }
 
     // Guest messages arrive as "@BotName /command" — [Command] on a GuestMessageHandler
-    // skips the leading mention via CommandHelper.MatchGuestCommand.
+    // skips the leading mention via CommandHelper.MatchGuestCommand. Replies go through
+    // AnswerGuestQuery (the message's GuestQueryId), never SendMessage.
     [GuestMessageHandler]
     [Command(Aliases = ["gstart"], IsHidden = true)]
     public static async Task<Result> GuestStartHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
     {
-        await bot.SendMessage(msg.Chat.Id, "guest:start", cancellationToken: ct);
+        await bot.AnswerGuestQuery(msg.GuestQueryId!, GuestResult("gstart", "guest:start"), cancellationToken: ct);
         return Result.Handled();
     }
 
@@ -250,7 +252,7 @@ public sealed partial class TestHandlers
     [Command(Aliases = ["gadd"], IsHidden = true)]
     public static async Task<Result> GuestAddHandler(Message msg, ITelegramBotClient bot, [Arg] int x, [Arg] int y, CancellationToken ct)
     {
-        await bot.SendMessage(msg.Chat.Id, $"guest:{x + y}", cancellationToken: ct);
+        await bot.AnswerGuestQuery(msg.GuestQueryId!, GuestResult("gadd", $"guest:{x + y}"), cancellationToken: ct);
         return Result.Handled();
     }
 
@@ -258,9 +260,12 @@ public sealed partial class TestHandlers
     [Command(Aliases = ["gtime"], Prefix = ' ', IsHidden = true)]
     public static async Task<Result> GuestTimeHandler(Message msg, ITelegramBotClient bot, CancellationToken ct)
     {
-        await bot.SendMessage(msg.Chat.Id, "guest:time", cancellationToken: ct);
+        await bot.AnswerGuestQuery(msg.GuestQueryId!, GuestResult("gtime", "guest:time"), cancellationToken: ct);
         return Result.Handled();
     }
+
+    private static InlineQueryResultArticle GuestResult(string id, string text)
+        => new(id, text, new InputTextMessageContent(text));
 
     [MessageHandler(Priority = -1)]
     [Command(Aliases = ["fsm"], Description = "FSM demo")]
