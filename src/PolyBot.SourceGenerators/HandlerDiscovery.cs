@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FlowAnalysis;
 using Microsoft.CodeAnalysis.Operations;
+using System.Text;
 
 namespace PolyBot.SourceGenerators;
 
@@ -230,6 +231,24 @@ internal static class HandlerDiscovery
         if (commandData is not null && prefix == '/' && aliases.Count > 0)
         {
             ValidateBotFatherMetadata(methodSymbol, aliases, commandDescription, commandHidden, diagnostics);
+        }
+
+        // An alias that starts with the prefix can never match: the matcher looks for
+        // prefix+alias (e.g. "//start"), which no message can contain.
+        if (commandData is not null && prefix != ' ' && aliases.Count > 0)
+        {
+            foreach (string alias in aliases)
+            {
+                if (alias.Length > 0 && alias[0] == prefix)
+                {
+                    diagnostics.Add(Diagnostic.Create(
+                        PolyBotDiagnostics.CommandAliasStartsWithPrefix,
+                        commandData.ApplicationSyntaxReference?.GetSyntax(CancellationToken.None).GetLocation() ?? methodSymbol.Locations.FirstOrDefault(),
+                        alias,
+                        methodSymbol.Name,
+                        prefix));
+                }
+            }
         }
 
         // [Arg]/[Parse]/[Rest] on parameters; only command-restricted handlers (aliases
@@ -679,12 +698,10 @@ internal static class HandlerDiscovery
             return HandlerItem.ForModel(null, new List<Diagnostic> { diagnostic });
         }
 
-        // Guest messages are answered exclusively through AnswerGuestQuery with the
-        // message's GuestQueryId (CUR046 on SendMessage, CUR047 on double answers).
-        if (updateTypeMemberNames.Contains("GuestMessage"))
-        {
-            AnalyzeGuestMessageAnswers(methodSymbol, methodSyntax, semanticModel, diagnostics);
-        }
+        // Telegram Bot API misuse analysis scoped to the handled update types
+        // (CUR046-CUR056): chat-bound sends in guest handlers, double answers,
+        // keyboard callback data, inline result limits and async hygiene.
+        AnalyzeHandlerApiUsage(methodSymbol, methodSyntax, semanticModel, updateTypeMemberNames, diagnostics);
 
         HandlerModel model = new()
         {
@@ -774,7 +791,249 @@ internal static class HandlerDiscovery
 
     private const string MessageDtoFqn = "global::Telegram.Bot.Types.Message";
 
-    private static void AnalyzeGuestMessageAnswers(
+    /// <summary>
+    /// Telegram Bot API methods that post to a chat; all of them target the wrong chat
+    /// when called from a GuestMessage handler.
+    /// </summary>
+    private static readonly string[] ChatBoundSendMethods =
+    [
+        "SendMessage", "SendPhoto", "SendAudio", "SendVideo", "SendAnimation", "SendVoice",
+        "SendVideoNote", "SendDocument", "SendSticker", "SendLocation", "SendVenue", "SendContact",
+        "SendPoll", "SendDice", "SendGame", "SendChatAction", "SendMediaGroup", "ForwardMessage",
+        "ForwardMessages", "CopyMessage", "CopyMessages", "SendInvoice", "SendPaidMedia",
+    ];
+
+    private static void AnalyzeHandlerApiUsage(
+        IMethodSymbol methodSymbol,
+        MethodDeclarationSyntax methodSyntax,
+        SemanticModel semanticModel,
+        List<string> updateTypeMemberNames,
+        List<Diagnostic> diagnostics)
+    {
+        ScanChatBoundSends(methodSymbol, methodSyntax, semanticModel, updateTypeMemberNames, diagnostics);
+        ScanAnswerUsage(methodSymbol, methodSyntax, semanticModel, updateTypeMemberNames, diagnostics);
+        ScanKeyboardCallbackData(methodSymbol, methodSyntax, semanticModel, diagnostics);
+        ScanInlineQueryResults(methodSymbol, methodSyntax, semanticModel, diagnostics);
+        ScanAsyncHygiene(methodSymbol, methodSyntax, semanticModel, diagnostics);
+    }
+
+    private static void ScanChatBoundSends(
+        IMethodSymbol methodSymbol,
+        MethodDeclarationSyntax methodSyntax,
+        SemanticModel semanticModel,
+        List<string> updateTypeMemberNames,
+        List<Diagnostic> diagnostics)
+    {
+        if (!updateTypeMemberNames.Contains("GuestMessage"))
+        {
+            return;
+        }
+
+        foreach (InvocationExpressionSyntax invocation in methodSyntax.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        {
+            if (semanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol target &&
+                Array.IndexOf(ChatBoundSendMethods, target.Name) >= 0 &&
+                IsTelegramBotApiMethod(target))
+            {
+                diagnostics.Add(Diagnostic.Create(
+                    PolyBotDiagnostics.GuestMessageHandlerUsesSendMessage,
+                    invocation.GetLocation(),
+                    methodSymbol.Name,
+                    target.Name));
+            }
+        }
+    }
+
+    private static void ScanAnswerUsage(
+        IMethodSymbol methodSymbol,
+        MethodDeclarationSyntax methodSyntax,
+        SemanticModel semanticModel,
+        List<string> updateTypeMemberNames,
+        List<Diagnostic> diagnostics)
+    {
+        if (updateTypeMemberNames.Contains("GuestMessage"))
+        {
+            ReportDoubleApiCall(methodSymbol, methodSyntax, semanticModel, "AnswerGuestQuery", PolyBotDiagnostics.GuestMessageHandlerDoubleAnswer, diagnostics);
+        }
+
+        if (updateTypeMemberNames.Contains("CallbackQuery"))
+        {
+            ReportDoubleApiCall(methodSymbol, methodSyntax, semanticModel, "AnswerCallbackQuery", PolyBotDiagnostics.CallbackHandlerDoubleAnswer, diagnostics);
+            if (!CanReachApiCall(methodSymbol, methodSyntax, semanticModel, "AnswerCallbackQuery"))
+            {
+                diagnostics.Add(Diagnostic.Create(
+                    PolyBotDiagnostics.CallbackQueryNeverAnswered,
+                    methodSymbol.Locations.FirstOrDefault(),
+                    methodSymbol.Name));
+            }
+        }
+
+        if (updateTypeMemberNames.Contains("InlineQuery"))
+        {
+            ReportDoubleApiCall(methodSymbol, methodSyntax, semanticModel, "AnswerInlineQuery", PolyBotDiagnostics.InlineHandlerDoubleAnswer, diagnostics);
+        }
+    }
+
+    private static void ReportDoubleApiCall(
+        IMethodSymbol handlerSymbol,
+        MethodDeclarationSyntax methodSyntax,
+        SemanticModel semanticModel,
+        string trackedMethod,
+        DiagnosticDescriptor descriptor,
+        List<Diagnostic> diagnostics)
+    {
+        if (TryCreateMethodCfg(methodSyntax, semanticModel) is { } cfg)
+        {
+            ReportDoubleApiCallInCfg(cfg, handlerSymbol, trackedMethod, descriptor, diagnostics);
+        }
+        else
+        {
+            ReportDoubleApiCallBySyntax(handlerSymbol, methodSyntax, semanticModel, trackedMethod, descriptor, diagnostics);
+        }
+
+        // Local functions have no public CFG accessor; count their invocations syntactically.
+        foreach (SyntaxNode nested in methodSyntax.DescendantNodes())
+        {
+            if (nested is LocalFunctionStatementSyntax localFunction)
+            {
+                ReportDoubleApiCallBySyntax(handlerSymbol, localFunction, semanticModel, trackedMethod, descriptor, diagnostics);
+            }
+        }
+    }
+
+    private static void ReportDoubleApiCallInCfg(
+        ControlFlowGraph cfg,
+        IMethodSymbol handlerSymbol,
+        string trackedMethod,
+        DiagnosticDescriptor descriptor,
+        List<Diagnostic> diagnostics)
+    {
+        CfgApiCallAnalyzer analyzer = new(cfg, trackedMethod);
+        analyzer.Run();
+        if (analyzer.CanExecuteTwice)
+        {
+            diagnostics.Add(Diagnostic.Create(
+                descriptor,
+                analyzer.SecondExecutionLocation ?? handlerSymbol.Locations.FirstOrDefault(),
+                handlerSymbol.Name));
+        }
+
+        // Lambdas have their own control-flow graphs reachable from the containing graph.
+        foreach (BasicBlock block in cfg.Blocks)
+        {
+            foreach (IOperation operation in block.Operations)
+            {
+                ReportDoubleApiCallInNestedCfg(cfg, operation, handlerSymbol, trackedMethod, descriptor, diagnostics);
+            }
+
+            if (block.BranchValue is not null)
+            {
+                ReportDoubleApiCallInNestedCfg(cfg, block.BranchValue, handlerSymbol, trackedMethod, descriptor, diagnostics);
+            }
+        }
+    }
+
+    private static void ReportDoubleApiCallInNestedCfg(
+        ControlFlowGraph cfg,
+        IOperation operation,
+        IMethodSymbol handlerSymbol,
+        string trackedMethod,
+        DiagnosticDescriptor descriptor,
+        List<Diagnostic> diagnostics)
+    {
+        foreach (IOperation node in operation.DescendantsAndSelf())
+        {
+            if (node is IFlowAnonymousFunctionOperation anonymousFunction)
+            {
+                ControlFlowGraph? nested = cfg.GetAnonymousFunctionControlFlowGraph(anonymousFunction, CancellationToken.None);
+                if (nested is not null)
+                {
+                    ReportDoubleApiCallInCfg(nested, handlerSymbol, trackedMethod, descriptor, diagnostics);
+                }
+            }
+        }
+    }
+
+    private static void ReportDoubleApiCallBySyntax(
+        IMethodSymbol handlerSymbol,
+        SyntaxNode unit,
+        SemanticModel semanticModel,
+        string trackedMethod,
+        DiagnosticDescriptor descriptor,
+        List<Diagnostic> diagnostics)
+    {
+        int callCount = 0;
+        Location? secondCallLocation = null;
+        foreach (InvocationExpressionSyntax invocation in unit.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        {
+            if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol target ||
+                !IsTrackedApiCall(target, trackedMethod) ||
+                IsInsideLoop(invocation))
+            {
+                continue;
+            }
+
+            callCount++;
+            if (callCount == 2)
+            {
+                secondCallLocation = invocation.GetLocation();
+            }
+        }
+
+        if (callCount > 1)
+        {
+            diagnostics.Add(Diagnostic.Create(
+                descriptor,
+                secondCallLocation ?? handlerSymbol.Locations.FirstOrDefault(),
+                handlerSymbol.Name));
+        }
+    }
+
+    private static bool CanReachApiCall(
+        IMethodSymbol methodSymbol,
+        MethodDeclarationSyntax methodSyntax,
+        SemanticModel semanticModel,
+        string methodName)
+    {
+        if (TryCreateMethodCfg(methodSyntax, semanticModel) is { } cfg)
+        {
+            CfgApiCallAnalyzer analyzer = new(cfg, methodName);
+            analyzer.Run();
+            if (analyzer.ExecutedAtLeastOnce)
+            {
+                return true;
+            }
+        }
+        else if (UnitContainsApiCall(methodSyntax, semanticModel, methodName))
+        {
+            return true;
+        }
+
+        foreach (SyntaxNode nested in methodSyntax.DescendantNodes())
+        {
+            if (nested is LocalFunctionStatementSyntax localFunction && UnitContainsApiCall(localFunction, semanticModel, methodName))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool UnitContainsApiCall(SyntaxNode unit, SemanticModel semanticModel, string methodName)
+    {
+        foreach (InvocationExpressionSyntax invocation in unit.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        {
+            if (semanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol target && IsTrackedApiCall(target, methodName))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void ScanKeyboardCallbackData(
         IMethodSymbol methodSymbol,
         MethodDeclarationSyntax methodSyntax,
         SemanticModel semanticModel,
@@ -782,32 +1041,198 @@ internal static class HandlerDiscovery
     {
         foreach (InvocationExpressionSyntax invocation in methodSyntax.DescendantNodes().OfType<InvocationExpressionSyntax>())
         {
-            if (semanticModel.GetSymbolInfo(invocation).Symbol is IMethodSymbol { Name: "SendMessage" } target &&
-                IsTelegramBotApiMethod(target))
+            if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol target ||
+                invocation.ArgumentList.Arguments.Count < 2 ||
+                target.Name is not ("WithCallbackData" or "CallbackButton") ||
+                !IsKeyboardButtonFactory(target))
+            {
+                continue;
+            }
+
+            CheckCallbackDataExpression(methodSymbol, invocation.ArgumentList.Arguments[^1].Expression, semanticModel, diagnostics);
+        }
+
+        foreach (ObjectCreationExpressionSyntax creation in methodSyntax.DescendantNodes().OfType<ObjectCreationExpressionSyntax>())
+        {
+            if (semanticModel.GetTypeInfo(creation, CancellationToken.None).Type?.ToDisplayString() != "Telegram.Bot.Types.InlineKeyboardButton" ||
+                creation.Initializer is null)
+            {
+                continue;
+            }
+
+            foreach (AssignmentExpressionSyntax assignment in creation.Initializer.Expressions.OfType<AssignmentExpressionSyntax>())
+            {
+                if (assignment.Left is MemberAccessExpressionSyntax { Name.Identifier.ValueText: "CallbackData" })
+                {
+                    CheckCallbackDataExpression(methodSymbol, assignment.Right, semanticModel, diagnostics);
+                }
+            }
+        }
+    }
+
+    private static bool IsKeyboardButtonFactory(IMethodSymbol method)
+    {
+        string? containingType = method.ContainingType?.ToDisplayString();
+        return containingType is "Telegram.Bot.Types.InlineKeyboardButton" or "PolyBot.Keyboards.InlineKeyboardBuilder";
+    }
+
+    private static void CheckCallbackDataExpression(
+        IMethodSymbol methodSymbol,
+        ExpressionSyntax expression,
+        SemanticModel semanticModel,
+        List<Diagnostic> diagnostics)
+    {
+        if (expression is InterpolatedStringExpressionSyntax)
+        {
+            diagnostics.Add(Diagnostic.Create(
+                PolyBotDiagnostics.InterpolatedCallbackData,
+                expression.GetLocation(),
+                methodSymbol.Name));
+            return;
+        }
+
+        Optional<object?> constant = semanticModel.GetConstantValue(expression, CancellationToken.None);
+        if (!constant.HasValue || constant.Value is not string callbackData)
+        {
+            return;
+        }
+
+        if (callbackData.Length == 0)
+        {
+            diagnostics.Add(Diagnostic.Create(
+                PolyBotDiagnostics.InvalidCallbackDataLiteral,
+                expression.GetLocation(),
+                methodSymbol.Name,
+                "is empty"));
+            return;
+        }
+
+        int bytes = Encoding.UTF8.GetByteCount(callbackData);
+        if (bytes > 64)
+        {
+            diagnostics.Add(Diagnostic.Create(
+                PolyBotDiagnostics.InvalidCallbackDataLiteral,
+                expression.GetLocation(),
+                methodSymbol.Name,
+                $"is {bytes} bytes"));
+        }
+    }
+
+    private static void ScanInlineQueryResults(
+        IMethodSymbol methodSymbol,
+        MethodDeclarationSyntax methodSyntax,
+        SemanticModel semanticModel,
+        List<Diagnostic> diagnostics)
+    {
+        foreach (InvocationExpressionSyntax invocation in methodSyntax.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        {
+            if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol { Name: "AnswerInlineQuery" } target ||
+                !IsTelegramBotApiMethod(target) ||
+                invocation.ArgumentList.Arguments.Count < 2 ||
+                CountInlineResults(invocation.ArgumentList.Arguments[1].Expression) is not { } count ||
+                count <= 50)
+            {
+                continue;
+            }
+
+            diagnostics.Add(Diagnostic.Create(
+                PolyBotDiagnostics.TooManyInlineResults,
+                invocation.ArgumentList.Arguments[1].GetLocation(),
+                methodSymbol.Name,
+                count));
+        }
+    }
+
+    private static int? CountInlineResults(ExpressionSyntax expression)
+    {
+        switch (expression)
+        {
+            case ArrayCreationExpressionSyntax { Initializer: { } arrayInitializer }:
+                return arrayInitializer.Expressions.Count;
+            case ImplicitArrayCreationExpressionSyntax { Initializer: { } implicitInitializer }:
+                return implicitInitializer.Expressions.Count;
+            case CollectionExpressionSyntax collection:
+                {
+                    if (collection.Elements.Any(static element => element is SpreadElementSyntax))
+                    {
+                        return null;
+                    }
+
+                    return collection.Elements.Count;
+                }
+
+            default:
+                return null;
+        }
+    }
+
+    private static void ScanAsyncHygiene(
+        IMethodSymbol methodSymbol,
+        MethodDeclarationSyntax methodSyntax,
+        SemanticModel semanticModel,
+        List<Diagnostic> diagnostics)
+    {
+        foreach (SyntaxNode node in methodSyntax.DescendantNodes())
+        {
+            if (node is MemberAccessExpressionSyntax { Name.Identifier.ValueText: "Result" } resultAccess &&
+                IsTaskLike(semanticModel.GetTypeInfo(resultAccess.Expression, CancellationToken.None).Type))
             {
                 diagnostics.Add(Diagnostic.Create(
-                    PolyBotDiagnostics.GuestMessageHandlerUsesSendMessage,
-                    invocation.GetLocation(),
+                    PolyBotDiagnostics.BlockingAsyncCall,
+                    resultAccess.GetLocation(),
+                    methodSymbol.Name,
+                    ".Result"));
+            }
+            else if (node is InvocationExpressionSyntax
+            {
+                Expression: MemberAccessExpressionSyntax { Name.Identifier.ValueText: "Wait" } waitAccess,
+            } waitInvocation &&
+                waitInvocation.ArgumentList.Arguments.Count == 0 &&
+                IsTaskLike(semanticModel.GetTypeInfo(waitAccess.Expression, CancellationToken.None).Type))
+            {
+                diagnostics.Add(Diagnostic.Create(
+                    PolyBotDiagnostics.BlockingAsyncCall,
+                    waitInvocation.GetLocation(),
+                    methodSymbol.Name,
+                    ".Wait()"));
+            }
+            else if (node is InvocationExpressionSyntax
+            {
+                Expression: MemberAccessExpressionSyntax
+                {
+                    Name.Identifier.ValueText: "GetResult",
+                    Expression: InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax { Name.Identifier.ValueText: "GetAwaiter" } },
+                },
+            } getResultInvocation)
+            {
+                diagnostics.Add(Diagnostic.Create(
+                    PolyBotDiagnostics.BlockingAsyncCall,
+                    getResultInvocation.GetLocation(),
+                    methodSymbol.Name,
+                    ".GetAwaiter().GetResult()"));
+            }
+            else if (node is ObjectCreationExpressionSyntax creation &&
+                semanticModel.GetTypeInfo(creation, CancellationToken.None).Type?.ToDisplayString() == "Telegram.Bot.TelegramBotClient")
+            {
+                diagnostics.Add(Diagnostic.Create(
+                    PolyBotDiagnostics.ClientCreatedInHandler,
+                    creation.GetLocation(),
                     methodSymbol.Name));
             }
         }
+    }
 
-        if (TryCreateMethodCfg(methodSyntax, semanticModel) is { } cfg)
+    private static bool IsTaskLike(ITypeSymbol? type)
+    {
+        if (type is null)
         {
-            ReportDoubleAnswersInCfg(cfg, methodSymbol, diagnostics);
-        }
-        else
-        {
-            ReportDoubleAnswersBySyntax(methodSymbol, methodSyntax, semanticModel, diagnostics);
+            return false;
         }
 
-        foreach (SyntaxNode nested in methodSyntax.DescendantNodes())
-        {
-            if (nested is LocalFunctionStatementSyntax localFunction)
-            {
-                ReportDoubleAnswersBySyntax(methodSymbol, localFunction, semanticModel, diagnostics);
-            }
-        }
+        string display = type.ToDisplayString();
+        return display is "System.Threading.Tasks.Task" ||
+            display.StartsWith("System.Threading.Tasks.Task<", StringComparison.Ordinal) ||
+            display.StartsWith("System.Threading.Tasks.ValueTask", StringComparison.Ordinal);
     }
 
     private static ControlFlowGraph? TryCreateMethodCfg(MethodDeclarationSyntax methodSyntax, SemanticModel semanticModel)
@@ -832,97 +1257,34 @@ internal static class HandlerDiscovery
         }
     }
 
-    private static void ReportDoubleAnswersInCfg(ControlFlowGraph cfg, IMethodSymbol handlerSymbol, List<Diagnostic> diagnostics)
-    {
-        CfgGuestAnswerAnalyzer analyzer = new(cfg);
-        analyzer.Run();
-        if (analyzer.CanAnswerTwice)
-        {
-            diagnostics.Add(Diagnostic.Create(
-                PolyBotDiagnostics.GuestMessageHandlerDoubleAnswer,
-                analyzer.SecondAnswerLocation ?? handlerSymbol.Locations.FirstOrDefault(),
-                handlerSymbol.Name));
-        }
-
-        // Lambdas have their own control-flow graphs reachable from the containing graph.
-        foreach (BasicBlock block in cfg.Blocks)
-        {
-            foreach (IOperation operation in block.Operations)
-            {
-                ReportDoubleAnswersInNestedCfg(cfg, operation, handlerSymbol, diagnostics);
-            }
-
-            if (block.BranchValue is not null)
-            {
-                ReportDoubleAnswersInNestedCfg(cfg, block.BranchValue, handlerSymbol, diagnostics);
-            }
-        }
-    }
-
-    private static void ReportDoubleAnswersInNestedCfg(ControlFlowGraph cfg, IOperation operation, IMethodSymbol handlerSymbol, List<Diagnostic> diagnostics)
-    {
-        foreach (IOperation node in operation.DescendantsAndSelf())
-        {
-            if (node is IFlowAnonymousFunctionOperation anonymousFunction)
-            {
-                ControlFlowGraph? nested = cfg.GetAnonymousFunctionControlFlowGraph(anonymousFunction, CancellationToken.None);
-                if (nested is not null)
-                {
-                    ReportDoubleAnswersInCfg(nested, handlerSymbol, diagnostics);
-                }
-            }
-        }
-    }
-
-    private static void ReportDoubleAnswersBySyntax(
-        IMethodSymbol handlerSymbol,
-        SyntaxNode unit,
-        SemanticModel semanticModel,
-        List<Diagnostic> diagnostics)
-    {
-        int answerCount = 0;
-        Location? secondAnswerLocation = null;
-        foreach (InvocationExpressionSyntax invocation in unit.DescendantNodes().OfType<InvocationExpressionSyntax>())
-        {
-            if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol target ||
-                !IsAnswerGuestQuery(target) ||
-                IsInsideLoop(invocation))
-            {
-                continue;
-            }
-
-            answerCount++;
-            if (answerCount == 2)
-            {
-                secondAnswerLocation = invocation.GetLocation();
-            }
-        }
-
-        if (answerCount > 1)
-        {
-            diagnostics.Add(Diagnostic.Create(
-                PolyBotDiagnostics.GuestMessageHandlerDoubleAnswer,
-                secondAnswerLocation ?? handlerSymbol.Locations.FirstOrDefault(),
-                handlerSymbol.Name));
-        }
-    }
-
-    private sealed class CfgGuestAnswerAnalyzer
+    /// <summary>
+    /// Reports whether a single execution can reach two invocations of the tracked API
+    /// method. Only tracked-call-carrying blocks are protected from re-execution (a lone
+    /// call in a loop body stays exempt: await loops may handle a new update per
+    /// iteration); zero-call blocks (loop headers, joins) are pruned by a best-count
+    /// memo so paths like "loop body once, then the trailing call" are still counted.
+    /// </summary>
+    private sealed class CfgApiCallAnalyzer
     {
         private readonly ControlFlowGraph _cfg;
-        private readonly HashSet<BasicBlock> _visitedAnswerBlocks = new();
-        private readonly Dictionary<BasicBlock, int> _zeroAnswerBestCount = new();
-        private bool _canAnswerTwice;
-        private Location? _secondAnswerLocation;
+        private readonly string _trackedMethod;
+        private readonly HashSet<BasicBlock> _visitedCallBlocks = new();
+        private readonly Dictionary<BasicBlock, int> _zeroCallBestCount = new();
+        private bool _canExecuteTwice;
+        private bool _executedAtLeastOnce;
+        private Location? _secondExecutionLocation;
 
-        public CfgGuestAnswerAnalyzer(ControlFlowGraph cfg)
+        public CfgApiCallAnalyzer(ControlFlowGraph cfg, string trackedMethod)
         {
             _cfg = cfg;
+            _trackedMethod = trackedMethod;
         }
 
-        public bool CanAnswerTwice => _canAnswerTwice;
+        public bool CanExecuteTwice => _canExecuteTwice;
 
-        public Location? SecondAnswerLocation => _secondAnswerLocation;
+        public bool ExecutedAtLeastOnce => _executedAtLeastOnce;
+
+        public Location? SecondExecutionLocation => _secondExecutionLocation;
 
         public void Run()
         {
@@ -930,54 +1292,61 @@ internal static class HandlerDiscovery
             {
                 if (block.Kind == BasicBlockKind.Entry)
                 {
-                    Visit(block, priorAnswers: 0);
+                    Visit(block, priorCalls: 0);
                     return;
                 }
             }
         }
 
-        private void Visit(BasicBlock block, int priorAnswers)
+        private void Visit(BasicBlock block, int priorCalls)
         {
-            if (_canAnswerTwice)
+            if (_canExecuteTwice)
             {
                 return;
             }
 
-            int blockAnswers = CountBlockAnswers(block);
-            bool tracksAnswers = blockAnswers > 0;
-            if (tracksAnswers)
+            int blockCalls = CountBlockCalls(block);
+            bool tracksCalls = blockCalls > 0;
+            if (tracksCalls)
             {
-                // Re-executing an answer-carrying block (a plain loop around one answer)
-                // is counted once by design.
-                if (!_visitedAnswerBlocks.Add(block))
+                // Re-executing a tracked-call-carrying block (a plain loop around one
+                // call) is counted once by design.
+                if (!_visitedCallBlocks.Add(block))
                 {
                     return;
                 }
             }
             else
             {
-                if (_zeroAnswerBestCount.TryGetValue(block, out int best) && best >= priorAnswers)
+                // Zero-call blocks contribute no calls; a path through one with an
+                // already-explored call count cannot produce a new outcome.
+                if (_zeroCallBestCount.TryGetValue(block, out int best) && best >= priorCalls)
                 {
                     return;
                 }
 
-                _zeroAnswerBestCount[block] = priorAnswers;
+                _zeroCallBestCount[block] = priorCalls;
             }
 
             try
             {
-                if (tracksAnswers && priorAnswers + blockAnswers >= 2)
+                int calls = priorCalls + blockCalls;
+                if (calls >= 1)
                 {
-                    _secondAnswerLocation = FindBlockAnswerLocation(block, ordinal: 2 - priorAnswers);
-                    _canAnswerTwice = true;
+                    _executedAtLeastOnce = true;
+                }
+
+                if (tracksCalls && calls >= 2)
+                {
+                    _secondExecutionLocation = FindBlockCallLocation(block, ordinal: 2 - priorCalls);
+                    _canExecuteTwice = true;
                     return;
                 }
 
-                int answers = priorAnswers + blockAnswers;
                 foreach (BasicBlock successor in Successors(block))
                 {
-                    Visit(successor, answers);
-                    if (_canAnswerTwice)
+                    Visit(successor, calls);
+                    if (_canExecuteTwice)
                     {
                         return;
                     }
@@ -985,9 +1354,9 @@ internal static class HandlerDiscovery
             }
             finally
             {
-                if (tracksAnswers)
+                if (tracksCalls)
                 {
-                    _visitedAnswerBlocks.Remove(block);
+                    _visitedCallBlocks.Remove(block);
                 }
             }
         }
@@ -1006,71 +1375,73 @@ internal static class HandlerDiscovery
                 yield return conditional;
             }
         }
-    }
 
-    private static int CountBlockAnswers(BasicBlock block)
-    {
-        int count = 0;
-        foreach (IOperation operation in block.Operations)
+        private int CountBlockCalls(BasicBlock block)
         {
-            count += CountAnswerInvocations(operation);
-        }
-
-        if (block.BranchValue is not null)
-        {
-            count += CountAnswerInvocations(block.BranchValue);
-        }
-
-        return count;
-    }
-
-    private static int CountAnswerInvocations(IOperation operation)
-    {
-        int count = 0;
-        foreach (IOperation node in operation.DescendantsAndSelf())
-        {
-            if (node is IInvocationOperation invocation && IsAnswerGuestQuery(invocation.TargetMethod))
+            int count = 0;
+            foreach (IOperation operation in block.Operations)
             {
-                count++;
+                count += CountTrackedCalls(operation);
             }
+
+            if (block.BranchValue is not null)
+            {
+                count += CountTrackedCalls(block.BranchValue);
+            }
+
+            return count;
         }
 
-        return count;
-    }
-
-    private static Location? FindBlockAnswerLocation(BasicBlock block, int ordinal)
-    {
-        int seen = 0;
-        foreach (IOperation operation in block.Operations)
+        private int CountTrackedCalls(IOperation operation)
         {
+            int count = 0;
             foreach (IOperation node in operation.DescendantsAndSelf())
             {
-                if (node is IInvocationOperation invocation && IsAnswerGuestQuery(invocation.TargetMethod) && ++seen == ordinal)
+                if (node is IInvocationOperation invocation && IsTrackedApiCall(invocation.TargetMethod, _trackedMethod))
                 {
-                    return invocation.Syntax.GetLocation();
+                    count++;
                 }
             }
+
+            return count;
         }
 
-        if (block.BranchValue is not null)
+        private Location? FindBlockCallLocation(BasicBlock block, int ordinal)
         {
-            foreach (IOperation node in block.BranchValue.DescendantsAndSelf())
+            int seen = 0;
+            foreach (IOperation operation in block.Operations)
             {
-                if (node is IInvocationOperation invocation && IsAnswerGuestQuery(invocation.TargetMethod) && ++seen == ordinal)
+                foreach (IOperation node in operation.DescendantsAndSelf())
                 {
-                    return invocation.Syntax.GetLocation();
+                    if (node is IInvocationOperation invocation && IsTrackedApiCall(invocation.TargetMethod, _trackedMethod) && ++seen == ordinal)
+                    {
+                        return invocation.Syntax.GetLocation();
+                    }
                 }
             }
-        }
 
-        return null;
+            if (block.BranchValue is not null)
+            {
+                foreach (IOperation node in block.BranchValue.DescendantsAndSelf())
+                {
+                    if (node is IInvocationOperation invocation && IsTrackedApiCall(invocation.TargetMethod, _trackedMethod) && ++seen == ordinal)
+                    {
+                        return invocation.Syntax.GetLocation();
+                    }
+                }
+            }
+
+            return null;
+        }
     }
 
-    private static bool IsAnswerGuestQuery(IMethodSymbol method)
-        => method.Name == "AnswerGuestQuery" && IsTelegramBotApiMethod(method);
+    private static bool IsTrackedApiCall(IMethodSymbol method, string trackedMethod)
+        => method.Name == trackedMethod && IsTelegramBotApiMethod(method);
 
     private static bool IsTelegramBotApiMethod(IMethodSymbol method)
     {
+        // Extension methods on ITelegramBotClient bind to TelegramBotClientExtensions;
+        // concrete-client calls bind to TelegramBotClient itself.
         string? containingType = method.ContainingType?.ToDisplayString();
         return containingType is "Telegram.Bot.TelegramBotClientExtensions" or "Telegram.Bot.TelegramBotClient" or "Telegram.Bot.ITelegramBotClient";
     }
@@ -1087,7 +1458,6 @@ internal static class HandlerDiscovery
 
         return false;
     }
-
     private static List<AwaitSiteModel> ExtractAwaitSites(
         MethodDeclarationSyntax methodSyntax,
         SemanticModel semanticModel,

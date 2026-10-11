@@ -50,3 +50,12 @@ CUR044 | PolyBot | Error | Filter arguments must be compile-time constants
 CUR045 | PolyBot | Error | No public constructor of the filter matches the supplied arguments
 CUR046 | PolyBot | Warning | A GuestMessage handler calls SendMessage instead of AnswerGuestQuery with the message GuestQueryId
 CUR047 | PolyBot | Warning | A GuestMessage handler can reach more than one AnswerGuestQuery call on a single update (control-flow analysis)
+CUR048 | PolyBot | Warning | A CallbackQuery handler can reach more than one AnswerCallbackQuery call on a single update (control-flow analysis)
+CUR049 | PolyBot | Warning | An InlineQuery handler can reach more than one AnswerInlineQuery call on a single update (control-flow analysis)
+CUR050 | PolyBot | Error | A literal callback_data is empty or exceeds the Bot API 64-byte limit
+CUR051 | PolyBot | Error | AnswerInlineQuery is passed more than 50 results inline
+CUR052 | PolyBot | Warning | A command alias starts with the command prefix and can never match
+CUR053 | PolyBot | Info | A handler blocks on asynchronous work (.Result/.Wait()/GetAwaiter().GetResult())
+CUR054 | PolyBot | Info | A handler creates its own TelegramBotClient instead of using the injected ITelegramBotClient
+CUR055 | PolyBot | Info | callback_data is built by string interpolation; [Pattern] gives typed, length-checked parsing
+CUR056 | PolyBot | Info | A CallbackQuery handler never answers the callback query

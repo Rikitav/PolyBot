@@ -368,8 +368,8 @@ internal static class PolyBotDiagnostics
 
     public static readonly DiagnosticDescriptor GuestMessageHandlerUsesSendMessage = new(
         id: "CUR046",
-        title: "GuestMessage handler sends a regular message",
-        messageFormat: "GuestMessage handler '{0}' calls SendMessage; guest messages must be answered with AnswerGuestQuery using the message's GuestQueryId — a regular SendMessage targets the wrong chat or fails silently",
+        title: "GuestMessage handler posts to a chat",
+        messageFormat: "GuestMessage handler '{0}' calls {1}, which posts to a chat; guest messages must be answered with AnswerGuestQuery using the message's GuestQueryId — the call targets the wrong chat or fails silently",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
@@ -380,5 +380,77 @@ internal static class PolyBotDiagnostics
         messageFormat: "GuestMessage handler '{0}' can execute AnswerGuestQuery more than once on a single update (control-flow analysis); a guest query can be answered only once, so every call after the first fails",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor CallbackHandlerDoubleAnswer = new(
+        id: "CUR048",
+        title: "CallbackQuery handler can answer the callback query more than once",
+        messageFormat: "CallbackQuery handler '{0}' can execute AnswerCallbackQuery more than once on a single update (control-flow analysis); a callback query can be answered only once, so every call after the first fails",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor InlineHandlerDoubleAnswer = new(
+        id: "CUR049",
+        title: "InlineQuery handler can answer the inline query more than once",
+        messageFormat: "InlineQuery handler '{0}' can execute AnswerInlineQuery more than once on a single update (control-flow analysis); an inline query can be answered only once, so every call after the first fails",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor InvalidCallbackDataLiteral = new(
+        id: "CUR050",
+        title: "callback_data literal is invalid",
+        messageFormat: "Callback data of handler '{0}' {1}; the Bot API requires 1-64 bytes, so the button fails at runtime",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor TooManyInlineResults = new(
+        id: "CUR051",
+        title: "AnswerInlineQuery result list exceeds 50 items",
+        messageFormat: "AnswerInlineQuery of handler '{0}' passes {1} results inline; the Bot API allows at most 50, so the call fails at runtime",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor CommandAliasStartsWithPrefix = new(
+        id: "CUR052",
+        title: "Command alias starts with the prefix",
+        messageFormat: "Alias '{0}' of handler '{1}' starts with the command prefix '{2}'; the matcher looks for '{2}{0}', so the command can never match — remove the leading '{2}' from the alias",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor BlockingAsyncCall = new(
+        id: "CUR053",
+        title: "Handler blocks on asynchronous work",
+        messageFormat: "Handler '{0}' blocks on asynchronous work via '{1}'; use await instead — blocking stalls the sequential update loop",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor ClientCreatedInHandler = new(
+        id: "CUR054",
+        title: "Handler creates its own TelegramBotClient",
+        messageFormat: "Handler '{0}' creates a TelegramBotClient; inject the shared ITelegramBotClient instead — a per-call client bypasses the configured HttpClient and breaks PolyTests",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor InterpolatedCallbackData = new(
+        id: "CUR055",
+        title: "callback_data built by string interpolation",
+        messageFormat: "Handler '{0}' builds callback data by string interpolation; consider [Pattern] with CallbackPatternMatcher for typed, length-checked parsing",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor CallbackQueryNeverAnswered = new(
+        id: "CUR056",
+        title: "CallbackQuery handler never answers the query",
+        messageFormat: "CallbackQuery handler '{0}' never calls AnswerCallbackQuery; the client's button shows a loading indicator until timeout — answer the query (even with no text) if the user should get feedback",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Info,
         isEnabledByDefault: true);
 }
