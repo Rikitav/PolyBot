@@ -191,3 +191,15 @@ A `[CallbackButton]`-annotated method or property does not return `InlineKeyboar
 
 A `[CallbackButton]`-annotated member is not declared `partial`, or the method itself is generic. The generator cannot emit an implementation and skips the member.
 </Accordion>
+
+<Accordion title="CUR050 – callback_data literal is invalid">
+**Severity:** Error
+
+A constant `callback_data` string passed to `InlineKeyboardButton.WithCallbackData(...)`, `InlineKeyboardBuilder.CallbackButton(...)`, or an `InlineKeyboardButton` object initializer is empty or longer than 64 bytes. The Bot API requires 1–64 bytes, so the button fails at runtime.
+</Accordion>
+
+<Accordion title="CUR055 – callback_data built by string interpolation">
+**Severity:** Info
+
+A `callback_data` argument (same call sites as CUR050) is an interpolated string (`$"item:{id}"`). Consider a `[CallbackButton]`-generated keyboard with placeholders, or `[Pattern]` routing with `CallbackPatternMatcher` for typed, length-checked parsing.
+</Accordion>

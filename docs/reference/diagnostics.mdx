@@ -1,7 +1,7 @@
 ---
-title: "PolyBot Compiler Diagnostics: CUR001–CUR047 Guide"
+title: "PolyBot Compiler Diagnostics: CUR001–CUR056 Guide"
 sidebarTitle: "Diagnostics"
-description: "Complete reference for every PolyBot source-generator diagnostic (CUR001–CUR047) — severity, trigger condition, and fix, grouped by feature area."
+description: "Complete reference for every PolyBot source-generator diagnostic (CUR001–CUR056) — severity, trigger condition, and fix, grouped by feature area."
 ---
 
 The PolyBot source generator reports diagnostics as standard Roslyn compiler messages. Warnings do not prevent compilation but indicate that an attribute or parameter was silently skipped. Errors prevent the affected handler, keyboard, or pattern from being emitted and must be resolved before the router will compile. All diagnostics use the `CUR` prefix and appear in the Error List / build output like any other C# diagnostic.
@@ -101,6 +101,12 @@ public static Task<Result> GoodHandler(Message msg)
 **Trigger:** Two or more handlers declare the same alias for the same `CommandScope` and `LanguageCode` combination. Only the first is sent to BotFather.
 
 **Fix:** Deduplicate the alias across the affected handlers, or assign different `Scope`/`LanguageCode` values to each so they target different BotFather menus.
+</Accordion>
+
+<Accordion title="CUR052 — Command alias starts with the prefix (Warning)">
+**Trigger:** An alias in `[Command(Aliases = [...])]` starts with the same character as the command `Prefix` (e.g. `Aliases = ["/start"]` with the default `/` prefix). The matcher looks for the prefix followed by the alias, so `//start` can never match — the command is dead.
+
+**Fix:** Drop the leading prefix from the alias: `Aliases = ["start"]`. This check does not apply to whitespace prefixes (BotFather-style mention commands).
 </Accordion>
 
 ---
@@ -261,18 +267,48 @@ public static Task<Result> GoodHandler(Message msg)
 **Fix:** Add `partial` to the method (or property in C# 13) and to every enclosing type.
 </Accordion>
 
+<Accordion title="CUR050 — callback_data literal is invalid (Error)">
+**Trigger:** A constant `callback_data` string passed to `InlineKeyboardButton.WithCallbackData(...)`, `InlineKeyboardBuilder.CallbackButton(...)`, or an `InlineKeyboardButton` object initializer is empty or longer than 64 bytes. The Bot API requires 1–64 bytes, so the button fails at runtime.
+
+**Fix:** Keep callback data between 1 and 64 UTF-8 bytes. Note that the limit is in bytes, not characters — non-ASCII data fills the budget faster.
+
+```csharp
+// ❌ CUR050 — 65 bytes
+InlineKeyboardButton.WithCallbackData("pick", new string('a', 65));
+
+// ✅ correct
+InlineKeyboardButton.WithCallbackData("pick", "item:42");
+```
+</Accordion>
+
+<Accordion title="CUR055 — callback_data built by string interpolation (Info)">
+**Trigger:** A `callback_data` argument (same call sites as CUR050) is an interpolated string (`$"item:{id}"`). Interpolated data bypasses compile-time length checks, is parsed by hand at the receiving handler, and drifts easily.
+
+**Fix:** Consider a generated callback keyboard with `[CallbackButton]` placeholders, or `[Pattern]` with `CallbackPatternMatcher` for typed, length-checked parsing:
+
+```csharp
+// ⚠️ CUR055 — ad-hoc format
+InlineKeyboardButton.WithCallbackData("Item 42", $"item:{itemId}");
+
+// ✅ typed pattern routing
+[CallbackQueryHandler, Pattern("item:{id:int}")]
+public static Task<Result> OnItem(CallbackQuery query, [Arg] int id) { ... }
+```
+</Accordion>
+
 ---
 
 ## Guest messages
 
-<Accordion title="CUR046 — GuestMessage handler sends a regular message (Warning)">
-**Trigger:** A `[GuestMessageHandler]` calls `SendMessage`. Guest messages are not addressed to a bot chat — replies must go through `AnswerGuestQuery` with the message's `GuestQueryId`. A regular `SendMessage` targets the wrong chat or fails silently.
+<Accordion title="CUR046 — GuestMessage handler posts to a chat (Warning)">
+**Trigger:** A `[GuestMessageHandler]` calls a chat-bound send method (`SendMessage`, `SendPhoto`, `SendVideo`, `SendAudio`, `SendDocument`, `SendSticker`, `SendDice`, `SendPoll`, `SendLocation`, `SendVenue`, `SendContact`, `SendPaidMedia`, and the rest of the `Send*` family). Guest messages are not addressed to a bot chat — replies must go through `AnswerGuestQuery` with the message's `GuestQueryId`. A regular send targets the wrong chat or fails silently.
 
 **Fix:** Answer with `AnswerGuestQuery` instead:
 
 ```csharp
 // ❌ CUR046
 await bot.SendMessage(msg.Chat, "hello");
+await bot.SendPhoto(msg.Chat, photo);
 
 // ✅ correct
 await bot.AnswerGuestQuery(msg.GuestQueryId!, result);
@@ -285,6 +321,92 @@ await bot.AnswerGuestQuery(msg.GuestQueryId!, result);
 **Not reported:** two calls on mutually exclusive `if/else` branches (only one runs per update), or a single call inside a loop whose iterations may await new guest messages. Local functions fall back to straight-line counting.
 
 **Fix:** Keep a single `AnswerGuestQuery` call per update, or move the decision into one answer call.
+</Accordion>
+
+---
+
+## Callback queries
+
+<Accordion title="CUR048 — CallbackQuery handler can answer the callback query more than once (Warning)">
+**Trigger:** Control-flow analysis of the handler body found an execution path on which `AnswerCallbackQuery` can run twice for one update — sequential calls, two calls in one loop body, or a call before and another inside a loop. A callback query can be answered only once; every call after the first fails.
+
+**Not reported:** two calls on mutually exclusive `if/else` branches (only one runs per update). Local functions fall back to straight-line counting; lambda bodies are analyzed via their own control-flow graph.
+
+**Fix:** Keep a single `AnswerCallbackQuery` call per update, or move the decision into one answer call.
+</Accordion>
+
+<Accordion title="CUR056 — CallbackQuery handler never answers the query (Info)">
+**Trigger:** A `[CallbackQueryHandler]` has no reachable `AnswerCallbackQuery` call at all. The button on the client's side keeps showing a loading indicator until the Bot API times it out.
+
+**Fix:** If the user should get feedback (button un-press, toast notification), call `AnswerCallbackQuery` — even with no text:
+
+```csharp
+[CallbackQueryHandler]
+public static async Task<Result> OnCallback(CallbackQuery query, ITelegramBotClient client)
+{
+    // ... handle the callback ...
+    await client.AnswerCallbackQuery(query.Id); // ✅ dismiss the loading state
+    return Result.StopRouting;
+}
+```
+
+Silent data-collection callbacks can ignore this Info.
+</Accordion>
+
+---
+
+## Inline queries
+
+<Accordion title="CUR049 — InlineQuery handler can answer the inline query more than once (Warning)">
+**Trigger:** Control-flow analysis of the handler body found an execution path on which `AnswerInlineQuery` can run twice for one update. An inline query can be answered only once; every call after the first fails.
+
+**Not reported:** two calls on mutually exclusive `if/else` branches (only one runs per update). Local functions fall back to straight-line counting; lambda bodies are analyzed via their own control-flow graph.
+
+**Fix:** Keep a single `AnswerInlineQuery` call per update.
+</Accordion>
+
+<Accordion title="CUR051 — AnswerInlineQuery result list exceeds 50 items (Error)">
+**Trigger:** An `AnswerInlineQuery` call passes more than 50 inline results inline — as an array, collection expression, or a local variable initialized with one. The Bot API rejects more than 50 results, so the call fails at runtime.
+
+**Fix:** Cap the result list at 50 items. Collections built with spread elements (`[..a, ..b]`) or other non-literal expressions are not counted.
+
+```csharp
+// ❌ CUR051 — 51 items
+InlineQueryResult[] results = [r01, r02, /* ... */ r51];
+await client.AnswerInlineQuery(query.Id, results);
+
+// ✅ correct — 50 items or fewer
+```
+</Accordion>
+
+---
+
+## Async hygiene
+
+<Accordion title="CUR053 — Handler blocks on asynchronous work (Info)">
+**Trigger:** A handler accesses `.Result`, calls `.Wait()`, or `.GetAwaiter().GetResult()` on a task-like value. Blocking synchronously stalls the sequential update loop — one slow handler delays every pending update.
+
+**Fix:** Make the handler `async` and `await` the operation instead.
+</Accordion>
+
+<Accordion title="CUR054 — Handler creates its own TelegramBotClient (Info)">
+**Trigger:** A handler body constructs `new TelegramBotClient(...)`. A per-call client bypasses the shared, configured `HttpClient` (proxy, retry, logging, rate-limit handlers) registered by `AddTelegramBot`, and breaks PolyTests test doubles.
+
+**Fix:** Inject the shared client through the handler parameter list:
+
+```csharp
+// ⚠️ CUR054
+[MessageHandler]
+public static Task<Result> OnMessage(Message msg)
+{
+    var client = new TelegramBotClient("token");
+    ...
+}
+
+// ✅ correct
+[MessageHandler]
+public static Task<Result> OnMessage(Message msg, ITelegramBotClient client) { ... }
+```
 </Accordion>
 
 ---

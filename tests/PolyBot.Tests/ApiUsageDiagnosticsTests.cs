@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Microsoft.CodeAnalysis;
 
 namespace PolyBot.Tests;
 
@@ -208,7 +209,7 @@ public sealed class ApiUsageDiagnosticsTests
                 [MessageHandler]
                 public static Task<Result> OnMessage(Message msg)
                 {
-                    _ = Telegram.Bot.Types.InlineKeyboardButton.WithCallbackData("pick", "{{longData}}");
+                    _ = Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton.WithCallbackData("pick", "{{longData}}");
                     return Task.FromResult(Result.StopRouting);
                 }
             }
@@ -232,7 +233,7 @@ public sealed class ApiUsageDiagnosticsTests
                 [MessageHandler]
                 public static Task<Result> OnMessage(Message msg)
                 {
-                    _ = Telegram.Bot.Types.InlineKeyboardButton.WithCallbackData("pick", "");
+                    _ = Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton.WithCallbackData("pick", "");
                     return Task.FromResult(Result.StopRouting);
                 }
             }
@@ -257,7 +258,7 @@ public sealed class ApiUsageDiagnosticsTests
                 [MessageHandler]
                 public static Task<Result> OnMessage(Message msg)
                 {
-                    _ = new Telegram.Bot.Types.InlineKeyboardButton("pick") { CallbackData = "{{longData}}" };
+                    _ = new Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton("pick") { CallbackData = "{{longData}}" };
                     return Task.FromResult(Result.StopRouting);
                 }
             }
@@ -282,7 +283,7 @@ public sealed class ApiUsageDiagnosticsTests
                 public static Task<Result> OnMessage(Message msg)
                 {
                     int id = 1;
-                    _ = Telegram.Bot.Types.InlineKeyboardButton.WithCallbackData("pick", $"item:{id}");
+                    _ = Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton.WithCallbackData("pick", $"item:{id}");
                     return Task.FromResult(Result.StopRouting);
                 }
             }

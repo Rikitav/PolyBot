@@ -276,6 +276,12 @@ The `Description` string exceeds BotFather's 256-character limit.
 Two commands with the same alias target the same `(Scope, LanguageCode)` pair. The second registration is discarded.
 </Accordion>
 
+<Accordion title="CUR052 – Alias starts with the command prefix">
+**Severity:** Warning
+
+An alias starts with the same character as the command `Prefix` (e.g. `Aliases = ["/start"]` with the default `/` prefix), so the matcher looks for `//start` and the command can never match. Drop the leading prefix from the alias.
+</Accordion>
+
 <Accordion title="CUR046 – GuestMessage handler calls SendMessage">
 **Severity:** Warning
 

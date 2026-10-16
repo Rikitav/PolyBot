@@ -1054,7 +1054,7 @@ internal static class HandlerDiscovery
 
         foreach (ObjectCreationExpressionSyntax creation in methodSyntax.DescendantNodes().OfType<ObjectCreationExpressionSyntax>())
         {
-            if (semanticModel.GetTypeInfo(creation, CancellationToken.None).Type?.ToDisplayString() != "Telegram.Bot.Types.InlineKeyboardButton" ||
+            if (semanticModel.GetTypeInfo(creation, CancellationToken.None).Type?.ToDisplayString() != "Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton" ||
                 creation.Initializer is null)
             {
                 continue;
@@ -1062,7 +1062,14 @@ internal static class HandlerDiscovery
 
             foreach (AssignmentExpressionSyntax assignment in creation.Initializer.Expressions.OfType<AssignmentExpressionSyntax>())
             {
-                if (assignment.Left is MemberAccessExpressionSyntax { Name.Identifier.ValueText: "CallbackData" })
+                string? assignedMember = assignment.Left switch
+                {
+                    IdentifierNameSyntax identifier => identifier.Identifier.ValueText,
+                    MemberAccessExpressionSyntax { Name.Identifier.ValueText: { } memberName } => memberName,
+                    _ => null,
+                };
+
+                if (assignedMember == "CallbackData")
                 {
                     CheckCallbackDataExpression(methodSymbol, assignment.Right, semanticModel, diagnostics);
                 }
@@ -1073,7 +1080,7 @@ internal static class HandlerDiscovery
     private static bool IsKeyboardButtonFactory(IMethodSymbol method)
     {
         string? containingType = method.ContainingType?.ToDisplayString();
-        return containingType is "Telegram.Bot.Types.InlineKeyboardButton" or "PolyBot.Keyboards.InlineKeyboardBuilder";
+        return containingType is "Telegram.Bot.Types.ReplyMarkups.InlineKeyboardButton" or "PolyBot.Keyboards.InlineKeyboardBuilder";
     }
 
     private static void CheckCallbackDataExpression(
@@ -1129,7 +1136,7 @@ internal static class HandlerDiscovery
             if (semanticModel.GetSymbolInfo(invocation).Symbol is not IMethodSymbol { Name: "AnswerInlineQuery" } target ||
                 !IsTelegramBotApiMethod(target) ||
                 invocation.ArgumentList.Arguments.Count < 2 ||
-                CountInlineResults(invocation.ArgumentList.Arguments[1].Expression) is not { } count ||
+                CountInlineResults(invocation.ArgumentList.Arguments[1].Expression, semanticModel) is not { } count ||
                 count <= 50)
             {
                 continue;
@@ -1143,7 +1150,7 @@ internal static class HandlerDiscovery
         }
     }
 
-    private static int? CountInlineResults(ExpressionSyntax expression)
+    private static int? CountInlineResults(ExpressionSyntax expression, SemanticModel semanticModel)
     {
         switch (expression)
         {
@@ -1162,7 +1169,35 @@ internal static class HandlerDiscovery
                 }
 
             default:
-                return null;
+                {
+                    // Follow a local variable back to its array/collection initializer, e.g.
+                    //     InlineQueryResult[] results = [a, b, c];
+                    //     await client.AnswerInlineQuery(query.Id, results);
+                    if (semanticModel.GetSymbolInfo(expression, CancellationToken.None).Symbol is ILocalSymbol
+                        {
+                            DeclaringSyntaxReferences.Length: > 0
+                        } local)
+                    {
+                        SyntaxNode declaration = local.DeclaringSyntaxReferences[0].GetSyntax(CancellationToken.None);
+                        ExpressionSyntax? initializer = declaration switch
+                        {
+                            VariableDeclaratorSyntax { Initializer.Value: { } value } => value,
+                            // Deconstruction: var (a, b) = expr; — the declaration sits on the left of an assignment.
+                            SingleVariableDesignationSyntax => declaration
+                                .Ancestors()
+                                .OfType<AssignmentExpressionSyntax>()
+                                .FirstOrDefault()?.Right,
+                            _ => null,
+                        };
+
+                        if (initializer is not null && !ReferenceEquals(initializer, expression))
+                        {
+                            return CountInlineResults(initializer, semanticModel);
+                        }
+                    }
+
+                    return null;
+                }
         }
     }
 
